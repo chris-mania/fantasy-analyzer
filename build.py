@@ -131,6 +131,21 @@ merged["offense_pct"] = safe_num(merged["offense_pct"])
 max_week = int(merged["week"].max())
 print(f"   Stats loaded through Week {max_week}.")
 
+print("   Loading player headshots...")
+headshot_map = {}
+try:
+    player_info = pd.read_csv(f"{BASE}/players/players.csv", low_memory=False)
+    id_col = "gsis_id" if "gsis_id" in player_info.columns else ("player_id" if "player_id" in player_info.columns else None)
+    hs_col = "headshot" if "headshot" in player_info.columns else ("headshot_url" if "headshot_url" in player_info.columns else None)
+    if id_col and hs_col:
+        headshot_map = (
+            player_info[[id_col, hs_col]].dropna()
+            .drop_duplicates(id_col).set_index(id_col)[hs_col].astype(str).to_dict()
+        )
+except Exception as e:
+    print("   Headshots unavailable; initials fallback will be used:", e)
+
+
 # ============================================================
 # RED ZONE / GOAL LINE DATA
 # ============================================================
@@ -601,7 +616,10 @@ for _, r in g.iterrows():
     # Low confidence does not crush Mania, but slightly reduces Start certainty.
     confidence_adj = {"High": 0.0, "Medium": -0.4, "Low": -0.8}[r["confidence_label"]]
 
-    start = clamp(r["mania"] + madj + trend_adj + confidence_adj)
+    context_adj = madj + trend_adj
+    if r["position"] == "TE":
+        context_adj *= 0.35
+    start = clamp(r["mania"] + context_adj + confidence_adj)
     start_vals.append((start, madj, trend_adj, opp))
     match_examples[r["player_id"]] = ex
 
@@ -625,8 +643,11 @@ for _, r in g.sort_values("mania", ascending=False).iterrows():
             "tgt": int(x.targets),
             "rec": int(x.receptions),
             "ry": round(float(x.receiving_yards), 1),
+            "rtd": round(float(x.receiving_tds), 2),
+            "air": round(float(x.receiving_air_yards), 1),
             "car": int(x.carries),
             "ruy": round(float(x.rushing_yards), 1),
+            "rutd": round(float(x.rushing_tds), 2),
             "ppr": round(float(x.fantasy_points_ppr), 1),
             "snap": round(float(x.offense_pct) * 100, 1),
             "tshare": round(float(x.target_share_game), 1),
@@ -703,6 +724,17 @@ for _, r in g.sort_values("mania", ascending=False).iterrows():
         "similar": match_examples.get(r["player_id"], []),
     })
 
+
+# Official same-position distributions used by the browser sandbox.
+# A custom selection is graded against the same league environment as official Mania.
+pct_refs = {}
+for pos in ["RB", "WR", "TE"]:
+    pct_refs[pos] = {}
+    gp = g[(g["position"] == pos) & g["qualified"]]
+    for c in PCT_COLS:
+        pct_refs[pos][c] = [round(float(v), 5) for v in np.sort(gp[c].replace([np.inf, -np.inf], np.nan).dropna().values)]
+refs_json = json.dumps(pct_refs, separators=(",", ":"))
+
 payload = json.dumps(players, separators=(",", ":"))
 meta = json.dumps({
     "season": SEASON,
@@ -716,254 +748,97 @@ meta = json.dumps({
 # ============================================================
 # FRONT END — FANTASY MANIA
 # ============================================================
-html = r'''<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+html = r"""<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fantasy Mania</title>
 <style>
-:root{
- --bg:#080b10;--panel:#10151d;--panel2:#151c26;--line:#263141;
- --text:#f4f7fb;--muted:#8e9aac;--blue:#4ea1ff;--cyan:#5de4ff;
- --green:#46d381;--yellow:#f4c95d;--red:#ff6673;--purple:#aa8cff;
-}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -20%,#182638 0,#080b10 42%);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-button,input{font:inherit}.shell{max-width:1240px;margin:auto;padding:0 22px 50px}
-nav{height:74px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1d2632;position:sticky;top:0;background:rgba(8,11,16,.94);backdrop-filter:blur(14px);z-index:30}
-.brand{font-size:22px;font-weight:950;letter-spacing:.7px}.brand span{color:var(--blue)}.navlinks{display:flex;gap:6px}
-.navbtn,.pill{border:0;background:transparent;color:var(--muted);padding:10px 13px;border-radius:9px;cursor:pointer;font-weight:750}
-.navbtn:hover,.navbtn.on,.pill.on{background:#182231;color:white}.hero{text-align:center;padding:58px 10px 32px}
-.eyebrow{font-size:12px;letter-spacing:2px;color:var(--cyan);font-weight:900}.hero h1{font-size:52px;line-height:1;margin:10px 0 12px;letter-spacing:-2px}.hero p{color:var(--muted);font-size:16px}
-.search{max-width:720px;margin:24px auto 0;position:relative}.search input{width:100%;padding:17px 20px;border-radius:13px;border:1px solid var(--line);background:#0f151e;color:white;outline:none;font-size:16px}.search input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(78,161,255,.12)}
-.dd{display:none;position:absolute;left:0;right:0;top:58px;background:#111823;border:1px solid var(--line);border-radius:12px;overflow:hidden;z-index:40;text-align:left;box-shadow:0 18px 50px #0009}.ddi{padding:13px 16px;border-bottom:1px solid #202a38;cursor:pointer}.ddi:hover{background:#192333}.ddi b{display:block}.ddi small{color:var(--muted)}
-.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card{background:linear-gradient(180deg,#121923,#0f141c);border:1px solid var(--line);border-radius:15px;padding:19px;box-shadow:0 10px 30px #0002}.card h3{margin:0 0 13px;font-size:13px;letter-spacing:.8px;color:#b6c1d0}.leader{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid #202a36;cursor:pointer}.leader:first-of-type{border-top:0}.leader:hover .lname{color:var(--blue)}.num{font-weight:900;color:#566274;width:18px}.lname{font-weight:800;flex:1}.lsub{font-size:11px;color:var(--muted);margin-top:2px}.rating{font-weight:950;font-size:18px}
-.sectionhead{display:flex;justify-content:space-between;align-items:end;margin:30px 0 13px}.sectionhead h2{margin:0;font-size:24px}.sectionhead p{margin:4px 0 0;color:var(--muted)}
-.filters{display:flex;gap:7px;flex-wrap:wrap}.pill{background:#111821;border:1px solid var(--line);padding:8px 12px}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#0e141c}
-table{width:100%;border-collapse:collapse;min-width:880px}th{font-size:11px;color:#8491a3;text-transform:uppercase;letter-spacing:.6px;text-align:right;padding:13px 12px;background:#111821;position:sticky;top:0;cursor:pointer;white-space:nowrap}th:first-child,th:nth-child(2),td:first-child,td:nth-child(2){text-align:left}th:hover{color:white}td{padding:13px 12px;border-top:1px solid #202a36;text-align:right;font-size:14px}tr:hover td{background:#131c27}.playerlink{font-weight:850;cursor:pointer}.playerlink:hover{color:var(--blue)}.tag{font-size:10px;padding:3px 6px;border-radius:5px;background:#1c2735;color:#9eacc0;margin-left:5px}
-.mania{font-weight:950;color:var(--cyan)}.start{font-weight:950;color:var(--green)}
-.view{display:none}.view.on{display:block}.profileTop{padding:34px 0 17px;display:flex;justify-content:space-between;align-items:end;gap:20px}.back{color:var(--blue);cursor:pointer;font-weight:800;margin-bottom:8px}.profileTop h1{margin:0;font-size:38px}.meta{color:var(--muted);margin-top:6px}
-.ratingHero{display:flex;gap:10px}.ratingBox{min-width:150px;background:#111923;border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}.ratingBox .big{font-size:38px;font-weight:950;line-height:1}.ratingBox small{color:var(--muted);font-weight:800}.blue{color:var(--cyan)}.green{color:var(--green)}
-.alert{padding:11px 14px;border-radius:9px;background:#2a2112;border:1px solid #5d4720;color:#f5cb73;margin:8px 0 16px}.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0 20px}.stat{background:#101720;border:1px solid var(--line);border-radius:11px;padding:14px}.stat .v{font-size:23px;font-weight:900}.stat .k{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-top:3px}
-.two{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.bars .barrow{display:grid;grid-template-columns:110px 1fr 42px;gap:10px;align-items:center;margin:12px 0}.track{height:8px;background:#080c12;border-radius:10px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:10px}
-.roomrow{display:grid;grid-template-columns:1fr repeat(3,70px);gap:8px;padding:10px 0;border-top:1px solid #202a36;align-items:center}.roomrow:first-of-type{border-top:0}.roomrow b{cursor:pointer}.roomrow b:hover{color:var(--blue)}.muted{color:var(--muted)}.good{color:var(--green)}.bad{color:var(--red)}
-.gameToggle{cursor:pointer;accent-color:var(--blue)}.partial{color:var(--yellow);font-size:10px;font-weight:900}.custom{margin:10px 0;padding:12px;background:#101923;border:1px solid #27374a;border-radius:10px;color:#bcd0e6}
-.comparePick{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px}.comparePick .search{margin:0;max-width:none}.versus{display:grid;grid-template-columns:1fr 80px 1fr;align-items:center;gap:12px;margin-top:20px}.vs{text-align:center;color:var(--muted);font-weight:950}.cmpHero{text-align:center;padding:22px}.cmpHero h2{margin:0 0 4px}.cmpBig{font-size:48px;font-weight:950}.why{font-size:13px;color:var(--muted);line-height:1.5}
-@media(max-width:900px){.grid4{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:1fr}.navlinks{overflow:auto}.hero h1{font-size:42px}}
-@media(max-width:600px){.shell{padding:0 12px 35px}.brand{font-size:17px}.navbtn{padding:8px 7px;font-size:12px}.hero{padding-top:35px}.hero h1{font-size:36px}.grid4{grid-template-columns:1fr}.profileTop{display:block}.ratingHero{margin-top:16px}.stats{grid-template-columns:repeat(2,1fr)}.comparePick,.versus{grid-template-columns:1fr}.vs{padding:4px}}
-</style>
-</head>
-<body>
-<div class="shell">
-<nav>
- <div class="brand">FANTASY <span>MANIA</span></div>
- <div class="navlinks">
-  <button class="navbtn on" data-view="home">HOME</button>
-  <button class="navbtn" data-view="players">PLAYERS</button>
-  <button class="navbtn" data-view="rankings">RANKINGS</button>
-  <button class="navbtn" data-view="compare">COMPARE</button>
- </div>
-</nav>
-
-<section id="home" class="view on">
- <div class="hero">
-  <div class="eyebrow">POWERED BY MANIA RATING</div>
-  <h1>Fantasy decisions,<br>built on real usage.</h1>
-  <p id="seasonline"></p>
-  <div class="search"><input id="homeSearch" placeholder="Search any RB, WR or TE..." autocomplete="off"><div class="dd" id="homeDD"></div></div>
- </div>
- <div class="grid4" id="dash"></div>
-</section>
-
-<section id="players" class="view">
- <div class="sectionhead"><div><h2>Players</h2><p>Search any player for the full Mania profile.</p></div></div>
- <div class="search" style="margin:0;max-width:none"><input id="playerSearch" placeholder="Search player..." autocomplete="off"><div class="dd" id="playerDD"></div></div>
- <div id="playerLanding"></div>
-</section>
-
-<section id="rankings" class="view">
- <div class="sectionhead"><div><h2 id="rankTitle">Overall Rankings</h2><p id="rankSub">Mania Rating: who has the best fantasy profile?</p></div>
-  <div class="filters"><button class="pill on rankmode" data-mode="mania">OVERALL</button><button class="pill rankmode" data-mode="start">WEEK <span id="wkBtn"></span></button></div>
- </div>
- <div class="filters" style="margin-bottom:12px"><button class="pill on posf" data-pos="ALL">ALL</button><button class="pill posf" data-pos="RB">RB</button><button class="pill posf" data-pos="WR">WR</button><button class="pill posf" data-pos="TE">TE</button></div>
- <div class="tablewrap"><table><thead id="rankHead"></thead><tbody id="rankBody"></tbody></table></div>
-</section>
-
+:root{--blue:#0866c6;--nav:#0b1f33;--ink:#17212b;--muted:#667483;--line:#dbe2e8;--soft:#f4f7f9;--green:#159447;--lime:#55b83d;--yellow:#d89b12;--orange:#e56d22;--red:#c9362b}
+*{box-sizing:border-box}body{margin:0;background:#fff;color:var(--ink);font-family:Arial,Helvetica,sans-serif}button,input{font:inherit}
+.topbar{background:var(--nav);color:#fff}.nav{max-width:1240px;margin:auto;height:66px;padding:0 22px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-size:22px;font-weight:900;letter-spacing:.3px}.brand span{color:#4da3ff}.links{display:flex;height:100%}.navb{border:0;background:transparent;color:#c8d3df;font-weight:800;padding:0 16px;cursor:pointer;border-bottom:4px solid transparent}.navb.on,.navb:hover{color:#fff;border-bottom-color:#4da3ff}
+.wrap{max-width:1240px;margin:auto;padding:28px 22px 60px}.view{display:none}.view.on{display:block}
+.kicker{font-size:12px;color:var(--blue);font-weight:900;text-transform:uppercase;letter-spacing:1px}.title{font-size:34px;margin:5px 0 4px}.sub{color:var(--muted);margin:0 0 22px}
+.search{position:relative;max-width:720px}.search input{width:100%;padding:14px 16px;border:1px solid #aeb9c4;border-radius:4px;background:white}.dd{display:none;position:absolute;top:49px;left:0;right:0;background:white;border:1px solid var(--line);box-shadow:0 8px 24px #0002;z-index:20}.ddi{padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}.ddi:hover{background:var(--soft)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.pill{background:white;border:1px solid #b9c4cf;border-radius:4px;padding:8px 13px;font-weight:800;cursor:pointer}.pill.on{background:var(--nav);border-color:var(--nav);color:white}
+.panel{border:1px solid var(--line);border-radius:5px;background:white;margin-top:18px}.ph{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:900}.pad{padding:18px}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th{background:#f3f6f8;color:#526171;font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer}th,td{padding:12px 11px;border-bottom:1px solid var(--line);text-align:right}th:nth-child(2),td:nth-child(2){text-align:left}.playerlink{font-weight:900;color:#15283b;cursor:pointer}.playerlink:hover{color:var(--blue);text-decoration:underline}.tag{font-size:10px;background:#edf2f6;color:#617181;padding:4px 6px;border-radius:3px;margin-left:6px}
+.grade{font-weight:900}.g90{color:#07823d}.g80{color:#2b9a42}.g70{color:#a07900}.g60{color:#c26717}.g0{color:#bb2f2a}
+.profileHead{display:grid;grid-template-columns:150px 1fr auto;gap:24px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:22px}.portrait{width:138px;height:138px;border-radius:50%;position:relative;display:grid;place-items:center;background:#edf2f6}.portrait:before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(var(--ring) calc(var(--score)*1%),#e2e7eb 0);z-index:-2}.portrait:after{content:"";position:absolute;inset:-1px;border-radius:50%;background:white;z-index:-1}.portrait img{width:132px;height:132px;object-fit:cover;border-radius:50%}.initials{font-size:38px;font-weight:900;color:#748291}.identity h1{font-size:38px;margin:0 0 5px}.meta{color:var(--muted);font-weight:700}.rankline{margin-top:10px;font-weight:800}.scorebox{text-align:center;min-width:125px}.scorebig{font-size:48px;font-weight:900;line-height:1}.scorelab{font-size:11px;font-weight:900;color:#6c7884;text-transform:uppercase;margin-top:4px}
+.scorepair{display:flex;gap:14px}.scorecard{border-left:1px solid var(--line);padding-left:20px}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--line);border-radius:5px;margin-top:18px}.stat{padding:15px;border-right:1px solid var(--line)}.stat:last-child{border:0}.sv{font-size:22px;font-weight:900}.sk{font-size:10px;color:#6d7985;text-transform:uppercase;font-weight:900;margin-top:3px}
+.two{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}.sectionTitle{font-size:13px;text-transform:uppercase;letter-spacing:.7px;font-weight:900;margin-bottom:14px}
+.barrow{display:grid;grid-template-columns:105px 1fr 48px;gap:12px;align-items:center;margin:12px 0}.track{height:10px;background:#edf1f4;border-radius:2px;overflow:hidden}.fill{height:100%}
+.roomrow{display:grid;grid-template-columns:1.6fr .65fr .65fr .65fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}.roomrow b[data-id]{cursor:pointer}.roomrow b[data-id]:hover{color:var(--blue)}
+.alert{background:#fff7df;border-left:4px solid var(--yellow);padding:11px 13px;margin-top:15px}.custom{background:#eef6ff;border:1px solid #bad8f6;padding:12px;margin-bottom:12px}.reset{float:right;border:1px solid #9badbd;background:white;border-radius:3px;padding:6px 9px;cursor:pointer;font-weight:800}
+.good{color:var(--green);font-weight:900}.bad{color:var(--red);font-weight:900}.muted{color:var(--muted)}.partial{font-size:9px;background:#fff0d9;color:#9b5c00;padding:3px 4px;border-radius:2px}
+.versus{display:grid;grid-template-columns:1fr 60px 1fr;align-items:start;gap:10px}.vs{text-align:center;font-size:20px;font-weight:900;padding-top:70px}.cmp{border:1px solid var(--line);padding:18px;border-radius:5px}.cmpTop{display:flex;align-items:center;gap:14px}.miniPic{width:74px;height:74px;border-radius:50%;object-fit:cover;background:#edf2f6}.games{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}.gamechip{border:1px solid #bcc7d1;padding:7px 9px;border-radius:3px}.gamechip input{margin-right:5px}
+@media(max-width:850px){.profileHead{grid-template-columns:100px 1fr}.portrait{width:92px;height:92px}.portrait img{width:88px;height:88px}.scorepair{grid-column:1/-1}.stats{grid-template-columns:repeat(3,1fr)}.two,.versus{grid-template-columns:1fr}.vs{padding:0}.links{display:none}}
+</style></head><body>
+<div class="topbar"><div class="nav"><div class="brand">FANTASY <span>MANIA</span></div><div class="links">
+<button class="navb" data-v="home">HOME</button><button class="navb" data-v="players">PLAYERS</button><button class="navb on" data-v="rankings">RANKINGS</button><button class="navb" data-v="compare">COMPARE</button>
+</div></div></div>
+<main class="wrap">
+<section id="home" class="view"><div class="kicker">2026 Fantasy Football</div><h1 class="title">Fantasy Mania</h1><p class="sub">Player value, usage, role and matchup context in one rating.</p><div class="search"><input id="homeQ" placeholder="Search any RB, WR or TE"><div class="dd" id="homeDD"></div></div><div id="leaders"></div></section>
+<section id="players" class="view"><h1 class="title">Players</h1><p class="sub">Search a player to open the full Mania profile.</p><div class="search"><input id="playerQ" placeholder="Search player"><div class="dd" id="playerDD"></div></div></section>
+<section id="rankings" class="view on"><div class="kicker">Through Week <span id="wk"></span></div><h1 class="title" id="rankTitle">Overall Rankings</h1><p class="sub" id="rankSub">Mania Rating: complete fantasy value, not name value.</p><div class="toolbar"><button class="pill rankmode on" data-mode="mania">MANIA</button><button class="pill rankmode" data-mode="start">WEEK START</button><span style="width:10px"></span><button class="pill posf on" data-pos="ALL">ALL</button><button class="pill posf" data-pos="RB">RB</button><button class="pill posf" data-pos="WR">WR</button><button class="pill posf" data-pos="TE">TE</button></div><div class="panel tablewrap"><table><thead id="rankHead"></thead><tbody id="rankBody"></tbody></table></div></section>
 <section id="profile" class="view"><div id="profileBody"></div></section>
-
-<section id="compare" class="view">
- <div class="sectionhead"><div><h2>Compare Players</h2><p>Who's better overall — and who should you start this week?</p></div></div>
- <div class="comparePick">
-  <div class="search"><input id="cmpA" placeholder="Player A..." autocomplete="off"><div class="dd" id="cmpADD"></div></div>
-  <div class="search"><input id="cmpB" placeholder="Player B..." autocomplete="off"><div class="dd" id="cmpBDD"></div></div>
- </div>
- <div id="compareBody"></div>
-</section>
-</div>
-
+<section id="compare" class="view"><h1 class="title">Compare Players</h1><p class="sub">Overall value and this week's start decision. Remove any game from either player to run your own scenario.</p><div class="two"><div class="search"><input id="aQ" placeholder="Player A"><div class="dd" id="aDD"></div></div><div class="search"><input id="bQ" placeholder="Player B"><div class="dd" id="bDD"></div></div></div><div id="compareBody"></div></section>
+</main>
 <script>
-const DB=__PAYLOAD__;
-const META=__META__;
-let rankMode="mania",posFilter="ALL",sortKey="mania",sortDir=-1,A=null,B=null;
+const DB=__PAYLOAD__, META=__META__, REFS=__REFS__;
+const $=id=>document.getElementById(id), byId=id=>DB.find(p=>p.id===id), fmt=n=>Math.round(Number(n)*10)/10;
+$("wk").textContent=META.week;
+let posFilter="ALL",rankMode="mania",sortKey="mania",sortDir=-1,A=null,B=null,selA=null,selB=null;
+function grade(v){return v>=90?"g90":v>=80?"g80":v>=70?"g70":v>=60?"g60":"g0"} function ring(v){return v>=85?"#159447":v>=72?"#d89b12":v>=60?"#e56d22":"#c9362b"}
+function tier(v){return v>=90?"Elite":v>=82?"Excellent":v>=74?"Strong":v>=65?"Starter":"Depth"}
+function showView(v){document.querySelectorAll(".view").forEach(x=>x.classList.toggle("on",x.id===v));document.querySelectorAll(".navb").forEach(x=>x.classList.toggle("on",x.dataset.v===v));window.scrollTo(0,0)}
+document.querySelectorAll(".navb").forEach(b=>b.onclick=()=>showView(b.dataset.v));
+function initials(p){return p.name.split(" ").slice(0,2).map(x=>x[0]).join("")}
+function pic(p,cls=""){return p.headshot?`<img class="${cls}" src="${p.headshot}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="initials" style="display:none">${initials(p)}</span>`:`<span class="initials">${initials(p)}</span>`}
+function searchBox(inp,dd,cb){$(inp).oninput=e=>{let q=e.target.value.toLowerCase().trim(),d=$(dd);if(!q){d.style.display="none";return}let m=DB.filter(p=>p.name.toLowerCase().includes(q)).slice(0,9);d.innerHTML=m.map(p=>`<div class="ddi" data-id="${p.id}"><b>${p.name}</b><small>${p.team} • ${p.pos} • Mania ${p.mania}</small></div>`).join("");d.style.display=m.length?"block":"none";d.querySelectorAll(".ddi").forEach(x=>x.onclick=()=>{d.style.display="none";$(inp).value=byId(x.dataset.id).name;cb(byId(x.dataset.id))})}}
+searchBox("homeQ","homeDD",p=>openPlayer(p));searchBox("playerQ","playerDD",p=>openPlayer(p));searchBox("aQ","aDD",p=>{A=p;selA=p.logs.map((_,i)=>i);renderCompare()});searchBox("bQ","bDD",p=>{B=p;selB=p.logs.map((_,i)=>i);renderCompare()});
 
-const $=id=>document.getElementById(id);
-const fmt=(v,d=1)=>Number(v||0).toFixed(d);
-const tier=x=>x>=90?"Elite":x>=85?"Excellent":x>=80?"Very Strong":x>=75?"Strong":x>=70?"Solid Role":"Developing";
-const byId=id=>DB.find(p=>String(p.id)===String(id));
+const COLS=[["rank","#"],["name","Player"],["mania","Mania"],["start","Start"],["m.ppr","PPR/G"],["m.tgt","TGT/G"],["m.rec","REC/G"],["m.recy","REC YD/G"],["m.car","CAR/G"],["m.rushy","RUSH YD/G"],["m.snap","SNAP%"],["share","SHARE"],["rz","RZ"]];
+function val(p,k){if(k==="rank")return rankMode==="mania"?p.rank:p.start_rank;if(k==="name")return p.name;if(k==="share")return p.pos==="RB"?p.m.touch:p.m.tshare;if(k==="rz")return p.pos==="RB"?p.m.rzc:p.m.rzt;if(k.startsWith("m."))return p.m[k.slice(2)];return p[k]}
+function renderRanks(){let arr=DB.filter(p=>posFilter==="ALL"||p.pos===posFilter);arr.sort((a,b)=>{let x=val(a,sortKey),y=val(b,sortKey);return typeof x==="string"?sortDir*x.localeCompare(y):sortDir*(x-y)});$("rankTitle").textContent=rankMode==="mania"?"Overall Rankings — Mania Rating":`Week ${META.next_week} Start Rankings`;$("rankSub").textContent=rankMode==="mania"?"Who has the strongest complete fantasy profile? Click any column to sort.":"Matchup-aware weekly rating. Season Mania remains the anchor.";$("rankHead").innerHTML="<tr>"+COLS.map(([k,l])=>`<th data-k="${k}">${l}${sortKey===k?(sortDir<0?" ↓":" ↑"):""}</th>`).join("")+"</tr>";$("rankBody").innerHTML=arr.map(p=>`<tr><td>${val(p,"rank")}</td><td><span class="playerlink" data-id="${p.id}">${p.name}</span><span class="tag">${p.team} ${p.pos}</span></td><td class="grade ${grade(p.mania)}">${p.mania}</td><td class="grade ${grade(p.start)}">${p.start}</td><td>${p.m.ppr}</td><td>${p.m.tgt}</td><td>${p.m.rec}</td><td>${p.m.recy}</td><td>${p.m.car}</td><td>${p.m.rushy}</td><td>${p.m.snap}%</td><td>${val(p,"share")}%</td><td>${val(p,"rz")}</td></tr>`).join("");$("rankHead").querySelectorAll("th").forEach(th=>th.onclick=()=>{let k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==="name"?1:-1}renderRanks()});$("rankBody").querySelectorAll(".playerlink").forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)))}
+document.querySelectorAll(".rankmode").forEach(b=>b.onclick=()=>{rankMode=b.dataset.mode;sortKey=rankMode;sortDir=-1;document.querySelectorAll(".rankmode").forEach(x=>x.classList.toggle("on",x===b));renderRanks()});document.querySelectorAll(".posf").forEach(b=>b.onclick=()=>{posFilter=b.dataset.pos;document.querySelectorAll(".posf").forEach(x=>x.classList.toggle("on",x===b));renderRanks()});renderRanks();
 
-$("seasonline").textContent=`${META.season} NFL Season • Data through Week ${META.week} • Week ${META.next_week} outlook`;
-$("wkBtn").textContent=META.next_week;
-
-function showView(v){
- document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
- $(v).classList.add("on");
- document.querySelectorAll(".navbtn").forEach(x=>x.classList.toggle("on",x.dataset.view===v));
- window.scrollTo({top:0,behavior:"smooth"});
+function percentile(pos,key,v){let a=(REFS[pos]||{})[key]||[];if(!a.length)return 0;let lo=0,hi=a.length;while(lo<hi){let m=(lo+hi)>>1;if(a[m]<=v)lo=m+1;else hi=m}return Math.min(100,lo/a.length*100)}
+function avg(a,k,w=true){let den=0,num=0;a.forEach(x=>{let z=w?(x.weight||1):1;num+=Number(x[k]||0)*z;den+=z});return den?num/den:0}
+function sum(a,k){return a.reduce((s,x)=>s+Number(x[k]||0)*(x.weight||1),0)}
+function calc(p,idxs){
+ let L=idxs.map(i=>p.logs[i]).filter(Boolean);if(!L.length)return null;
+ let M={};M.ppr_pg=avg(L,"ppr");M.targets_pg=avg(L,"tgt");M.rec_pg=avg(L,"rec");M.rec_yards_pg=avg(L,"ry");M.carries_pg=avg(L,"car");M.rush_yards_pg=avg(L,"ruy");M.scrim_pg=M.rec_yards_pg+M.rush_yards_pg;M.td_pg=avg(L,"rtd")+avg(L,"rutd");M.snap_pct=avg(L,"snap");M.target_share=avg(L,"tshare");M.air_share=avg(L,"ashare");M.touch_share=avg(L,"touch");M.rz_targets_pg=avg(L,"rzt");M.endzone_targets_pg=avg(L,"ez");M.rz_carries_pg=avg(L,"rzc");M.gl_carries_pg=avg(L,"gl");
+ M.yards_per_target=sum(L,"tgt")?sum(L,"ry")/sum(L,"tgt"):0;M.catch_rate=sum(L,"tgt")?sum(L,"rec")/sum(L,"tgt")*100:0;M.yards_per_carry=sum(L,"car")?sum(L,"ruy")/sum(L,"car"):0;let opp=sum(L,"car")+2*sum(L,"tgt");M.fp_per_weighted_opp=opp?sum(L,"ppr")/opp:0;
+ let P={};Object.keys(M).forEach(k=>P[k]=percentile(p.pos,k,M[k]));
+ let prod,op,role,hv,eff;if(p.pos==="RB"){prod=.55*P.ppr_pg+.30*P.scrim_pg+.15*P.td_pg;op=.45*P.carries_pg+.35*P.targets_pg+.20*P.rec_pg;role=.60*P.touch_share+.40*P.snap_pct;hv=.40*P.rz_carries_pg+.35*P.gl_carries_pg+.25*P.rz_targets_pg;eff=.55*P.fp_per_weighted_opp+.25*P.yards_per_carry+.20*P.catch_rate}else{prod=.55*P.ppr_pg+.30*P.rec_yards_pg+.15*P.td_pg;op=.50*P.targets_pg+.30*P.rec_pg+.20*P.target_share;role=.45*P.target_share+.30*P.air_share+.25*P.snap_pct;hv=.60*P.rz_targets_pg+.40*P.endzone_targets_pg;eff=.45*P.yards_per_target+.30*P.catch_rate+.25*P.fp_per_weighted_opp}
+ let W=p.pos==="RB"?[.30,.30,.20,.125,.075]:[.30,.30,.225,.10,.075],raw=W[0]*prod+W[1]*op+W[2]*role+W[3]*hv+W[4]*eff,base=45+.52*raw,eg=L.reduce((s,x)=>s+(x.weight||1),0),conf=Math.min(1,eg/Math.max(META.week,1)),sh=(1-conf)*.12,mania=Math.max(0,Math.min(99.5,base*(1-sh)+72*sh));
+ let recent=L.slice(-Math.min(2,L.length)),recentOpp=recent.reduce((s,x)=>s+2*x.tgt+x.car,0)/recent.length,seasonOpp=M.targets_pg*2+M.carries_pg,tr=seasonOpp?((recentOpp/seasonOpp)-1)*100:0,trend=Math.max(-2.5,Math.min(2.5,tr/20*2.5));if(L.length<2)trend*=.25;let ctx=p.matchup_adj+trend;if(p.pos==="TE")ctx*=.35;let start=Math.max(0,Math.min(100,mania+ctx));
+ return {mania,start,M,b:{Production:prod,Opportunity:op,Role:role,"High Value":hv,Efficiency:eff}};
 }
-document.querySelectorAll(".navbtn").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+function barColor(v){return v>=85?"#159447":v>=70?"#d89b12":v>=55?"#e56d22":"#c9362b"}
+function stat(v,k){return `<div class="stat"><div class="sv">${v}</div><div class="sk">${k}</div></div>`}
+function openPlayer(p){showView("profile");let share=p.pos==="RB"?p.m.touch:p.m.tshare,shareName=p.pos==="RB"?"Touch Share":"Target Share",room=p.room.map((x,i)=>`<div class="roomrow"><b data-id="${x.id}">${i+1}. ${x.name}</b><span class="grade ${grade(x.mania)}">${x.mania}</span><span>${x.opp}</span><span>${x.share}%</span></div>`).join(""),bars=Object.entries(p.buckets).map(([k,v])=>`<div class="barrow"><span>${k}</span><div class="track"><div class="fill" style="width:${v}%;background:${barColor(v)}"></div></div><b class="${grade(v)}">${v}</b></div>`).join(""),logs=p.logs.map((l,i)=>`<tr><td><input class="gameToggle" type="checkbox" checked data-i="${i}"></td><td>W${l.w} ${l.partial?'<span class="partial">SHORT</span>':""}</td><td>${l.tgt}</td><td>${l.rec}</td><td>${l.ry}</td><td>${l.car}</td><td>${l.ruy}</td><td>${l.snap}%</td><td>${l.ppr}</td></tr>`).join("");
+$("profileBody").innerHTML=`<div class="kicker playerlink" id="backRanks">← Rankings</div><div class="profileHead"><div class="portrait" id="portrait" style="--score:${p.mania};--ring:${ring(p.mania)}">${pic(p)}</div><div class="identity"><h1>${p.name}</h1><div class="meta">${p.team} • ${p.pos} • ${p.games} games</div><div class="rankline">#${p.rank} overall &nbsp; • &nbsp; ${p.pos}${p.pos_rank} &nbsp; • &nbsp; #${p.team_rank} ${p.pos} on ${p.team}</div></div><div class="scorepair"><div class="scorebox"><div id="maniaTop" class="scorebig ${grade(p.mania)}">${p.mania}</div><div class="scorelab">Mania Rating<br>${tier(p.mania)}</div></div><div class="scorecard scorebox"><div id="startTop" class="scorebig ${grade(p.start)}">${p.start}</div><div class="scorelab">Week ${META.next_week} Start<br>vs ${p.opp}</div></div></div></div>
+${p.confidence!=="High"?`<div class="alert">${p.confidence} sample confidence. Missed games are excluded and detected shortened games are downweighted automatically.</div>`:""}
+<div class="stats">${stat(p.m.ppr,"PPR / Game")}${stat(p.m.tgt,"Targets / Game")}${stat(p.m.rec,"Receptions / Game")}${stat(p.m.scrim,"Scrimmage Yds / G")}${stat(share+"%",shareName)}${stat(p.m.snap+"%","Snap Share")}</div>
+<div class="two"><div class="panel"><div class="ph">MANIA PROFILE</div><div class="pad" id="profileBars">${bars}<p class="sub" style="margin:14px 0 0">Position-specific. WR/TE carries have zero direct rating weight. RB receiving work gets extra PPR value.</p></div></div><div class="panel"><div class="ph">${p.team} ${p.pos} ROOM</div><div class="pad"><div class="roomrow muted"><span>Player</span><span>Mania</span><span>${p.pos==="RB"?"Opp/G":"Tgt/G"}</span><span>Share</span></div>${room}</div></div></div>
+<div class="two"><div class="panel"><div class="ph">WEEK ${META.next_week} MATCHUP • ${p.opp}</div><div class="pad"><div class="${p.matchup_adj>=0?"good":"bad"}" style="font-size:28px">${p.matchup_adj>=0?"+":""}${p.matchup_adj}</div><p class="sub" style="margin:6px 0">Built from how similar ${p.pos}s performed against ${p.opp}, with early-season damping. TE matchup movement is intentionally more conservative.</p>${p.similar.map(x=>`<div class="roomrow"><b>${x.name}</b><span>${x.sim}% match</span><span>${x.normal}</span><span>${x.actual}</span></div>`).join("")||'<span class="muted">Not enough comparable-player evidence yet.</span>'}</div></div><div class="panel"><div class="ph">ADVANCED USAGE</div><div class="pad">${stat(p.pos==="RB"?p.m.car:p.m.recy,p.pos==="RB"?"Carries / G":"Receiving Yds / G")}${stat(p.pos==="RB"?p.m.rzc:p.m.rzt,p.pos==="RB"?"RZ Carries / G":"RZ Targets / G")}${stat(p.pos==="RB"?p.m.gl:p.m.ashare,p.pos==="RB"?"Goal-Line Carries / G":"Air Yard Share %")}</div></div></div>
+<div class="panel"><div class="ph">GAME LOG • CUSTOM MANIA <button class="reset" id="resetGames">RESET TO OFFICIAL</button></div><div class="pad"><div class="custom" id="customLine">Official Mania <b>${p.mania}</b>. Uncheck any game and the full Mania + Start math recalculates.</div><div class="tablewrap"><table><thead><tr><th>Use</th><th>Game</th><th>Tgt</th><th>Rec</th><th>Rec Yd</th><th>Car</th><th>Rush Yd</th><th>Snap</th><th>PPR</th></tr></thead><tbody>${logs}</tbody></table></div></div></div>`;
+$("backRanks").onclick=()=>showView("rankings");$("profileBody").querySelectorAll(".roomrow b[data-id]").forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));$("profileBody").querySelectorAll(".gameToggle").forEach(x=>x.onchange=()=>customProfile(p));$("resetGames").onclick=()=>{$("profileBody").querySelectorAll(".gameToggle").forEach(x=>x.checked=true);customProfile(p)}}
+function customProfile(p){let idx=[...document.querySelectorAll(".gameToggle:checked")].map(x=>Number(x.dataset.i)),c=calc(p,idx);if(!c){$("customLine").innerHTML="Select at least one game.";return}$("maniaTop").textContent=fmt(c.mania);$("maniaTop").className="scorebig "+grade(c.mania);$("startTop").textContent=fmt(c.start);$("startTop").className="scorebig "+grade(c.start);$("portrait").style.setProperty("--score",c.mania);$("portrait").style.setProperty("--ring",ring(c.mania));$("profileBars").innerHTML=Object.entries(c.b).map(([k,v])=>`<div class="barrow"><span>${k}</span><div class="track"><div class="fill" style="width:${v}%;background:${barColor(v)}"></div></div><b class="${grade(v)}">${fmt(v)}</b></div>`).join("")+`<p class="sub" style="margin:14px 0 0">Custom sandbox — official rankings stay unchanged.</p>`;$("customLine").innerHTML=`Official <b>${p.mania}</b> → Custom Mania <b class="${grade(c.mania)}">${fmt(c.mania)}</b> • Custom Start <b class="${grade(c.start)}">${fmt(c.start)}</b> • ${idx.length} selected game${idx.length===1?"":"s"} • ${fmt(c.M.ppr_pg)} PPR/G • ${fmt(c.M.targets_pg)} TGT/G • ${fmt(c.M.snap_pct)}% snaps.`}
 
-function wireSearch(inputId,ddId,onPick){
- const inp=$(inputId),dd=$(ddId);
- inp.oninput=()=>{
-  const q=inp.value.trim().toLowerCase();
-  if(!q){dd.style.display="none";return}
-  const m=DB.filter(p=>p.name.toLowerCase().includes(q)).slice(0,9);
-  dd.innerHTML=m.map(p=>`<div class="ddi" data-id="${p.id}"><b>${p.name}</b><small>${p.team} • ${p.pos} • ${p.mania} Mania</small></div>`).join("");
-  dd.style.display=m.length?"block":"none";
-  dd.querySelectorAll(".ddi").forEach(x=>x.onclick=()=>{dd.style.display="none";inp.value=byId(x.dataset.id).name;onPick(byId(x.dataset.id))});
- };
-}
-wireSearch("homeSearch","homeDD",openPlayer);
-wireSearch("playerSearch","playerDD",openPlayer);
-wireSearch("cmpA","cmpADD",p=>{A=p;renderCompare()});
-wireSearch("cmpB","cmpBDD",p=>{B=p;renderCompare()});
+function chips(p,which,sel){return `<div class="games">${p.logs.map((l,i)=>`<label class="gamechip"><input type="checkbox" class="cmpGame" data-side="${which}" data-i="${i}" ${sel.includes(i)?"checked":""}>W${l.w}${l.partial?"*":""}</label>`).join("")}</div>`}
+function renderCompare(){if(!A||!B)return;if(!selA)selA=A.logs.map((_,i)=>i);if(!selB)selB=B.logs.map((_,i)=>i);let ca=calc(A,selA),cb=calc(B,selB);if(!ca||!cb)return;let better=ca.mania>=cb.mania?A:B,starter=ca.start>=cb.start?A:B,rows=[["Mania",ca.mania,cb.mania],["Week Start",ca.start,cb.start],["PPR/G",ca.M.ppr_pg,cb.M.ppr_pg],["Targets/G",ca.M.targets_pg,cb.M.targets_pg],["Receptions/G",ca.M.rec_pg,cb.M.rec_pg],["Scrimmage Yds/G",ca.M.scrim_pg,cb.M.scrim_pg],["Snap %",ca.M.snap_pct,cb.M.snap_pct]];
+$("compareBody").innerHTML=`<div class="versus" style="margin-top:22px"><div class="cmp"><div class="cmpTop">${A.headshot?`<img class="miniPic" src="${A.headshot}">`:""}<div><h2>${A.name}</h2><div class="muted">${A.team} • ${A.pos}</div></div></div><div class="scorebig ${grade(ca.mania)}">${fmt(ca.mania)}</div><b>Custom Mania</b>${chips(A,"A",selA)}</div><div class="vs">VS</div><div class="cmp"><div class="cmpTop">${B.headshot?`<img class="miniPic" src="${B.headshot}">`:""}<div><h2>${B.name}</h2><div class="muted">${B.team} • ${B.pos}</div></div></div><div class="scorebig ${grade(cb.mania)}">${fmt(cb.mania)}</div><b>Custom Mania</b>${chips(B,"B",selB)}</div></div><div class="two"><div class="panel"><div class="ph">OVERALL PROFILE</div><div class="pad"><h2>${better.name}</h2><span class="muted">Based on the selected games' complete Mania profile.</span></div></div><div class="panel"><div class="ph">WHO SHOULD I START • WEEK ${META.next_week}</div><div class="pad"><h2>${starter.name}</h2><span class="muted">Custom Mania plus matchup and recent-role context.</span></div></div></div><div class="panel tablewrap"><table><thead><tr><th>${A.name}</th><th style="text-align:center">Metric</th><th>${B.name}</th></tr></thead><tbody>${rows.map(([k,a,b])=>`<tr><td class="${a>b?"good":""}">${fmt(a)}</td><td style="text-align:center">${k}</td><td class="${b>a?"good":""}">${fmt(b)}</td></tr>`).join("")}</tbody></table></div>`;
+document.querySelectorAll(".cmpGame").forEach(x=>x.onchange=()=>{let side=x.dataset.side,i=Number(x.dataset.i),arr=side==="A"?selA:selB;if(x.checked){if(!arr.includes(i))arr.push(i)}else if(arr.length>1){arr.splice(arr.indexOf(i),1)}arr.sort((a,b)=>a-b);renderCompare()})}
+showView("rankings");
+</script></body></html>"""
 
-function leaders(arr,key,n=3){return [...arr].sort((a,b)=>b[key]-a[key]).slice(0,n)}
-function leadCard(title,arr,key,label){
- return `<div class="card"><h3>${title}</h3>${arr.map((p,i)=>`<div class="leader" data-id="${p.id}"><div class="num">${i+1}</div><div class="lname">${p.name}<div class="lsub">${p.team} • ${p.pos}</div></div><div class="rating">${label(p)}</div></div>`).join("")}</div>`
-}
-function renderDash(){
- const risers=[...DB].sort((a,b)=>b.trend_pct-a.trend_pct).slice(0,3);
- const breakout=[...DB].filter(p=>p.mania>=72&&p.m.ppr<16).sort((a,b)=>(b.buckets.Opportunity+b.buckets.Role)-(a.buckets.Opportunity+a.buckets.Role)).slice(0,3);
- $("dash").innerHTML=
-  leadCard("⭐ TOP MANIA",leaders(DB,"mania"),"mania",p=>p.mania)+
-  leadCard(`🎯 TOP WEEK ${META.next_week}`,leaders(DB,"start"),"start",p=>p.start)+
-  leadCard("📈 ROLE RISERS",risers,"trend_pct",p=>(p.trend_pct>0?"+":"")+p.trend_pct+"%")+
-  leadCard("👀 BREAKOUT WATCH",breakout,"mania",p=>p.mania);
- document.querySelectorAll(".leader").forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));
-}
-renderDash();
-
-const COLS=[
- ["rank","#"],["name","Player"],["mania","Mania"],["start","Start"],["m.ppr","PPR/G"],["m.tgt","TGT/G"],["m.rec","REC/G"],
- ["m.recy","REC YD/G"],["m.car","CAR/G"],["m.rushy","RUSH YD/G"],["m.snap","SNAP%"],["share","SHARE%"],["rz","RZ"]
-];
-function val(p,k){
- if(k==="rank")return rankMode==="mania"?p.rank:p.start_rank;
- if(k==="name")return p.name;
- if(k==="share")return p.pos==="RB"?p.m.touch:p.m.tshare;
- if(k==="rz")return p.pos==="RB"?p.m.rzc:p.m.rzt;
- if(k.startsWith("m."))return p.m[k.slice(2)];
- return p[k];
-}
-function renderRanks(){
- let arr=DB.filter(p=>posFilter==="ALL"||p.pos===posFilter);
- arr.sort((a,b)=>{let x=val(a,sortKey),y=val(b,sortKey);if(typeof x==="string")return sortDir*x.localeCompare(y);return sortDir*(x-y)});
- $("rankTitle").textContent=rankMode==="mania"?"Overall Rankings":`Week ${META.next_week} Start Rankings`;
- $("rankSub").textContent=rankMode==="mania"?"Mania Rating: who has the best fantasy profile?":"Current-week rating: Mania + role trend + opponent/similar-player matchup.";
- $("rankHead").innerHTML="<tr>"+COLS.map(([k,l])=>`<th data-k="${k}">${l}${sortKey===k?(sortDir===-1?" ↓":" ↑"):""}</th>`).join("")+"</tr>";
- $("rankBody").innerHTML=arr.map(p=>`<tr>
-  <td>${val(p,"rank")}</td><td><span class="playerlink" data-id="${p.id}">${p.name}</span> <span class="tag">${p.team} ${p.pos}</span></td>
-  <td class="mania">${p.mania}</td><td class="start">${p.start}</td><td>${p.m.ppr}</td><td>${p.m.tgt}</td><td>${p.m.rec}</td>
-  <td>${p.m.recy}</td><td>${p.m.car}</td><td>${p.m.rushy}</td><td>${p.m.snap}%</td><td>${val(p,"share")}%</td><td>${val(p,"rz")}</td></tr>`).join("");
- $("rankHead").querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==="name"?1:-1}renderRanks()});
- $("rankBody").querySelectorAll(".playerlink").forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));
-}
-document.querySelectorAll(".rankmode").forEach(b=>b.onclick=()=>{
- rankMode=b.dataset.mode;sortKey=rankMode;sortDir=-1;
- document.querySelectorAll(".rankmode").forEach(x=>x.classList.toggle("on",x===b));renderRanks();
-});
-document.querySelectorAll(".posf").forEach(b=>b.onclick=()=>{
- posFilter=b.dataset.pos;document.querySelectorAll(".posf").forEach(x=>x.classList.toggle("on",x===b));renderRanks();
-});
-renderRanks();
-
-function statCard(v,k){return `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`}
-function openPlayer(p){
- showView("profile");
- const share=p.pos==="RB"?p.m.touch:p.m.tshare;
- const shareName=p.pos==="RB"?"Touch Share":"Target Share";
- const warning=p.confidence!=="High"?`<div class="alert">⚠ ${p.confidence} confidence • ${p.games} played game${p.games===1?"":"s"}${p.partial_games?` • ${p.partial_games} shortened-participation game detected`:""}. Missed games do not count as zeroes.</div>`:"";
- const roomLabel=p.pos==="RB"?`${p.team} BACKFIELD`:`${p.team} ${p.pos} ROOM`;
- const room=p.room.map(x=>`<div class="roomrow"><b data-id="${x.id}">${x.name}</b><span>${x.mania}</span><span>${x.opp}</span><span>${x.share}%</span></div>`).join("");
- const bars=Object.entries(p.buckets).map(([k,v])=>`<div class="barrow"><span class="muted">${k}</span><div class="track"><div class="fill" style="width:${v}%"></div></div><b>${v}</b></div>`).join("");
- const sims=p.similar.length?p.similar.map(x=>`<div class="roomrow"><b>${x.name}</b><span>${x.sim}%</span><span>${x.normal}</span><span>${x.actual}</span></div>`).join(""):`<p class="muted">Not enough similar-player evidence yet. Early-season matchup effects stay intentionally small.</p>`;
- const logs=p.logs.map((l,i)=>`<tr><td><input class="gameToggle" type="checkbox" checked data-i="${i}"></td><td>W${l.w} ${l.partial?'<span class="partial">SHORT</span>':""}</td><td>${l.tgt}</td><td>${l.rec}</td><td>${l.ry}</td><td>${l.car}</td><td>${l.ruy}</td><td>${l.snap}%</td><td>${l.ppr}</td></tr>`).join("");
-
- $("profileBody").innerHTML=`
- <div class="profileTop"><div><div class="back" id="backRanks">← Rankings</div><h1>${p.name}</h1><div class="meta">${p.team} • ${p.pos} • ${p.games} games • #${p.rank} overall • ${p.pos}${p.pos_rank}</div></div>
- <div class="ratingHero"><div class="ratingBox"><div class="big blue">${p.mania}</div><small>MANIA RATING<br>${tier(p.mania)}</small></div>
- <div class="ratingBox"><div class="big green">${p.start}</div><small>WEEK ${META.next_week} START<br>vs ${p.opp}</small></div></div></div>
- ${warning}
- <div class="stats">${statCard(p.m.ppr,"PPR / Game")}${statCard(p.m.tgt,"Targets / Game")}${statCard(p.m.rec,"Receptions / Game")}${statCard(p.m.scrim,"Scrimmage Yds / G")}${statCard(share+"%",shareName)}${statCard(p.m.snap+"%","Snap Share")}</div>
- <div class="two">
-  <div class="card"><h3>MANIA PROFILE</h3><div class="bars">${bars}</div><p class="why">Mania is position-specific. WR/TE carries have no direct rating weight. RB targets and receptions receive extra PPR value. Missed games are excluded; clearly shortened games are automatically downweighted.</p></div>
-  <div class="card"><h3>${roomLabel}</h3><div class="roomrow muted"><span>Player</span><span>Mania</span><span>${p.pos==="RB"?"Opp/G":"Tgt/G"}</span><span>Share</span></div>${room}</div>
- </div>
- <div class="two" style="margin-top:14px">
-  <div class="card"><h3>WEEK ${META.next_week} MATCHUP • ${p.opp}</h3>
-   <div style="font-size:32px;font-weight:950" class="${p.matchup_adj>=0?"good":"bad"}">${p.matchup_adj>=0?"+":""}${p.matchup_adj}</div>
-   <p class="why">Matchup adjustment from similar ${p.pos}s who already faced ${p.opp}. It is deliberately dampened early in the season. Recent-role adjustment: ${p.trend_adj>=0?"+":""}${p.trend_adj}.</p>
-   <div class="roomrow muted"><span>Similar player</span><span>Match</span><span>Normal</span><span>vs ${p.opp}</span></div>${sims}
-  </div>
-  <div class="card"><h3>ADVANCED USAGE</h3>
-   ${statCard(p.pos==="RB"?p.m.car:p.m.recy,p.pos==="RB"?"Carries / G":"Receiving Yds / G")}
-   ${statCard(p.pos==="RB"?p.m.rzc:p.m.rzt,p.pos==="RB"?"RZ Carries / G":"RZ Targets / G")}
-   ${statCard(p.pos==="RB"?p.m.gl:p.m.ashare,p.pos==="RB"?"Goal-Line Carries / G":"Air Yard Share %")}
-  </div>
- </div>
- <div class="card" style="margin-top:14px"><h3>GAME LOG • CUSTOM VIEW</h3>
- <div class="custom" id="customLine">Official Mania: <b>${p.mania}</b>. Uncheck a game to inspect the selected-game production; official rankings never change.</div>
- <div class="tablewrap"><table><thead><tr><th>Use</th><th>Game</th><th>Tgt</th><th>Rec</th><th>Rec Yd</th><th>Car</th><th>Rush Yd</th><th>Snap</th><th>PPR</th></tr></thead><tbody>${logs}</tbody></table></div></div>`;
-
- $("backRanks").onclick=()=>showView("rankings");
- $("profileBody").querySelectorAll(".roomrow b[data-id]").forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));
- $("profileBody").querySelectorAll(".gameToggle").forEach(x=>x.onchange=()=>customProfile(p));
-}
-function customProfile(p){
- const checked=[...document.querySelectorAll(".gameToggle:checked")].map(x=>p.logs[Number(x.dataset.i)]);
- if(!checked.length){$("customLine").innerHTML=`Official Mania: <b>${p.mania}</b>. Select at least one game.`;return}
- const avg=k=>checked.reduce((s,x)=>s+Number(x[k]||0),0)/checked.length;
- $("customLine").innerHTML=`Official Mania: <b>${p.mania}</b> • Selected ${checked.length} game${checked.length===1?"":"s"}: <b>${fmt(avg("ppr"))} PPR/G</b>, ${fmt(avg("tgt"))} targets/G, ${fmt(avg("car"))} carries/G, ${fmt(avg("snap"))}% snaps. <span class="muted">This sandbox does not alter official Mania.</span>`;
-}
-
-function renderCompare(){
- if(!A||!B)return;
- const better=A.mania>B.mania?A:B, starter=A.start>B.start?A:B;
- const rows=[
-  ["Mania Rating",A.mania,B.mania],["Week Start",A.start,B.start],["PPR/G",A.m.ppr,B.m.ppr],
-  ["Targets/G",A.m.tgt,B.m.tgt],["Receptions/G",A.m.rec,B.m.rec],["Scrimmage Yds/G",A.m.scrim,B.m.scrim],
-  ["Snap %",A.m.snap,B.m.snap]
- ];
- $("compareBody").innerHTML=`<div class="versus">
- <div class="card cmpHero"><h2>${A.name}</h2><div class="muted">${A.team} • ${A.pos}</div><div class="cmpBig blue">${A.mania}</div><div>MANIA</div><div class="cmpBig green" style="font-size:30px;margin-top:10px">${A.start}</div><div>WEEK ${META.next_week} START</div></div>
- <div class="vs">VS</div>
- <div class="card cmpHero"><h2>${B.name}</h2><div class="muted">${B.team} • ${B.pos}</div><div class="cmpBig blue">${B.mania}</div><div>MANIA</div><div class="cmpBig green" style="font-size:30px;margin-top:10px">${B.start}</div><div>WEEK ${META.next_week} START</div></div></div>
- <div class="two" style="margin-top:14px"><div class="card"><h3>WHO'S BETTER OVERALL?</h3><h2>${better.name}</h2><p class="why">${better.mania} Mania Rating. This is the season profile, independent of this week's matchup.</p></div>
- <div class="card"><h3>WHO SHOULD I START — WEEK ${META.next_week}?</h3><h2>${starter.name}</h2><p class="why">${starter.start} Start Rating. Matchup: ${starter.matchup_adj>=0?"+":""}${starter.matchup_adj}; recent role: ${starter.trend_adj>=0?"+":""}${starter.trend_adj}.</p></div></div>
- <div class="card" style="margin-top:14px"><div class="tablewrap"><table><thead><tr><th>${A.name}</th><th style="text-align:center">Metric</th><th>${B.name}</th></tr></thead><tbody>
- ${rows.map(([k,a,b])=>`<tr><td class="${a>b?"good":""}">${a}</td><td style="text-align:center">${k}</td><td class="${b>a?"good":""}">${b}</td></tr>`).join("")}
- </tbody></table></div></div>`;
-}
-</script>
-</body></html>'''
-
-html = html.replace("__PAYLOAD__", payload).replace("__META__", meta)
-
+html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("__REFS__", refs_json)
 os.makedirs("public", exist_ok=True)
-with open("public/index.html", "w", encoding="utf-8") as f:
-    f.write(html)
-
+with open("public/index.html","w",encoding="utf-8") as f:f.write(html)
 print("7. FANTASY MANIA built successfully.")
 print(f"   {len(players)} players | Through Week {max_week} | Week {next_week} outlook")
 print("   Output: public/index.html")
