@@ -2,24 +2,23 @@ import json
 import os
 import pandas as pd
 
-print("1. Fetching current 2026 NFL data from nflverse...")
+SEASON = 2026
+BASE = "https://github.com/nflverse/nflverse-data/releases/download"
 
-# Download live 2026 stats and snap counts
-stats_url = "https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_2026.csv"
-snaps_url = "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv"
+print(f"1. Fetching {SEASON} NFL data from nflverse...")
 
-# Fallback in case 2026 snap release name differs
-try:
-  stats_df = pd.read_csv(stats_url, low_memory=False)
-except Exception:
-  stats_url = "https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_2025.csv"
-  stats_df = pd.read_csv(stats_url, low_memory=False)
+stats_url = f"{BASE}/stats_player/stats_player_week_{SEASON}.csv"
+snaps_url = f"{BASE}/snap_counts/snap_counts_{SEASON}.csv"
 
-try:
-  snaps_df = pd.read_csv(snaps_url, low_memory=False)
-except Exception:
-  snaps_url = "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv"
-  snaps_df = pd.read_csv(snaps_url, low_memory=False)
+# No silent fallbacks: if this fails, the build fails loudly
+stats_df = pd.read_csv(stats_url, low_memory=False)
+snaps_df = pd.read_csv(snaps_url, low_memory=False)
+
+# Regular season only
+if "season_type" in stats_df.columns:
+    stats_df = stats_df[stats_df["season_type"] == "REG"]
+if "game_type" in snaps_df.columns:
+    snaps_df = snaps_df[snaps_df["game_type"] == "REG"]
 
 # Clean column headers
 name_col = (
@@ -56,6 +55,7 @@ stats_clean.rename(
 snaps_clean = snaps_df[
     ["player", "team", "week", "offense_snaps", "offense_pct"]
 ].copy()
+snaps_clean = snaps_clean.drop_duplicates(subset=["player", "team", "week"])
 
 merged = pd.merge(
     stats_clean,
@@ -72,13 +72,7 @@ merged["targets"] = merged["targets"].fillna(0)
 merged["carries"] = merged["carries"].fillna(0)
 merged["fantasy_points_ppr"] = merged["fantasy_points_ppr"].fillna(0.0)
 
-# Include any player with at least 1 game logged this season
-player_games = merged.groupby("player_id")["week"].count()
-merged = merged[
-    merged["player_id"].isin(player_games[player_games >= 1].index)
-].copy()
-
-print("2. Calculating 2026 season metrics & depth chart roles...")
+print("2. Calculating season metrics & depth chart roles...")
 
 season_summary = (
     merged.groupby(["player_id", "player_name", "team", "position"])
@@ -110,37 +104,41 @@ season_summary["role"] = (
     season_summary["position"] + season_summary["rank"].astype(str)
 )
 
+# Show top scorers first
+season_summary = season_summary.sort_values("ppr_ppg", ascending=False)
+
 players_list = []
 for _, row in season_summary.iterrows():
-  p_id = row["player_id"]
-  p_logs = merged[merged["player_id"] == p_id].sort_values("week")
+    p_id = row["player_id"]
+    p_logs = merged[merged["player_id"] == p_id].sort_values("week")
 
-  history = []
-  for _, g in p_logs.iterrows():
-    history.append({
-        "week": int(g["week"]),
-        "targets": int(g["targets"]),
-        "carries": int(g["carries"]),
-        "snaps": int(g["offense_snaps"]),
-        "snap_pct": round(float(g["offense_pct"]) * 100, 1),
-        "ppr": round(float(g["fantasy_points_ppr"]), 1),
+    history = []
+    for _, g in p_logs.iterrows():
+        history.append({
+            "week": int(g["week"]),
+            "targets": int(g["targets"]),
+            "carries": int(g["carries"]),
+            "snaps": int(g["offense_snaps"]),
+            "snap_pct": round(float(g["offense_pct"]) * 100, 1),
+            "ppr": round(float(g["fantasy_points_ppr"]), 1),
+        })
+
+    players_list.append({
+        "id": row["player_id"],
+        "name": row["player_name"],
+        "team": row["team"],
+        "pos": row["position"],
+        "role": row["role"],
+        "games": int(row["games"]),
+        "targets_pg": round(float(row["targets_pg"]), 1),
+        "carries_pg": round(float(row["carries_pg"]), 1),
+        "snap_pct": round(float(row["snap_pct"]) * 100, 1),
+        "ppr_ppg": round(float(row["ppr_ppg"]), 1),
+        "game_logs": history,
     })
 
-  players_list.append({
-      "id": row["player_id"],
-      "name": row["player_name"],
-      "team": row["team"],
-      "pos": row["position"],
-      "role": row["role"],
-      "games": int(row["games"]),
-      "targets_pg": round(float(row["targets_pg"]), 1),
-      "carries_pg": round(float(row["carries_pg"]), 1),
-      "snap_pct": round(float(row["snap_pct"]) * 100, 1),
-      "ppr_ppg": round(float(row["ppr_ppg"]), 1),
-      "game_logs": history,
-  })
-
-print(f"3. Building app with {len(players_list)} active 2026 players...")
+max_week = int(merged["week"].max())
+print(f"3. Building app with {len(players_list)} players through Week {max_week}...")
 
 json_payload = json.dumps(players_list)
 
@@ -208,7 +206,9 @@ html_code = (
 <div class="container">
   <header>
     <h1>Fantasy Usage & Role Analyzer</h1>
-    <p class="sub">2026 NFL Season &bull; Auto-Updated Weekly</p>
+    <p class="sub">2026 NFL Season &bull; Through Week """
+    + str(max_week)
+    + """ &bull; Auto-Updated Weekly</p>
   </header>
   <div class="tabs">
     <button class="tab-btn active" id="singleTabBtn" onclick="switchMode('single')">Single Player Profile</button>
@@ -299,6 +299,7 @@ function renderComparison() {
   if (!compareA || !compareB) return;
   const cmp = (a, b, f='') => a > b ? [`<span class="winner">${a}${f}</span>`, `<span class="loser">${b}${f}</span>`] : (b > a ? [`<span class="loser">${a}${f}</span>`, `<span class="winner">${b}${f}</span>`] : [`${a}${f}`, `${b}${f}`]);
   const [tA, tB] = cmp(compareA.targets_pg, compareB.targets_pg);
+  const [cA, cB] = cmp(compareA.carries_pg, compareB.carries_pg);
   const [sA, sB] = cmp(compareA.snap_pct, compareB.snap_pct, '%');
   const [pA, pB] = cmp(compareA.ppr_ppg, compareB.ppr_ppg);
   document.getElementById('compareContainer').innerHTML = `
@@ -308,12 +309,14 @@ function renderComparison() {
         <div style="text-align:center; border-right:1px solid var(--border); padding-right:16px;">
           <h3>${compareA.name}</h3><p style="color:#8b949e; margin-bottom:14px;">${compareA.team} - ${compareA.role}</p>
           <div class="stat-box" style="margin-bottom:10px;"><div class="label">Targets / Game</div><div class="val">${tA}</div></div>
+          <div class="stat-box" style="margin-bottom:10px;"><div class="label">Carries / Game</div><div class="val">${cA}</div></div>
           <div class="stat-box" style="margin-bottom:10px;"><div class="label">Snap Share</div><div class="val">${sA}</div></div>
           <div class="stat-box"><div class="label">PPR PPG</div><div class="val">${pA}</div></div>
         </div>
         <div style="text-align:center; padding-left:16px;">
           <h3>${compareB.name}</h3><p style="color:#8b949e; margin-bottom:14px;">${compareB.team} - ${compareB.role}</p>
           <div class="stat-box" style="margin-bottom:10px;"><div class="label">Targets / Game</div><div class="val">${tB}</div></div>
+          <div class="stat-box" style="margin-bottom:10px;"><div class="label">Carries / Game</div><div class="val">${cB}</div></div>
           <div class="stat-box" style="margin-bottom:10px;"><div class="label">Snap Share</div><div class="val">${sB}</div></div>
           <div class="stat-box"><div class="label">PPR PPG</div><div class="val">${pB}</div></div>
         </div>
@@ -327,6 +330,6 @@ function renderComparison() {
 
 os.makedirs("public", exist_ok=True)
 with open("public/index.html", "w") as f:
-  f.write(html_code)
+    f.write(html_code)
 
-print("4. Successfully generated public/index.html for 2026!")
+print("4. Successfully generated public/index.html!")
