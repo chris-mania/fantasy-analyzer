@@ -1,0 +1,38 @@
+name: Autonomous Weekly Fantasy Refresh
+
+on:
+  schedule:
+    # Runs every Tuesday at 9:00 AM UTC (after Monday Night Football)
+    - cron: '0 9 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          pip install pandas requests
+
+      - name: Run Build Script
+        run: |
+          python build.py
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
