@@ -2,14 +2,24 @@ import json
 import os
 import pandas as pd
 
-print("1. Fetching latest NFL data from nflverse...")
+print("1. Fetching current 2026 NFL data from nflverse...")
 
-# Download official current stats & snap percentages
-stats_url = "https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_2024.csv"
-snaps_url = "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2024.csv"
+# Download live 2026 stats and snap counts
+stats_url = "https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_2026.csv"
+snaps_url = "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv"
 
-stats_df = pd.read_csv(stats_url, low_memory=False)
-snaps_df = pd.read_csv(snaps_url, low_memory=False)
+# Fallback in case 2026 snap release name differs
+try:
+  stats_df = pd.read_csv(stats_url, low_memory=False)
+except Exception:
+  stats_url = "https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_2025.csv"
+  stats_df = pd.read_csv(stats_url, low_memory=False)
+
+try:
+  snaps_df = pd.read_csv(snaps_url, low_memory=False)
+except Exception:
+  snaps_url = "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2025.csv"
+  snaps_df = pd.read_csv(snaps_url, low_memory=False)
 
 # Clean column headers
 name_col = (
@@ -42,7 +52,7 @@ stats_clean.rename(
     columns={name_col: "player_name", team_col: "team"}, inplace=True
 )
 
-# Clean snaps
+# Clean snap stats
 snaps_clean = snaps_df[
     ["player", "team", "week", "offense_snaps", "offense_pct"]
 ].copy()
@@ -62,13 +72,13 @@ merged["targets"] = merged["targets"].fillna(0)
 merged["carries"] = merged["carries"].fillna(0)
 merged["fantasy_points_ppr"] = merged["fantasy_points_ppr"].fillna(0.0)
 
-# Only keep active players with at least 2 games
+# Include any player with at least 1 game logged this season
 player_games = merged.groupby("player_id")["week"].count()
 merged = merged[
-    merged["player_id"].isin(player_games[player_games >= 2].index)
+    merged["player_id"].isin(player_games[player_games >= 1].index)
 ].copy()
 
-print("2. Aggregating season averages and roles...")
+print("2. Calculating 2026 season metrics & depth chart roles...")
 
 season_summary = (
     merged.groupby(["player_id", "player_name", "team", "position"])
@@ -130,7 +140,7 @@ for _, row in season_summary.iterrows():
       "game_logs": history,
   })
 
-print(f"3. Building web app with {len(players_list)} players...")
+print(f"3. Building app with {len(players_list)} active 2026 players...")
 
 json_payload = json.dumps(players_list)
 
@@ -140,7 +150,7 @@ html_code = (
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fantasy Volume & Role Analyzer</title>
+  <title>Fantasy Volume & Role Analyzer (2026)</title>
   <style>
     :root {
       --bg: #0d1117; --card-bg: #161b22; --border: #30363d;
@@ -198,7 +208,7 @@ html_code = (
 <div class="container">
   <header>
     <h1>Fantasy Usage & Role Analyzer</h1>
-    <p class="sub">Autonomous NFL Volume Engine &bull; Auto-Updated Weekly</p>
+    <p class="sub">2026 NFL Season &bull; Auto-Updated Weekly</p>
   </header>
   <div class="tabs">
     <button class="tab-btn active" id="singleTabBtn" onclick="switchMode('single')">Single Player Profile</button>
@@ -206,7 +216,7 @@ html_code = (
   </div>
   <div id="singleSection">
     <div class="search-box">
-      <input type="text" id="playerInput" placeholder="Search NFL player (e.g., CeeDee Lamb, Justin Jefferson, Saquon Barkley)..." oninput="handleSearch(this.value, 'single')" />
+      <input type="text" id="playerInput" placeholder="Search 2026 player..." oninput="handleSearch(this.value, 'single')" />
       <div class="autocomplete-list" id="singleDropdown"></div>
     </div>
     <div id="profileContainer"></div>
@@ -231,8 +241,7 @@ const database = """
     + """;
 let compareA = null, compareB = null;
 window.onload = () => {
-  const def = database.find(p => p.name === "CeeDee Lamb") || database[0];
-  if (def) renderProfile(def);
+  if (database.length > 0) renderProfile(database[0]);
 };
 function switchMode(m) {
   document.getElementById('singleSection').style.display = m === 'single' ? 'block' : 'none';
@@ -282,7 +291,7 @@ function renderProfile(p) {
         <div class="stat-box"><div class="label">Average Snap Share</div><div class="val">${p.snap_pct}%</div><div class="sub-val">Field Involvement Rate</div></div>
         <div class="stat-box"><div class="label">PPR Points / Game</div><div class="val" style="color:var(--green);">${p.ppr_ppg}</div><div class="sub-val">Per Game Fantasy Average</div></div>
       </div>
-      <h3 style="color:var(--text-bright); margin-bottom: 12px;">Weekly Usage History</h3>
+      <h3 style="color:var(--text-bright); margin-bottom: 12px;">2026 Game Logs</h3>
       <table><thead><tr><th>Game</th><th>Targets</th><th>Carries</th><th>Snaps</th><th>Snap %</th><th>PPR Pts</th></tr></thead><tbody>${logsHtml}</tbody></table>
     </div>`;
 }
@@ -316,9 +325,8 @@ function renderComparison() {
 </html>"""
 )
 
-# Output into public web directory
 os.makedirs("public", exist_ok=True)
 with open("public/index.html", "w") as f:
   f.write(html_code)
 
-print("4. Successfully generated public/index.html!")
+print("4. Successfully generated public/index.html for 2026!")
