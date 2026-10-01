@@ -1,245 +1,969 @@
-import json, math, os, re
+import json
+import math
+import os
+import warnings
+from urllib.error import HTTPError
+
 import numpy as np
 import pandas as pd
 
-SEASON=2026
-BASE='https://github.com/nflverse/nflverse-data/releases/download'
-POSITIONS=['WR','RB','TE']
-QUALIFY_SNAPS=30
-BASELINE=50.0
+warnings.filterwarnings("ignore")
 
-print('1. Loading nflverse player stats, snaps, and schedule...')
-stats=pd.read_csv(f'{BASE}/stats_player/stats_player_week_{SEASON}.csv',low_memory=False)
-snaps=pd.read_csv(f'{BASE}/snap_counts/snap_counts_{SEASON}.csv',low_memory=False)
-sched=pd.read_csv(f'{BASE}/schedules/games.csv',low_memory=False)
-if 'season_type' in stats: stats=stats[stats.season_type.eq('REG')]
-if 'game_type' in snaps: snaps=snaps[snaps.game_type.eq('REG')]
-sched=sched[(sched.season==SEASON) & (sched.game_type.eq('REG') if 'game_type' in sched else True)].copy()
+# ============================================================
+# FANTASY MANIA — 2026
+# One-file autonomous builder for GitHub Pages
+# ============================================================
 
-name_col='player_display_name' if 'player_display_name' in stats else 'player_name'
-team_col='team' if 'team' in stats else 'recent_team'
-needed=['targets','receptions','receiving_yards','receiving_tds','receiving_air_yards','carries','rushing_yards','rushing_tds','fantasy_points_ppr']
-for c in needed:
-    if c not in stats: stats[c]=0
-    stats[c]=pd.to_numeric(stats[c],errors='coerce').fillna(0)
+SEASON = 2026
+BASE = "https://github.com/nflverse/nflverse-data/releases/download"
 
-# Team-week denominators: shares only use games in which the player actually appeared.
-tw=(stats.groupby([team_col,'week'])[['targets','carries','receiving_air_yards']].sum().reset_index()
-    .rename(columns={team_col:'team','targets':'team_targets','carries':'team_carries','receiving_air_yards':'team_air'}))
-keep=['player_id',name_col,team_col,'position','week']+needed
-s=stats[stats.position.isin(POSITIONS)][keep].copy().rename(columns={name_col:'player_name',team_col:'team'})
-s=s.merge(tw,on=['team','week'],how='left')
+# Core tuning
+QUALIFY_SNAP = 0.30
+PARTIAL_RATIO = 0.55       # <55% of a player's normal snap share = likely shortened game
+PARTIAL_MIN_NORMAL = 0.45  # only detect shortened games for players with a real normal role
+MIN_PARTIAL_WEIGHT = 0.20
+MATCHUP_CAP = 6.0          # Start Rating can move at most +/- 6 from matchup
+RECENT_CAP = 2.5           # recent role trend can move at most +/- 2.5
+CONFIDENCE_SHRINK = 0.12   # modest sample shrink, not a giant injury punishment
 
-# Snap merge. Missing snaps remain NaN, never fake 0%.
-def norm_name(x):
-    x=str(x).lower(); x=re.sub(r'\b(jr|sr|ii|iii|iv)\.?\b','',x); return re.sub(r'[^a-z0-9]','',x)
-s['norm_name']=s.player_name.map(norm_name)
-sn=snaps.copy()
-sn['norm_name']=sn.player.map(norm_name)
-for c in ['offense_snaps','offense_pct']:
-    sn[c]=pd.to_numeric(sn[c],errors='coerce')
-sn=sn[['norm_name','team','week','offense_snaps','offense_pct']].drop_duplicates(['norm_name','team','week'])
-m=s.merge(sn,on=['norm_name','team','week'],how='left')
-# impossible joins are missing, not zero
-bad=((m.targets+m.carries)>0)&(m.offense_pct.fillna(0)<=0)
-m.loc[bad,['offense_snaps','offense_pct']]=np.nan
-
-print('2. Loading red-zone / goal-line play-by-play...')
-rz_ok=True
-try:
-    want=['season_type','week','posteam','yardline_100','pass_attempt','rush_attempt','receiver_player_id','rusher_player_id']
-    urls=[f'{BASE}/pbp/play_by_play_{SEASON}.csv.gz',f'{BASE}/pbp/play_by_play_{SEASON}.csv']
-    pbp=None
-    for u in urls:
-        try:
-            pbp=pd.read_csv(u,usecols=lambda c:c in want,low_memory=False); break
-        except Exception: pass
-    if pbp is None: raise RuntimeError('PBP file unavailable')
-    if 'season_type' in pbp: pbp=pbp[pbp.season_type.eq('REG')]
-    rzpbp=pbp[pbp.yardline_100.le(20)].copy()
-    rec=rzpbp[(rzpbp.pass_attempt.eq(1)) & rzpbp.receiver_player_id.notna()][['receiver_player_id','week']].copy()
-    rec.columns=['player_id','week']; rec['rz_targets']=1
-    rus=rzpbp[(rzpbp.rush_attempt.eq(1)) & rzpbp.rusher_player_id.notna()][['rusher_player_id','week','yardline_100']].copy()
-    rus.columns=['player_id','week','yardline_100']; rus['rz_carries']=1; rus['gl_carries']=rus.yardline_100.le(5).astype(int)
-    rz=pd.concat([rec.assign(rz_carries=0,gl_carries=0),rus.assign(rz_targets=0)],ignore_index=True)
-    rz=rz.groupby(['player_id','week'])[['rz_targets','rz_carries','gl_carries']].sum().reset_index()
-    m=m.merge(rz,on=['player_id','week'],how='left')
-except Exception as e:
-    print('WARNING: PBP unavailable; red-zone fields disabled:',e); rz_ok=False
-for c in ['rz_targets','rz_carries','gl_carries']:
-    if c not in m: m[c]=0
-    m[c]=m[c].fillna(0)
-
-# Per-game shares. This fixes the Nico-type denominator problem.
-def safe_div(a,b): return np.where(pd.to_numeric(b,errors='coerce').fillna(0)>0,a/b*100,0)
-m['target_share']=safe_div(m.targets,m.team_targets)
-m['air_share']=safe_div(m.receiving_air_yards,m.team_air)
-m['touches']=m.targets+m.carries
-m['team_opps']=m.team_targets+m.team_carries
-m['touch_share']=safe_div(m.touches,m.team_opps)
-m['total_yards']=m.receiving_yards+m.rushing_yards
-m['tds']=m.receiving_tds+m.rushing_tds
-
-# Participation intelligence: typical role + downweight extreme abbreviated games.
-print('3. Detecting low-participation games and calculating player profiles...')
-m['snap_pct']=m.offense_pct*100
-m['typical_snap']=m.groupby('player_id').snap_pct.transform('median')
-m['participation_ratio']=m.snap_pct/m.typical_snap.replace(0,np.nan)
-# Conservative: established role >=50%; game <=50% of normal; at least 2 usable snap games.
-snap_n=m.groupby('player_id').snap_pct.transform('count')
-m['low_participation']=(snap_n>=2)&(m.typical_snap>=50)&(m.participation_ratio<=.50)&m.snap_pct.notna()
-m['mania_game_weight']=1.0
-m.loc[m.low_participation,'mania_game_weight']=m.loc[m.low_participation,'participation_ratio'].clip(.10,.50)
-
-# Opportunity points are descriptive, not a separate public score.
-m['opp_pts']=1.55*m.targets+.65*m.carries+1.35*m.rz_targets+.45*m.rz_carries+1.75*m.gl_carries
-
-def wavg(df,col):
-    z=df[[col,'mania_game_weight']].dropna()
-    return np.average(z[col],weights=z.mania_game_weight) if len(z) else np.nan
-
-rows=[]
-for keys,d in m.groupby(['player_id','player_name','team','position'],dropna=False):
-    pid,name,team,pos=keys; games=len(d); w=d.mania_game_weight.sum()
-    r={'player_id':pid,'player_name':name,'team':team,'position':pos,'games':games,
-       'targets_pg':wavg(d,'targets'),'receptions_pg':wavg(d,'receptions'),'carries_pg':wavg(d,'carries'),
-       'touches_pg':wavg(d,'touches'),'rec_yards_pg':wavg(d,'receiving_yards'),'rush_yards_pg':wavg(d,'rushing_yards'),
-       'total_yards_pg':wavg(d,'total_yards'),'td_pg':wavg(d,'tds'),'ppr_ppg':wavg(d,'fantasy_points_ppr'),
-       'target_share':wavg(d,'target_share'),'touch_share':wavg(d,'touch_share'),'air_share':wavg(d,'air_share'),
-       'snap_pct':wavg(d,'snap_pct'),'typical_snap':d.snap_pct.median(skipna=True),'rz_targets_pg':wavg(d,'rz_targets'),
-       'rz_carries_pg':wavg(d,'rz_carries'),'gl_carries_pg':wavg(d,'gl_carries'),'opp_pg':wavg(d,'opp_pts'),
-       'actual_ppr_pg':d.fantasy_points_ppr.mean(),'low_games':int(d.low_participation.sum()),'weight_games':w}
-    rows.append(r)
-g=pd.DataFrame(rows)
-
-# Position-relative percentiles.
-def percentile_by_pos(df,col):
-    out=pd.Series(np.nan,index=df.index,dtype=float)
-    for pos,grp in df.groupby('position'):
-        vals=grp[col]
-        ref=vals[vals.notna()]
-        if len(ref): out.loc[grp.index]=vals.rank(pct=True,method='average')*100
-    return out
-metrics=['targets_pg','receptions_pg','carries_pg','touches_pg','rec_yards_pg','rush_yards_pg','total_yards_pg','td_pg','ppr_ppg','target_share','touch_share','air_share','snap_pct','typical_snap','rz_targets_pg','rz_carries_pg','gl_carries_pg','opp_pg']
-for c in metrics: g['p_'+c]=percentile_by_pos(g,c).fillna(50)
-
-# Position-specific Mania Rating. Production matters most; volume/role prevents TD luck from dominating.
-WEIGHTS={
-'WR':{'ppr_ppg':.24,'rec_yards_pg':.12,'receptions_pg':.08,'targets_pg':.13,'target_share':.10,'air_share':.07,'typical_snap':.07,'rz_targets_pg':.07,'td_pg':.06,'opp_pg':.06},
-'TE':{'ppr_ppg':.25,'rec_yards_pg':.11,'receptions_pg':.09,'targets_pg':.14,'target_share':.12,'air_share':.05,'typical_snap':.08,'rz_targets_pg':.08,'td_pg':.05,'opp_pg':.03},
-'RB':{'ppr_ppg':.23,'rush_yards_pg':.10,'rec_yards_pg':.06,'carries_pg':.13,'targets_pg':.09,'touches_pg':.10,'touch_share':.10,'typical_snap':.06,'rz_carries_pg':.05,'gl_carries_pg':.04,'td_pg':.04}
+# Position-specific Mania bucket weights
+BUCKET_W = {
+    "RB": {"production": .30, "opportunity": .30, "role": .20, "high_value": .125, "efficiency": .075},
+    "WR": {"production": .30, "opportunity": .30, "role": .225, "high_value": .10, "efficiency": .075},
+    "TE": {"production": .30, "opportunity": .30, "role": .225, "high_value": .10, "efficiency": .075},
 }
-def raw_rating(r):
-    w=WEIGHTS[r.position]; return sum(w[k]*r['p_'+k] for k in w)/sum(w.values())
-g['raw_mania']=g.apply(raw_rating,axis=1)
-# Confidence shrinkage: DNPs don't become zeroes; tiny samples are simply less certain.
-# 1 GP=.48, 2=.70, 3=.82, 4=.90, 5=.95, 6+=.98
-conf_map={1:.48,2:.70,3:.82,4:.90,5:.95}
-g['confidence']=g.games.map(conf_map).fillna(.98)
-g['mania_rating']=g.confidence*g.raw_mania+(1-g.confidence)*BASELINE
 
-# Rank Mania Rating across all skill players and within position.
-g['overall_rank']=g.mania_rating.rank(ascending=False,method='min').astype(int)
-g['pos_rank']=g.groupby('position').mania_rating.rank(ascending=False,method='min').astype(int)
-g['team_pos_rank']=g.groupby(['team','position']).mania_rating.rank(ascending=False,method='min').astype(int)
+def safe_num(s):
+    return pd.to_numeric(s, errors="coerce").fillna(0)
 
-# Trend: weighted opportunity over latest up-to-3 appearances vs prior appearances.
-def trend_for(pid,team):
-    d=m[(m.player_id==pid)&(m.team==team)].sort_values('week')
-    if len(d)<4:return 0.0
-    recent=d.tail(3).opp_pts.mean(); prior=d.iloc[:-3].opp_pts.mean()
-    return float(recent-prior) if pd.notna(prior) else 0.0
-g['trend']=g.apply(lambda r:trend_for(r.player_id,r.team),axis=1)
+def weighted_mean(values, weights):
+    v = np.asarray(values, dtype=float)
+    w = np.asarray(weights, dtype=float)
+    ok = np.isfinite(v) & np.isfinite(w) & (w > 0)
+    return float(np.average(v[ok], weights=w[ok])) if ok.any() else 0.0
 
-# Upcoming schedule.
-max_week=int(m.week.max())
-future=sched[sched.week>max_week].sort_values('week')
-current_week=int(future.week.min()) if len(future) else max_week
-next_games=sched[sched.week.eq(current_week)].copy()
-opp={}
-for _,x in next_games.iterrows():
-    opp[str(x.home_team)]=(str(x.away_team),'vs')
-    opp[str(x.away_team)]=(str(x.home_team),'@')
+def weighted_sum(values, weights):
+    v = np.asarray(values, dtype=float)
+    w = np.asarray(weights, dtype=float)
+    ok = np.isfinite(v) & np.isfinite(w) & (w > 0)
+    return float(np.sum(v[ok] * w[ok])) if ok.any() else 0.0
 
-# Defense matchup from 2026 historical player games: how opponent has allowed production to each position.
-# We infer player's opponent from schedule by team/week.
-week_opp={}
-for _,x in sched[sched.week<=max_week].iterrows():
-    week_opp[(str(x.home_team),int(x.week))]=str(x.away_team)
-    week_opp[(str(x.away_team),int(x.week))]=str(x.home_team)
-m['opponent']=[week_opp.get((str(t),int(w))) for t,w in zip(m.team,m.week)]
-def_pp=(m.groupby(['opponent','position']).agg(allowed_ppr=('fantasy_points_ppr','mean'),allowed_opp=('opp_pts','mean'),allowed_rz=('rz_targets','mean')).reset_index())
-# percentile matchup by position (higher = easier)
-for c in ['allowed_ppr','allowed_opp','allowed_rz']:
-    def_pp['p_'+c]=def_pp.groupby('position')[c].rank(pct=True)*100
-def matchup(team,pos):
-    o=opp.get(str(team))
-    if not o:return (None,50.0)
-    opponent=o[0]; q=def_pp[(def_pp.opponent==opponent)&(def_pp.position==pos)]
-    if q.empty:return (o,50.0)
-    rr=q.iloc[0]; score=.55*rr.p_allowed_ppr+.30*rr.p_allowed_opp+.15*rr.p_allowed_rz
-    return (o,float(score))
+def percentile_series(df, col, qualify_col="qualified"):
+    out = pd.Series(0.0, index=df.index)
+    for pos, grp in df.groupby("position"):
+        ref = np.sort(grp.loc[grp[qualify_col], col].replace([np.inf, -np.inf], np.nan).dropna().values)
+        if len(ref) == 0:
+            continue
+        vals = grp[col].fillna(0).values
+        pct = np.searchsorted(ref, vals, side="right") / len(ref) * 100
+        out.loc[grp.index] = np.clip(pct, 0, 100)
+    return out
 
-g['opponent']='';g['site']='';g['matchup_score']=50.0
-for i,r in g.iterrows():
-    o,ms=matchup(r.team,r.position)
-    if o:g.at[i,'opponent']=o[0];g.at[i,'site']=o[1]
-    g.at[i,'matchup_score']=ms
-# Early season: player quality dominates. Start Score = 75% Mania, 15% matchup, 10% trend percentile.
-g['trend_pct']=g.groupby('position').trend.rank(pct=True)*100
-g['start_score']=.75*g.mania_rating+.15*g.matchup_score+.10*g.trend_pct
-# Slightly reduce weekly certainty for tiny player samples without destroying talent rating.
-g['start_score']=g.start_score*(.90+.10*g.confidence)
-g['week_rank']=g.start_score.rank(ascending=False,method='min').astype(int)
-g['week_pos_rank']=g.groupby('position').start_score.rank(ascending=False,method='min').astype(int)
+def pct_rank_dict(values):
+    # Percentiles for a dict player_id -> value.
+    if not values:
+        return {}
+    ids = list(values)
+    arr = np.array([values[i] for i in ids], dtype=float)
+    order = np.argsort(arr)
+    ranks = np.empty(len(arr), dtype=float)
+    ranks[order] = np.arange(1, len(arr) + 1)
+    return {pid: float(ranks[i] / len(arr) * 100) for i, pid in enumerate(ids)}
 
-# Expected PPR is a transparent blend of player's weighted PPR and opponent allowance.
-league_pos=m.groupby('position').fantasy_points_ppr.mean().to_dict()
-def exp_ppr(r):
-    o=opp.get(str(r.team)); defense=None
-    if o:
-        q=def_pp[(def_pp.opponent==o[0])&(def_pp.position==r.position)]
-        if len(q): defense=float(q.iloc[0].allowed_ppr)
-    if defense is None:defense=float(league_pos.get(r.position,10))
-    return .72*r.ppr_ppg+.28*defense
-g['expected_ppr']=g.apply(exp_ppr,axis=1)
-g['luck']=g.actual_ppr_pg-g.expected_ppr
-g['flag']=np.where((g.games>=3)&(g.luck<=-3),'BUY LOW',np.where((g.games>=3)&(g.luck>=3),'SELL HIGH',''))
+def clamp(x, lo=0, hi=100):
+    return max(lo, min(hi, float(x)))
 
-print('4. Packaging players, game logs, teammate rooms, rankings...')
-players=[]
-for _,r in g.sort_values('mania_rating',ascending=False).iterrows():
-    d=m[(m.player_id==r.player_id)&(m.team==r.team)].sort_values('week')
-    logs=[]
+print("1. Loading current 2026 player stats + snaps...")
+stats_url = f"{BASE}/stats_player/stats_player_week_{SEASON}.csv"
+snaps_url = f"{BASE}/snap_counts/snap_counts_{SEASON}.csv"
+
+stats = pd.read_csv(stats_url, low_memory=False)
+snaps = pd.read_csv(snaps_url, low_memory=False)
+
+if "season_type" in stats.columns:
+    stats = stats[stats["season_type"].astype(str).eq("REG")].copy()
+if "game_type" in snaps.columns:
+    snaps = snaps[snaps["game_type"].astype(str).eq("REG")].copy()
+
+name_col = "player_display_name" if "player_display_name" in stats.columns else "player_name"
+team_col = "team" if "team" in stats.columns else "recent_team"
+
+# Stats we want. Missing columns become zero so nflverse schema changes don't kill the site.
+needed = [
+    "targets", "receptions", "receiving_yards", "receiving_tds",
+    "receiving_air_yards", "carries", "rushing_yards", "rushing_tds",
+    "fantasy_points_ppr"
+]
+for c in needed:
+    if c not in stats.columns:
+        stats[c] = 0
+    stats[c] = safe_num(stats[c])
+
+keep = ["player_id", name_col, team_col, "position", "week"] + needed
+s = stats[stats["position"].isin(["RB", "WR", "TE"])][keep].copy()
+s = s.rename(columns={name_col: "player_name", team_col: "team"})
+s["week"] = safe_num(s["week"]).astype(int)
+
+# Snap columns
+for c in ["offense_snaps", "offense_pct"]:
+    if c not in snaps.columns:
+        snaps[c] = 0
+    snaps[c] = safe_num(snaps[c])
+
+snap_name = "player" if "player" in snaps.columns else ("player_name" if "player_name" in snaps.columns else None)
+if snap_name:
+    sn = snaps[[snap_name, "team", "week", "offense_snaps", "offense_pct"]].copy()
+    sn = sn.rename(columns={snap_name: "snap_name"})
+    sn["week"] = safe_num(sn["week"]).astype(int)
+    sn = sn.drop_duplicates(["snap_name", "team", "week"])
+    merged = s.merge(
+        sn, left_on=["player_name", "team", "week"],
+        right_on=["snap_name", "team", "week"], how="left"
+    )
+else:
+    merged = s.copy()
+    merged["offense_snaps"] = 0
+    merged["offense_pct"] = 0
+
+merged["offense_snaps"] = safe_num(merged["offense_snaps"])
+merged["offense_pct"] = safe_num(merged["offense_pct"])
+
+max_week = int(merged["week"].max())
+print(f"   Stats loaded through Week {max_week}.")
+
+# ============================================================
+# RED ZONE / GOAL LINE DATA
+# ============================================================
+print("2. Loading red-zone usage...")
+rz_ok = True
+try:
+    want = [
+        "season_type", "week", "yardline_100", "pass_attempt", "rush_attempt",
+        "receiver_player_id", "rusher_player_id"
+    ]
+    pbp = None
+    pbp_urls = [
+        f"{BASE}/pbp/play_by_play_{SEASON}.csv.gz",
+        f"{BASE}/pbp/play_by_play_{SEASON}.csv",
+    ]
+    last_err = None
+    for u in pbp_urls:
+        try:
+            pbp = pd.read_csv(u, usecols=lambda c: c in want, low_memory=False)
+            break
+        except Exception as e:
+            last_err = e
+    if pbp is None:
+        raise last_err or RuntimeError("PBP unavailable")
+
+    if "season_type" in pbp.columns:
+        pbp = pbp[pbp["season_type"].astype(str).eq("REG")]
+    pbp["yardline_100"] = safe_num(pbp["yardline_100"])
+    pbp = pbp[(pbp["week"] <= max_week) & (pbp["yardline_100"] <= 20) & (pbp["yardline_100"] > 0)].copy()
+
+    rec = pbp[(safe_num(pbp["pass_attempt"]) == 1) & pbp["receiver_player_id"].notna()].copy()
+    rec["player_id"] = rec["receiver_player_id"]
+    rec["rz_targets"] = 1
+    rec["endzone_targets"] = (rec["yardline_100"] <= 10).astype(int)
+
+    rus = pbp[(safe_num(pbp["rush_attempt"]) == 1) & pbp["rusher_player_id"].notna()].copy()
+    rus["player_id"] = rus["rusher_player_id"]
+    rus["rz_carries"] = 1
+    rus["gl_carries"] = (rus["yardline_100"] <= 5).astype(int)
+
+    rz = pd.concat([
+        rec[["player_id", "week", "rz_targets", "endzone_targets"]],
+        rus[["player_id", "week", "rz_carries", "gl_carries"]],
+    ]).fillna(0)
+    rz = rz.groupby(["player_id", "week"], as_index=False).sum()
+    merged = merged.merge(rz, on=["player_id", "week"], how="left")
+except Exception as e:
+    print("   WARNING: PBP red-zone data unavailable; site will still build:", e)
+    rz_ok = False
+
+for c in ["rz_targets", "endzone_targets", "rz_carries", "gl_carries"]:
+    if c not in merged.columns:
+        merged[c] = 0
+    merged[c] = safe_num(merged[c])
+
+# ============================================================
+# TEAM-WEEK TOTALS — fixes the Nico/missed-games share problem
+# ============================================================
+print("3. Building active-game shares + injury-safe game weights...")
+
+team_week = (
+    stats.groupby([team_col, "week"], as_index=False)[
+        ["targets", "carries", "receiving_air_yards"]
+    ].sum()
+    .rename(columns={
+        team_col: "team",
+        "targets": "team_targets",
+        "carries": "team_carries",
+        "receiving_air_yards": "team_air",
+    })
+)
+team_week["week"] = safe_num(team_week["week"]).astype(int)
+merged = merged.merge(team_week, on=["team", "week"], how="left")
+
+for c in ["team_targets", "team_carries", "team_air"]:
+    merged[c] = safe_num(merged[c])
+
+merged["target_share_game"] = np.where(
+    merged["team_targets"] > 0, merged["targets"] / merged["team_targets"] * 100, 0
+)
+merged["air_share_game"] = np.where(
+    merged["team_air"] > 0, merged["receiving_air_yards"] / merged["team_air"] * 100, 0
+)
+merged["touch_share_game"] = np.where(
+    (merged["team_targets"] + merged["team_carries"]) > 0,
+    (merged["targets"] + merged["carries"]) /
+    (merged["team_targets"] + merged["team_carries"]) * 100, 0
+)
+
+# Infer normal participation from each player's higher-participation games.
+# This is automatic: no manual injury list.
+merged["normal_snap"] = 0.0
+merged["participation_ratio"] = 1.0
+merged["game_weight"] = 1.0
+merged["partial"] = False
+
+for pid, idx in merged.groupby("player_id").groups.items():
+    ix = list(idx)
+    snaps_pct = merged.loc[ix, "offense_pct"].values.astype(float)
+    positive = snaps_pct[snaps_pct > 0]
+    if len(positive):
+        # Upper-half median is robust to one early-exit game.
+        cutoff = np.median(positive)
+        upper = positive[positive >= cutoff]
+        normal = float(np.median(upper)) if len(upper) else float(np.max(positive))
+    else:
+        normal = 0.0
+
+    merged.loc[ix, "normal_snap"] = normal
+    if normal > 0:
+        ratio = np.clip(snaps_pct / normal, 0, 1.25)
+        merged.loc[ix, "participation_ratio"] = ratio
+        is_partial = (normal >= PARTIAL_MIN_NORMAL) & (ratio < PARTIAL_RATIO) & (snaps_pct > 0)
+        merged.loc[ix, "partial"] = is_partial
+        # Normal games = 1. Shortened games get 0.20–0.55-ish weight.
+        weights = np.where(is_partial, np.clip(ratio, MIN_PARTIAL_WEIGHT, 0.60), 1.0)
+        merged.loc[ix, "game_weight"] = weights
+
+# A stat row exists only for a played game. Missing weeks are not added as zeroes.
+# That's how DNPs stop hurting Mania.
+
+# ============================================================
+# PLAYER SUMMARY
+# ============================================================
+def summarize_player(d):
+    d = d.sort_values("week").copy()
+    w = d["game_weight"].values
+    games = len(d)
+    effective_games = float(np.sum(w))
+
+    # Weighted per-game production: partial games contribute less.
+    def wm(col):
+        return weighted_mean(d[col].values, w)
+
+    # Rate stats
+    targets_pg = wm("targets")
+    rec_pg = wm("receptions")
+    rec_yards_pg = wm("receiving_yards")
+    rec_td_pg = wm("receiving_tds")
+    carries_pg = wm("carries")
+    rush_yards_pg = wm("rushing_yards")
+    rush_td_pg = wm("rushing_tds")
+    ppr_pg = wm("fantasy_points_ppr")
+    snap_pct = wm("offense_pct") * 100
+    tgt_share = wm("target_share_game")
+    air_share = wm("air_share_game")
+    touch_share = wm("touch_share_game")
+    rz_t_pg = wm("rz_targets")
+    ez_t_pg = wm("endzone_targets")
+    rz_c_pg = wm("rz_carries")
+    gl_c_pg = wm("gl_carries")
+
+    scrim_pg = rec_yards_pg + rush_yards_pg
+    total_td_pg = rec_td_pg + rush_td_pg
+
+    # Efficiency
+    ypt = weighted_sum(d["receiving_yards"], w) / max(weighted_sum(d["targets"], w), 1)
+    catch_rate = weighted_sum(d["receptions"], w) / max(weighted_sum(d["targets"], w), 1) * 100
+    ypc = weighted_sum(d["rushing_yards"], w) / max(weighted_sum(d["carries"], w), 1)
+    opp = weighted_sum(d["carries"], w) + 2.0 * weighted_sum(d["targets"], w)
+    fp_per_opp = weighted_sum(d["fantasy_points_ppr"], w) / max(opp, 1)
+
+    # Recent role uses last 2 completed appearances vs full weighted role.
+    recent = d.tail(min(2, games))
+    recent_opp = float((recent["targets"] * 2.0 + recent["carries"]).mean()) if games else 0
+    season_opp = targets_pg * 2.0 + carries_pg
+    trend_pct = ((recent_opp / season_opp) - 1) * 100 if season_opp > 0 else 0
+
+    return {
+        "games": games,
+        "effective_games": effective_games,
+        "partial_games": int(d["partial"].sum()),
+        "targets_pg": targets_pg,
+        "rec_pg": rec_pg,
+        "rec_yards_pg": rec_yards_pg,
+        "rec_td_pg": rec_td_pg,
+        "carries_pg": carries_pg,
+        "rush_yards_pg": rush_yards_pg,
+        "rush_td_pg": rush_td_pg,
+        "scrim_pg": scrim_pg,
+        "td_pg": total_td_pg,
+        "ppr_pg": ppr_pg,
+        "snap_pct": snap_pct,
+        "target_share": tgt_share,
+        "air_share": air_share,
+        "touch_share": touch_share,
+        "rz_targets_pg": rz_t_pg,
+        "endzone_targets_pg": ez_t_pg,
+        "rz_carries_pg": rz_c_pg,
+        "gl_carries_pg": gl_c_pg,
+        "yards_per_target": ypt,
+        "catch_rate": catch_rate,
+        "yards_per_carry": ypc,
+        "fp_per_weighted_opp": fp_per_opp,
+        "trend_pct": trend_pct,
+    }
+
+rows = []
+for keys, d in merged.groupby(["player_id", "player_name", "team", "position"]):
+    pid, name, team, pos = keys
+    x = summarize_player(d)
+    x.update({"player_id": pid, "player_name": name, "team": team, "position": pos})
+    rows.append(x)
+
+g = pd.DataFrame(rows)
+g["qualified"] = (g["snap_pct"] >= QUALIFY_SNAP * 100) | (g["ppr_pg"] >= 6)
+
+# ============================================================
+# MANIA RATING — POSITION-SPECIFIC BUCKETS
+# ============================================================
+print("4. Calculating Mania Rating...")
+
+PCT_COLS = [
+    "ppr_pg", "scrim_pg", "rec_yards_pg", "td_pg",
+    "targets_pg", "rec_pg", "carries_pg",
+    "target_share", "air_share", "touch_share", "snap_pct",
+    "rz_targets_pg", "endzone_targets_pg", "rz_carries_pg", "gl_carries_pg",
+    "yards_per_target", "catch_rate", "yards_per_carry", "fp_per_weighted_opp"
+]
+for c in PCT_COLS:
+    g["pct_" + c] = percentile_series(g, c)
+
+def avg(*xs):
+    xs = [float(x) for x in xs if np.isfinite(x)]
+    return sum(xs) / len(xs) if xs else 0.0
+
+bucket_values = []
+for _, r in g.iterrows():
+    pos = r["position"]
+
+    if pos == "RB":
+        production = (
+            .55 * r["pct_ppr_pg"] +
+            .30 * r["pct_scrim_pg"] +
+            .15 * r["pct_td_pg"]
+        )
+        # Targets deliberately worth more than carries in PPR.
+        opportunity = (
+            .45 * r["pct_carries_pg"] +
+            .35 * r["pct_targets_pg"] +
+            .20 * r["pct_rec_pg"]
+        )
+        role = (
+            .60 * r["pct_touch_share"] +
+            .40 * r["pct_snap_pct"]
+        )
+        high_value = (
+            .40 * r["pct_rz_carries_pg"] +
+            .35 * r["pct_gl_carries_pg"] +
+            .25 * r["pct_rz_targets_pg"]
+        )
+        efficiency = (
+            .55 * r["pct_fp_per_weighted_opp"] +
+            .25 * r["pct_yards_per_carry"] +
+            .20 * r["pct_catch_rate"]
+        )
+    else:
+        # WR/TE: carries have ZERO direct weight.
+        production = (
+            .55 * r["pct_ppr_pg"] +
+            .30 * r["pct_rec_yards_pg"] +
+            .15 * r["pct_td_pg"]
+        )
+        opportunity = (
+            .50 * r["pct_targets_pg"] +
+            .30 * r["pct_rec_pg"] +
+            .20 * r["pct_target_share"]
+        )
+        role = (
+            .45 * r["pct_target_share"] +
+            .30 * r["pct_air_share"] +
+            .25 * r["pct_snap_pct"]
+        )
+        high_value = (
+            .60 * r["pct_rz_targets_pg"] +
+            .40 * r["pct_endzone_targets_pg"]
+        )
+        efficiency = (
+            .45 * r["pct_yards_per_target"] +
+            .30 * r["pct_catch_rate"] +
+            .25 * r["pct_fp_per_weighted_opp"]
+        )
+
+    W = BUCKET_W[pos]
+    raw = (
+        W["production"] * production +
+        W["opportunity"] * opportunity +
+        W["role"] * role +
+        W["high_value"] * high_value +
+        W["efficiency"] * efficiency
+    )
+
+    bucket_values.append((production, opportunity, role, high_value, efficiency, raw))
+
+g[["production", "opportunity", "role_score", "high_value", "efficiency", "raw_profile"]] = pd.DataFrame(
+    bucket_values, index=g.index
+)
+
+# Raw percentile blends tend to bunch in the 60s/70s.
+# Transform to an intuitive Madden-like 0-100 fantasy scale while keeping ordering intact.
+# 90+ remains rare; elite complete profiles can get there.
+g["mania_base"] = 45 + 0.52 * g["raw_profile"]
+
+# Confidence: modest shrink toward 72, NOT a huge punishment.
+# One strong game remains capable of a mid/high-80s score but is labeled low-confidence.
+season_games = max_week
+g["confidence"] = np.clip(g["effective_games"] / max(season_games, 1), 0, 1)
+shrink = (1 - g["confidence"]) * CONFIDENCE_SHRINK
+g["mania"] = g["mania_base"] * (1 - shrink) + 72 * shrink
+g["mania"] = g["mania"].clip(0, 99.5)
+
+# Rankings
+g["pos_rank"] = g.groupby("position")["mania"].rank(ascending=False, method="min").astype(int)
+g["overall_rank"] = g["mania"].rank(ascending=False, method="min").astype(int)
+g["team_pos_rank"] = g.groupby(["team", "position"])["mania"].rank(ascending=False, method="min").astype(int)
+
+def confidence_label(r):
+    if r["games"] >= max(3, math.ceil(max_week * .75)) and r["partial_games"] == 0:
+        return "High"
+    if r["effective_games"] >= 2:
+        return "Medium"
+    return "Low"
+
+g["confidence_label"] = g.apply(confidence_label, axis=1)
+
+# ============================================================
+# SCHEDULE + UPCOMING OPPONENT
+# ============================================================
+print("5. Loading schedule + building current-week matchup engine...")
+schedule_ok = True
+games = None
+schedule_urls = [
+    f"{BASE}/schedules/games.csv",
+    f"{BASE}/schedules/games.csv.gz",
+]
+for u in schedule_urls:
+    try:
+        games = pd.read_csv(u, low_memory=False)
+        break
+    except Exception:
+        pass
+
+if games is None:
+    schedule_ok = False
+    print("   WARNING: schedule unavailable. Start Rating will equal role-adjusted Mania.")
+else:
+    if "season" in games.columns:
+        games = games[safe_num(games["season"]).astype(int) == SEASON].copy()
+    if "game_type" in games.columns:
+        games = games[games["game_type"].astype(str).eq("REG")].copy()
+
+next_week = max_week + 1
+
+opp_map = {}
+if schedule_ok and {"week", "home_team", "away_team"}.issubset(games.columns):
+    nw = games[safe_num(games["week"]).astype(int) == next_week]
+    for _, game in nw.iterrows():
+        opp_map[str(game["home_team"])] = str(game["away_team"])
+        opp_map[str(game["away_team"])] = str(game["home_team"])
+
+# ============================================================
+# SIMILAR-PLAYER DEFENSE ENGINE
+# Uses 2026 prior games only; early-season dampened.
+# ============================================================
+# Build per-player profile vectors from summary.
+profile_cols = {
+    "RB": ["targets_pg", "carries_pg", "touch_share", "snap_pct", "ppr_pg", "rz_carries_pg", "gl_carries_pg"],
+    "WR": ["targets_pg", "rec_pg", "target_share", "air_share", "snap_pct", "ppr_pg", "rz_targets_pg"],
+    "TE": ["targets_pg", "rec_pg", "target_share", "air_share", "snap_pct", "ppr_pg", "rz_targets_pg"],
+}
+
+# Team opponent for each completed week from schedule.
+completed_opp = {}
+if schedule_ok and {"week", "home_team", "away_team"}.issubset(games.columns):
+    for _, game in games[safe_num(games["week"]).astype(int) <= max_week].iterrows():
+        wk = int(game["week"])
+        h, a = str(game["home_team"]), str(game["away_team"])
+        completed_opp[(h, wk)] = a
+        completed_opp[(a, wk)] = h
+
+merged["opponent"] = [completed_opp.get((str(t), int(w)), "") for t, w in zip(merged["team"], merged["week"])]
+
+# Z-score profile vectors within position.
+zprofiles = {}
+for pos, grp in g.groupby("position"):
+    cols = profile_cols[pos]
+    X = grp[cols].astype(float)
+    mu = X.mean()
+    sd = X.std(ddof=0).replace(0, 1)
+    Z = (X - mu) / sd
+    for idx in grp.index:
+        zprofiles[g.loc[idx, "player_id"]] = Z.loc[idx].values.astype(float)
+
+def similarity(a, b):
+    if a not in zprofiles or b not in zprofiles:
+        return 0.0
+    dist = float(np.sqrt(np.mean((zprofiles[a] - zprofiles[b]) ** 2)))
+    return math.exp(-0.75 * dist)  # 1.0 identical; fades smoothly
+
+summary_by_id = g.set_index("player_id", drop=False)
+
+def matchup_adjustment(player_row, opponent):
+    # Compare similar players normal PPR to what they did vs this opponent.
+    if not opponent:
+        return 0.0, []
+
+    pos = player_row["position"]
+    pid = player_row["player_id"]
+    candidates = merged[(merged["position"] == pos) & (merged["opponent"] == opponent)].copy()
+    if candidates.empty:
+        return 0.0, []
+
+    examples = []
+    weighted_deltas = []
+    weights = []
+
+    for _, game in candidates.iterrows():
+        other_id = game["player_id"]
+        if other_id == pid or other_id not in summary_by_id.index:
+            continue
+        other = summary_by_id.loc[other_id]
+        sim = similarity(pid, other_id)
+        if sim < 0.35:
+            continue
+        normal = float(other["ppr_pg"])
+        if normal < 3:
+            continue
+        actual = float(game["fantasy_points_ppr"])
+        delta_pct = (actual / normal - 1) * 100
+        # Participation and similarity both affect evidence weight.
+        wt = sim ** 2 * float(game.get("game_weight", 1))
+        weighted_deltas.append(delta_pct)
+        weights.append(wt)
+        examples.append({
+            "name": str(other["player_name"]),
+            "sim": round(sim * 100),
+            "normal": round(normal, 1),
+            "actual": round(actual, 1),
+        })
+
+    if not weights or sum(weights) <= 0:
+        return 0.0, []
+
+    effect_pct = float(np.average(weighted_deltas, weights=weights))
+
+    # Early season: defensive evidence is deliberately weak.
+    evidence_games = len(weights)
+    maturity = min(1.0, max_week / 8.0)
+    evidence = min(1.0, evidence_games / 6.0)
+    # +/-25% opponent effect maps to +/-6 rating points at full maturity/evidence.
+    adj = np.clip(effect_pct / 25.0 * MATCHUP_CAP, -MATCHUP_CAP, MATCHUP_CAP)
+    adj *= maturity * (0.45 + 0.55 * evidence)
+
+    examples = sorted(examples, key=lambda x: x["sim"], reverse=True)[:4]
+    return float(adj), examples
+
+start_vals = []
+match_examples = {}
+for _, r in g.iterrows():
+    opp = opp_map.get(str(r["team"]), "")
+    madj, ex = matchup_adjustment(r, opp)
+
+    # Recent opportunity trend matters, but is capped and muted this early.
+    trend_adj = np.clip(r["trend_pct"] / 20.0, -1, 1) * RECENT_CAP
+    if r["games"] < 2:
+        trend_adj *= 0.25
+
+    # Low confidence does not crush Mania, but slightly reduces Start certainty.
+    confidence_adj = {"High": 0.0, "Medium": -0.4, "Low": -0.8}[r["confidence_label"]]
+
+    start = clamp(r["mania"] + madj + trend_adj + confidence_adj)
+    start_vals.append((start, madj, trend_adj, opp))
+    match_examples[r["player_id"]] = ex
+
+g[["start_rating", "matchup_adj", "trend_adj", "opponent"]] = pd.DataFrame(start_vals, index=g.index)
+g["start_pos_rank"] = g.groupby("position")["start_rating"].rank(ascending=False, method="min").astype(int)
+g["start_overall_rank"] = g["start_rating"].rank(ascending=False, method="min").astype(int)
+
+# ============================================================
+# BUILD JSON
+# ============================================================
+print("6. Packaging player pages, team rooms and rankings...")
+
+players = []
+for _, r in g.sort_values("mania", ascending=False).iterrows():
+    d = merged[(merged["player_id"] == r["player_id"]) & (merged["team"] == r["team"])].sort_values("week")
+
+    logs = []
     for x in d.itertuples():
-        logs.append({'w':int(x.week),'t':int(x.targets),'rec':int(x.receptions),'ry':round(float(x.receiving_yards),1),'c':int(x.carries),'ruy':round(float(x.rushing_yards),1),'td':int(x.tds),'ppr':round(float(x.fantasy_points_ppr),1),'sp':None if pd.isna(x.snap_pct) else round(float(x.snap_pct),1),'ts':round(float(x.target_share),1),'touchs':round(float(x.touch_share),1),'rt':int(x.rz_targets),'rc':int(x.rz_carries),'gc':int(x.gl_carries),'low':bool(x.low_participation),'weight':round(float(x.mania_game_weight),2)})
-    vals={k:(None if pd.isna(r[k]) else round(float(r[k]),1)) for k in metrics+['actual_ppr_pg','typical_snap','trend','expected_ppr','matchup_score']}
-    players.append({'id':str(r.player_id),'name':r.player_name,'team':r.team,'pos':r.position,'games':int(r.games),'mania':round(float(r.mania_rating),1),'raw':round(float(r.raw_mania),1),'conf':round(float(r.confidence)*100),'overall_rank':int(r.overall_rank),'pos_rank':int(r.pos_rank),'team_rank':int(r.team_pos_rank),'start':round(float(r.start_score),1),'week_rank':int(r.week_rank),'week_pos_rank':int(r.week_pos_rank),'opp':r.opponent,'site':r.site,'flag':r.flag,'low_games':int(r.low_games),'m':vals,'logs':logs})
+        logs.append({
+            "w": int(x.week),
+            "tgt": int(x.targets),
+            "rec": int(x.receptions),
+            "ry": round(float(x.receiving_yards), 1),
+            "car": int(x.carries),
+            "ruy": round(float(x.rushing_yards), 1),
+            "ppr": round(float(x.fantasy_points_ppr), 1),
+            "snap": round(float(x.offense_pct) * 100, 1),
+            "tshare": round(float(x.target_share_game), 1),
+            "ashare": round(float(x.air_share_game), 1),
+            "touch": round(float(x.touch_share_game), 1),
+            "rzt": int(x.rz_targets),
+            "ez": int(x.endzone_targets),
+            "rzc": int(x.rz_carries),
+            "gl": int(x.gl_carries),
+            "partial": bool(x.partial),
+            "weight": round(float(x.game_weight), 2),
+        })
 
-payload=json.dumps(players,allow_nan=False)
-meta=json.dumps({'season':SEASON,'through':max_week,'week':current_week,'rz':rz_ok})
+    pos = r["position"]
+    room = g[(g["team"] == r["team"]) & (g["position"] == pos)].sort_values("mania", ascending=False)
+    room_data = [{
+        "id": rr["player_id"], "name": rr["player_name"],
+        "mania": round(float(rr["mania"]), 1),
+        "ppr": round(float(rr["ppr_pg"]), 1),
+        "opp": round(float(rr["targets_pg"] if pos != "RB" else rr["carries_pg"] + rr["targets_pg"]), 1),
+        "share": round(float(rr["target_share"] if pos != "RB" else rr["touch_share"]), 1),
+    } for _, rr in room.iterrows()]
 
-html=r'''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mania Fantasy Analyzer</title>
+    metrics = {
+        "ppr": round(float(r["ppr_pg"]), 1),
+        "tgt": round(float(r["targets_pg"]), 1),
+        "rec": round(float(r["rec_pg"]), 1),
+        "recy": round(float(r["rec_yards_pg"]), 1),
+        "car": round(float(r["carries_pg"]), 1),
+        "rushy": round(float(r["rush_yards_pg"]), 1),
+        "scrim": round(float(r["scrim_pg"]), 1),
+        "td": round(float(r["td_pg"]), 2),
+        "snap": round(float(r["snap_pct"]), 1),
+        "tshare": round(float(r["target_share"]), 1),
+        "ashare": round(float(r["air_share"]), 1),
+        "touch": round(float(r["touch_share"]), 1),
+        "rzt": round(float(r["rz_targets_pg"]), 2),
+        "rzc": round(float(r["rz_carries_pg"]), 2),
+        "gl": round(float(r["gl_carries_pg"]), 2),
+        "ypt": round(float(r["yards_per_target"]), 1),
+        "ypc": round(float(r["yards_per_carry"]), 1),
+    }
+
+    players.append({
+        "id": r["player_id"],
+        "name": r["player_name"],
+        "team": r["team"],
+        "pos": pos,
+        "games": int(r["games"]),
+        "partial_games": int(r["partial_games"]),
+        "confidence": r["confidence_label"],
+        "mania": round(float(r["mania"]), 1),
+        "raw": round(float(r["mania_base"]), 1),
+        "rank": int(r["overall_rank"]),
+        "pos_rank": int(r["pos_rank"]),
+        "team_rank": int(r["team_pos_rank"]),
+        "start": round(float(r["start_rating"]), 1),
+        "start_rank": int(r["start_overall_rank"]),
+        "start_pos_rank": int(r["start_pos_rank"]),
+        "opp": str(r["opponent"]) if r["opponent"] else "TBD",
+        "matchup_adj": round(float(r["matchup_adj"]), 1),
+        "trend_adj": round(float(r["trend_adj"]), 1),
+        "trend_pct": round(float(r["trend_pct"]), 1),
+        "buckets": {
+            "Production": round(float(r["production"]), 1),
+            "Opportunity": round(float(r["opportunity"]), 1),
+            "Role": round(float(r["role_score"]), 1),
+            "High Value": round(float(r["high_value"]), 1),
+            "Efficiency": round(float(r["efficiency"]), 1),
+        },
+        "m": metrics,
+        "logs": logs,
+        "room": room_data,
+        "similar": match_examples.get(r["player_id"], []),
+    })
+
+payload = json.dumps(players, separators=(",", ":"))
+meta = json.dumps({
+    "season": SEASON,
+    "week": max_week,
+    "next_week": next_week,
+    "rz": rz_ok,
+    "schedule": schedule_ok,
+    "players": len(players),
+})
+
+# ============================================================
+# FRONT END — FANTASY MANIA
+# ============================================================
+html = r'''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fantasy Mania</title>
 <style>
-:root{--bg:#0b0f14;--card:#131922;--card2:#0e141c;--bd:#293241;--tx:#cbd5e1;--hi:#f8fafc;--mu:#8491a3;--ac:#60a5fa;--gr:#4ade80;--or:#fb923c;--red:#fb7185;--pur:#c084fc}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px}.wrap{max-width:1180px;margin:auto}header{text-align:center;margin-bottom:20px}h1{margin:0;color:var(--hi);font-size:2.25rem}.sub,.mu{color:var(--mu)}.tabs,.filters{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:16px 0}.btn,select,input{background:var(--card);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:10px 14px}.btn{cursor:pointer;font-weight:700}.btn.on{background:var(--ac);color:#07111e;border-color:var(--ac)}.search{position:relative;margin:18px 0}.search input{width:100%;font-size:1rem}.dd{position:absolute;left:0;right:0;top:46px;background:var(--card);border:1px solid var(--bd);z-index:20;display:none;max-height:280px;overflow:auto;border-radius:8px}.dd div{padding:11px 14px;border-bottom:1px solid var(--bd);cursor:pointer}.dd div:hover{background:#1d2633}.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:22px;margin:16px 0}.hero{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;flex-wrap:wrap}.rating{font-size:4rem;line-height:1;font-weight:900;color:var(--hi)}.start{font-size:2.2rem;font-weight:850;color:var(--ac)}.pill{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:5px 9px;margin:3px;font-size:.8rem}.buy{color:var(--gr);border-color:var(--gr)}.sell{color:var(--red);border-color:var(--red)}.warn{padding:10px 12px;border:1px solid var(--or);color:var(--or);background:#fb923c12;border-radius:8px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px}.stat{background:var(--card2);border:1px solid var(--bd);border-radius:10px;padding:13px}.stat b{display:block;color:var(--hi);font-size:1.35rem;margin-top:4px}.scroll{overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:10px 9px;border-bottom:1px solid var(--bd);text-align:center}th{font-size:.72rem;color:var(--mu);text-transform:uppercase;cursor:pointer}td.l,th.l{text-align:left}.hi{color:var(--gr);font-weight:800}.low{color:var(--or)}.rankrow:hover{background:#1b2430;cursor:pointer}.current{background:#60a5fa12}.checks input{width:auto}.sectionTitle{color:var(--hi);margin:22px 0 8px}.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:720px){body{padding:12px}.split{grid-template-columns:1fr}.rating{font-size:3rem}}
-</style></head><body><div class="wrap"><header><h1>Mania Fantasy Analyzer</h1><div class="sub" id="subtitle"></div></header>
-<div class="tabs"><button class="btn on" id="bp" onclick="mode('profile')">Player Profile</button><button class="btn" id="br" onclick="mode('rank')">Rankings</button><button class="btn" id="bc" onclick="mode('compare')">Head-to-Head</button></div>
-<section id="profile"><div class="search"><input placeholder="Search a player..." oninput="searchPlayer(this.value,'p')"><div class="dd" id="ddp"></div></div><div id="profileOut"></div></section>
-<section id="rank" style="display:none"><div class="filters"><button class="btn on" id="ro" onclick="rankMode('overall')">Overall</button><button class="btn" id="rw" onclick="rankMode('week')">Week</button><select id="posFilter" onchange="renderRanks()"><option>ALL</option><option>WR</option><option>RB</option><option>TE</option></select><select id="sortFilter" onchange="renderRanks()"><option value="mania">Mania Rating</option><option value="start">Start Score</option><option value="ppr_ppg">PPR/G</option><option value="targets_pg">Targets/G</option><option value="receptions_pg">Receptions/G</option><option value="carries_pg">Carries/G</option><option value="touches_pg">Touches/G</option><option value="rec_yards_pg">Rec Yards/G</option><option value="rush_yards_pg">Rush Yards/G</option><option value="total_yards_pg">Total Yards/G</option><option value="target_share">Target Share</option><option value="touch_share">Touch Share</option><option value="typical_snap">Typical Snap</option><option value="rz_targets_pg">RZ Targets/G</option><option value="gl_carries_pg">Goal-Line/G</option></select></div><div id="rankOut"></div></section>
-<section id="compare" style="display:none"><div class="split"><div class="search"><input placeholder="Player A..." oninput="searchPlayer(this.value,'a')"><div class="dd" id="dda"></div></div><div class="search"><input placeholder="Player B..." oninput="searchPlayer(this.value,'b')"><div class="dd" id="ddb"></div></div></div><div id="compareOut"></div></section>
-</div><script>const DB=__PAYLOAD__;const META=__META__;let A=null,B=null,RANKMODE='overall';
-subtitle.innerHTML=`${META.season} NFL Season &bull; Through Week ${META.through} &bull; Week ${META.week} Start/Sit`;
-const fmt=(v,s='')=>v===null||v===undefined?'—':v+s;const byId=id=>DB.find(p=>p.id===id);
-function mode(x){['profile','rank','compare'].forEach(k=>document.getElementById(k).style.display=k===x?'block':'none');bp.classList.toggle('on',x==='profile');br.classList.toggle('on',x==='rank');bc.classList.toggle('on',x==='compare');if(x==='rank')renderRanks()}
-function searchPlayer(v,t){let d=document.getElementById('dd'+t),q=v.toLowerCase().trim();if(!q){d.style.display='none';return}let a=DB.filter(p=>p.name.toLowerCase().includes(q)).slice(0,9);d.innerHTML='';d.style.display=a.length?'block':'none';a.forEach(p=>{let e=document.createElement('div');e.textContent=`${p.name} (${p.team} • ${p.pos}) — Mania ${p.mania}`;e.onclick=()=>{d.style.display='none';if(t==='p')showPlayer(p);else{if(t==='a')A=p;else B=p;showCompare()}};d.appendChild(e)})}
-function teammateRoom(p){let mates=DB.filter(x=>x.team===p.team&&x.pos===p.pos).sort((a,b)=>b.mania-a.mania);let label=p.pos==='RB'?`${p.team} BACKFIELD`:p.pos==='WR'?`${p.team} WR ROOM`:`${p.team} TE ROOM`;return `<h3 class="sectionTitle">${label}</h3><div class="scroll"><table><thead><tr><th class="l">Player</th><th>Mania</th><th>Tgt/G</th><th>Car/G</th><th>Share</th><th>Typical Snap</th><th>RZ Tgt</th><th>GL Car</th></tr></thead><tbody>${mates.map(x=>`<tr class="rankrow ${x.id===p.id?'current':''}" onclick="showPlayer(byId('${x.id}'))"><td class="l"><b>${x.name}</b></td><td>${x.mania}</td><td>${fmt(x.m.targets_pg)}</td><td>${fmt(x.m.carries_pg)}</td><td>${fmt(x.pos==='RB'?x.m.touch_share:x.m.target_share,'%')}</td><td>${fmt(x.m.typical_snap,'%')}</td><td>${fmt(x.m.rz_targets_pg)}</td><td>${fmt(x.m.gl_carries_pg)}</td></tr>`).join('')}</tbody></table></div>`}
-function calcCustom(p,chosen){let logs=p.logs.filter(x=>chosen.has(x.w));if(!logs.length)return null;let avg=k=>logs.reduce((s,x)=>s+(Number(x[k])||0),0)/logs.length;return {ppr:avg('ppr'),t:avg('t'),rec:avg('rec'),ry:avg('ry'),c:avg('c'),ruy:avg('ruy'),sp:(()=>{let z=logs.filter(x=>x.sp!==null);return z.length?z.reduce((s,x)=>s+x.sp,0)/z.length:null})()}}
-function showPlayer(p){mode('profile');let chosen=new Set(p.logs.map(x=>x.w));function draw(){let custom=calcCustom(p,chosen);let logs=p.logs.map(x=>`<tr><td><input type="checkbox" ${chosen.has(x.w)?'checked':''} onchange="toggle(${x.w},this.checked)"></td><td>W${x.w}</td><td>${x.t}</td><td>${x.rec}</td><td>${x.ry}</td><td>${x.c}</td><td>${x.ruy}</td><td>${x.td}</td><td>${fmt(x.sp,'%')}</td><td>${x.rt}</td><td>${x.rc}</td><td>${x.gc}</td><td class="hi">${x.ppr}</td><td class="${x.low?'low':''}">${x.low?'⚠ Low participation':''}</td></tr>`).join('');let sample=p.games<3?`<div class="warn">Limited sample: ${p.games} game${p.games===1?'':'s'}. Missed games are not counted as zeroes; Mania Rating is confidence-adjusted until the sample grows.</div>`:'';let low=p.low_games?`<div class="warn">${p.low_games} unusually low-participation game${p.low_games>1?'s':''} detected. It remains in actual stats but is downweighted when estimating normal player quality.</div>`:'';let customBox=chosen.size!==p.logs.length&&custom?`<div class="warn"><b>Custom view (${chosen.size}/${p.logs.length} games):</b> ${custom.ppr.toFixed(1)} PPR/G • ${custom.t.toFixed(1)} Tgt/G • ${custom.c.toFixed(1)} Car/G • ${custom.sp===null?'—':custom.sp.toFixed(1)+'%'} Snap. Official Mania Rating above is unchanged.</div>`:'';profileOut.innerHTML=`<div class="card"><div class="hero"><div><h2 style="margin:0;color:var(--hi)">${p.name}</h2><div class="mu">${p.team} • ${p.pos} • ${p.games} games • Team ${p.pos}${p.team_rank}</div><div style="margin-top:12px"><span class="pill">Overall #${p.overall_rank}</span><span class="pill">${p.pos} #${p.pos_rank}</span>${p.flag?`<span class="pill ${p.flag==='BUY LOW'?'buy':'sell'}">${p.flag}</span>`:''}</div></div><div><div class="rating">${p.mania}</div><b>MANIA RATING</b><div class="mu">Raw profile ${p.raw} • Confidence ${p.conf}%</div></div><div><div class="start">${p.start}</div><b>WEEK ${META.week} START SCORE</b><div class="mu">#${p.week_rank} overall • ${p.pos} #${p.week_pos_rank}<br>${p.site||''} ${p.opp||'TBD'} • Matchup ${fmt(p.m.matchup_score)}</div></div></div>${sample}${low}<h3 class="sectionTitle">Production & Usage</h3><div class="grid"><div class="stat">PPR / Game<b>${fmt(p.m.actual_ppr_pg)}</b></div><div class="stat">Targets / Game<b>${fmt(p.m.targets_pg)}</b></div><div class="stat">Receptions / Game<b>${fmt(p.m.receptions_pg)}</b></div><div class="stat">Carries / Game<b>${fmt(p.m.carries_pg)}</b></div><div class="stat">Rec Yards / Game<b>${fmt(p.m.rec_yards_pg)}</b></div><div class="stat">Rush Yards / Game<b>${fmt(p.m.rush_yards_pg)}</b></div><div class="stat">Target Share<b>${fmt(p.m.target_share,'%')}</b></div><div class="stat">Touch Share<b>${fmt(p.m.touch_share,'%')}</b></div><div class="stat">Air Yard Share<b>${fmt(p.m.air_share,'%')}</b></div><div class="stat">Typical Snap %<b>${fmt(p.m.typical_snap,'%')}</b></div><div class="stat">RZ Targets / G<b>${fmt(p.m.rz_targets_pg)}</b></div><div class="stat">Goal-Line Carries / G<b>${fmt(p.m.gl_carries_pg)}</b></div><div class="stat">Expected PPR / G<b>${fmt(p.m.expected_ppr)}</b></div><div class="stat">Trend (Opp Pts)<b>${p.m.trend>0?'+':''}${fmt(p.m.trend)}</b></div></div>${teammateRoom(p)}<h3 class="sectionTitle">Game Logs — toggle games for your own view</h3>${customBox}<div class="scroll checks"><table><thead><tr><th>Use</th><th>Game</th><th>Tgt</th><th>Rec</th><th>Rec Yd</th><th>Car</th><th>Rush Yd</th><th>TD</th><th>Snap%</th><th>RZ Tgt</th><th>RZ Car</th><th>GL Car</th><th>PPR</th><th>Note</th></tr></thead><tbody>${logs}</tbody></table></div><p class="mu">Mania Rating estimates overall fantasy quality from position-adjusted production, volume, team share, role, scoring opportunities and controlled efficiency. Missed games are excluded rather than entered as zeroes; extreme low-participation games are downweighted, not erased.</p></div>`;window.toggle=(w,on)=>{on?chosen.add(w):chosen.delete(w);draw()}}draw()}
-function rankMode(x){RANKMODE=x;ro.classList.toggle('on',x==='overall');rw.classList.toggle('on',x==='week');sortFilter.value=x==='overall'?'mania':'start';renderRanks()}
-function renderRanks(){let pos=posFilter.value,sort=sortFilter.value,a=DB.filter(p=>pos==='ALL'||p.pos===pos);a.sort((x,y)=>{let xv=sort==='mania'?x.mania:sort==='start'?x.start:(x.m[sort]??-999),yv=sort==='mania'?y.mania:sort==='start'?y.start:(y.m[sort]??-999);return yv-xv});let title=RANKMODE==='overall'?'Overall Rankings — Mania Rating':`Week ${META.week} Rankings — Start Score`;rankOut.innerHTML=`<div class="card"><h2 style="color:var(--hi)">${title}</h2><div class="scroll"><table><thead><tr><th>#</th><th class="l">Player</th><th>Pos</th><th>Team</th><th>Opp</th><th>Mania</th><th>Start</th><th>PPR/G</th><th>Tgt/G</th><th>Rec/G</th><th>Car/G</th><th>Yds/G</th><th>Share</th><th>Typical Snap</th><th>RZ Tgt</th><th>GL Car</th></tr></thead><tbody>${a.map((p,i)=>`<tr class="rankrow" onclick="showPlayer(byId('${p.id}'))"><td>${RANKMODE==='overall'?p.overall_rank:p.week_rank}</td><td class="l"><b>${p.name}</b></td><td>${p.pos}</td><td>${p.team}</td><td>${p.site} ${p.opp}</td><td class="hi">${p.mania}</td><td>${p.start}</td><td>${fmt(p.m.actual_ppr_pg)}</td><td>${fmt(p.m.targets_pg)}</td><td>${fmt(p.m.receptions_pg)}</td><td>${fmt(p.m.carries_pg)}</td><td>${fmt(p.m.total_yards_pg)}</td><td>${fmt(p.pos==='RB'?p.m.touch_share:p.m.target_share,'%')}</td><td>${fmt(p.m.typical_snap,'%')}</td><td>${fmt(p.m.rz_targets_pg)}</td><td>${fmt(p.m.gl_carries_pg)}</td></tr>`).join('')}</tbody></table></div></div>`}
-function showCompare(){if(!A||!B)return;let row=(l,a,b,s='')=>`<tr><td class="${a>b?'hi':''}">${fmt(a,s)}</td><td>${l}</td><td class="${b>a?'hi':''}">${fmt(b,s)}</td></tr>`;compareOut.innerHTML=`<div class="card"><div class="split"><div style="text-align:center"><h2>${A.name}</h2><div class="rating">${A.mania}</div><b>MANIA RATING</b></div><div style="text-align:center"><h2>${B.name}</h2><div class="rating">${B.mania}</div><b>MANIA RATING</b></div></div><h3 class="sectionTitle" style="text-align:center">Who's better overall? — Mania Rating</h3><table><tbody>${row('Mania Rating',A.mania,B.mania)}${row('PPR / G',A.m.actual_ppr_pg,B.m.actual_ppr_pg)}${row('Targets / G',A.m.targets_pg,B.m.targets_pg)}${row('Carries / G',A.m.carries_pg,B.m.carries_pg)}${row('Total Yards / G',A.m.total_yards_pg,B.m.total_yards_pg)}${row('Typical Snap',A.m.typical_snap,B.m.typical_snap,'%')}</tbody></table><h3 class="sectionTitle" style="text-align:center">Who should I start Week ${META.week}?</h3><table><tbody>${row('Start Score',A.start,B.start)}${row('Matchup Score',A.m.matchup_score,B.m.matchup_score)}${row('Expected PPR',A.m.expected_ppr,B.m.expected_ppr)}${row('Recent Opportunity Trend',A.m.trend,B.m.trend)}</tbody></table><div class="split"><p class="mu" style="text-align:center">${A.name}: ${A.site} ${A.opp||'TBD'} • Week rank #${A.week_rank}</p><p class="mu" style="text-align:center">${B.name}: ${B.site} ${B.opp||'TBD'} • Week rank #${B.week_rank}</p></div></div>`}
-window.onload=()=>{if(DB.length)showPlayer(DB[0])};</script></body></html>'''
-html=html.replace('__PAYLOAD__',payload).replace('__META__',meta)
-os.makedirs('public',exist_ok=True)
-with open('public/index.html','w',encoding='utf-8') as f:f.write(html)
-print(f'5. DONE — {len(players)} players, through Week {max_week}, Week {current_week} matchup view.')
+:root{
+ --bg:#080b10;--panel:#10151d;--panel2:#151c26;--line:#263141;
+ --text:#f4f7fb;--muted:#8e9aac;--blue:#4ea1ff;--cyan:#5de4ff;
+ --green:#46d381;--yellow:#f4c95d;--red:#ff6673;--purple:#aa8cff;
+}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -20%,#182638 0,#080b10 42%);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}.shell{max-width:1240px;margin:auto;padding:0 22px 50px}
+nav{height:74px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1d2632;position:sticky;top:0;background:rgba(8,11,16,.94);backdrop-filter:blur(14px);z-index:30}
+.brand{font-size:22px;font-weight:950;letter-spacing:.7px}.brand span{color:var(--blue)}.navlinks{display:flex;gap:6px}
+.navbtn,.pill{border:0;background:transparent;color:var(--muted);padding:10px 13px;border-radius:9px;cursor:pointer;font-weight:750}
+.navbtn:hover,.navbtn.on,.pill.on{background:#182231;color:white}.hero{text-align:center;padding:58px 10px 32px}
+.eyebrow{font-size:12px;letter-spacing:2px;color:var(--cyan);font-weight:900}.hero h1{font-size:52px;line-height:1;margin:10px 0 12px;letter-spacing:-2px}.hero p{color:var(--muted);font-size:16px}
+.search{max-width:720px;margin:24px auto 0;position:relative}.search input{width:100%;padding:17px 20px;border-radius:13px;border:1px solid var(--line);background:#0f151e;color:white;outline:none;font-size:16px}.search input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(78,161,255,.12)}
+.dd{display:none;position:absolute;left:0;right:0;top:58px;background:#111823;border:1px solid var(--line);border-radius:12px;overflow:hidden;z-index:40;text-align:left;box-shadow:0 18px 50px #0009}.ddi{padding:13px 16px;border-bottom:1px solid #202a38;cursor:pointer}.ddi:hover{background:#192333}.ddi b{display:block}.ddi small{color:var(--muted)}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card{background:linear-gradient(180deg,#121923,#0f141c);border:1px solid var(--line);border-radius:15px;padding:19px;box-shadow:0 10px 30px #0002}.card h3{margin:0 0 13px;font-size:13px;letter-spacing:.8px;color:#b6c1d0}.leader{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid #202a36;cursor:pointer}.leader:first-of-type{border-top:0}.leader:hover .lname{color:var(--blue)}.num{font-weight:900;color:#566274;width:18px}.lname{font-weight:800;flex:1}.lsub{font-size:11px;color:var(--muted);margin-top:2px}.rating{font-weight:950;font-size:18px}
+.sectionhead{display:flex;justify-content:space-between;align-items:end;margin:30px 0 13px}.sectionhead h2{margin:0;font-size:24px}.sectionhead p{margin:4px 0 0;color:var(--muted)}
+.filters{display:flex;gap:7px;flex-wrap:wrap}.pill{background:#111821;border:1px solid var(--line);padding:8px 12px}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#0e141c}
+table{width:100%;border-collapse:collapse;min-width:880px}th{font-size:11px;color:#8491a3;text-transform:uppercase;letter-spacing:.6px;text-align:right;padding:13px 12px;background:#111821;position:sticky;top:0;cursor:pointer;white-space:nowrap}th:first-child,th:nth-child(2),td:first-child,td:nth-child(2){text-align:left}th:hover{color:white}td{padding:13px 12px;border-top:1px solid #202a36;text-align:right;font-size:14px}tr:hover td{background:#131c27}.playerlink{font-weight:850;cursor:pointer}.playerlink:hover{color:var(--blue)}.tag{font-size:10px;padding:3px 6px;border-radius:5px;background:#1c2735;color:#9eacc0;margin-left:5px}
+.mania{font-weight:950;color:var(--cyan)}.start{font-weight:950;color:var(--green)}
+.view{display:none}.view.on{display:block}.profileTop{padding:34px 0 17px;display:flex;justify-content:space-between;align-items:end;gap:20px}.back{color:var(--blue);cursor:pointer;font-weight:800;margin-bottom:8px}.profileTop h1{margin:0;font-size:38px}.meta{color:var(--muted);margin-top:6px}
+.ratingHero{display:flex;gap:10px}.ratingBox{min-width:150px;background:#111923;border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}.ratingBox .big{font-size:38px;font-weight:950;line-height:1}.ratingBox small{color:var(--muted);font-weight:800}.blue{color:var(--cyan)}.green{color:var(--green)}
+.alert{padding:11px 14px;border-radius:9px;background:#2a2112;border:1px solid #5d4720;color:#f5cb73;margin:8px 0 16px}.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0 20px}.stat{background:#101720;border:1px solid var(--line);border-radius:11px;padding:14px}.stat .v{font-size:23px;font-weight:900}.stat .k{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-top:3px}
+.two{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.bars .barrow{display:grid;grid-template-columns:110px 1fr 42px;gap:10px;align-items:center;margin:12px 0}.track{height:8px;background:#080c12;border-radius:10px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:10px}
+.roomrow{display:grid;grid-template-columns:1fr repeat(3,70px);gap:8px;padding:10px 0;border-top:1px solid #202a36;align-items:center}.roomrow:first-of-type{border-top:0}.roomrow b{cursor:pointer}.roomrow b:hover{color:var(--blue)}.muted{color:var(--muted)}.good{color:var(--green)}.bad{color:var(--red)}
+.gameToggle{cursor:pointer;accent-color:var(--blue)}.partial{color:var(--yellow);font-size:10px;font-weight:900}.custom{margin:10px 0;padding:12px;background:#101923;border:1px solid #27374a;border-radius:10px;color:#bcd0e6}
+.comparePick{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px}.comparePick .search{margin:0;max-width:none}.versus{display:grid;grid-template-columns:1fr 80px 1fr;align-items:center;gap:12px;margin-top:20px}.vs{text-align:center;color:var(--muted);font-weight:950}.cmpHero{text-align:center;padding:22px}.cmpHero h2{margin:0 0 4px}.cmpBig{font-size:48px;font-weight:950}.why{font-size:13px;color:var(--muted);line-height:1.5}
+@media(max-width:900px){.grid4{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:1fr}.navlinks{overflow:auto}.hero h1{font-size:42px}}
+@media(max-width:600px){.shell{padding:0 12px 35px}.brand{font-size:17px}.navbtn{padding:8px 7px;font-size:12px}.hero{padding-top:35px}.hero h1{font-size:36px}.grid4{grid-template-columns:1fr}.profileTop{display:block}.ratingHero{margin-top:16px}.stats{grid-template-columns:repeat(2,1fr)}.comparePick,.versus{grid-template-columns:1fr}.vs{padding:4px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav>
+ <div class="brand">FANTASY <span>MANIA</span></div>
+ <div class="navlinks">
+  <button class="navbtn on" data-view="home">HOME</button>
+  <button class="navbtn" data-view="players">PLAYERS</button>
+  <button class="navbtn" data-view="rankings">RANKINGS</button>
+  <button class="navbtn" data-view="compare">COMPARE</button>
+ </div>
+</nav>
+
+<section id="home" class="view on">
+ <div class="hero">
+  <div class="eyebrow">POWERED BY MANIA RATING</div>
+  <h1>Fantasy decisions,<br>built on real usage.</h1>
+  <p id="seasonline"></p>
+  <div class="search"><input id="homeSearch" placeholder="Search any RB, WR or TE..." autocomplete="off"><div class="dd" id="homeDD"></div></div>
+ </div>
+ <div class="grid4" id="dash"></div>
+</section>
+
+<section id="players" class="view">
+ <div class="sectionhead"><div><h2>Players</h2><p>Search any player for the full Mania profile.</p></div></div>
+ <div class="search" style="margin:0;max-width:none"><input id="playerSearch" placeholder="Search player..." autocomplete="off"><div class="dd" id="playerDD"></div></div>
+ <div id="playerLanding"></div>
+</section>
+
+<section id="rankings" class="view">
+ <div class="sectionhead"><div><h2 id="rankTitle">Overall Rankings</h2><p id="rankSub">Mania Rating: who has the best fantasy profile?</p></div>
+  <div class="filters"><button class="pill on rankmode" data-mode="mania">OVERALL</button><button class="pill rankmode" data-mode="start">WEEK <span id="wkBtn"></span></button></div>
+ </div>
+ <div class="filters" style="margin-bottom:12px"><button class="pill on posf" data-pos="ALL">ALL</button><button class="pill posf" data-pos="RB">RB</button><button class="pill posf" data-pos="WR">WR</button><button class="pill posf" data-pos="TE">TE</button></div>
+ <div class="tablewrap"><table><thead id="rankHead"></thead><tbody id="rankBody"></tbody></table></div>
+</section>
+
+<section id="profile" class="view"><div id="profileBody"></div></section>
+
+<section id="compare" class="view">
+ <div class="sectionhead"><div><h2>Compare Players</h2><p>Who's better overall — and who should you start this week?</p></div></div>
+ <div class="comparePick">
+  <div class="search"><input id="cmpA" placeholder="Player A..." autocomplete="off"><div class="dd" id="cmpADD"></div></div>
+  <div class="search"><input id="cmpB" placeholder="Player B..." autocomplete="off"><div class="dd" id="cmpBDD"></div></div>
+ </div>
+ <div id="compareBody"></div>
+</section>
+</div>
+
+<script>
+const DB=__PAYLOAD__;
+const META=__META__;
+let rankMode="mania",posFilter="ALL",sortKey="mania",sortDir=-1,A=null,B=null;
+
+const $=id=>document.getElementById(id);
+const fmt=(v,d=1)=>Number(v||0).toFixed(d);
+const tier=x=>x>=90?"Elite":x>=85?"Excellent":x>=80?"Very Strong":x>=75?"Strong":x>=70?"Solid Role":"Developing";
+const byId=id=>DB.find(p=>String(p.id)===String(id));
+
+$("seasonline").textContent=`${META.season} NFL Season • Data through Week ${META.week} • Week ${META.next_week} outlook`;
+$("wkBtn").textContent=META.next_week;
+
+function showView(v){
+ document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+ $(v).classList.add("on");
+ document.querySelectorAll(".navbtn").forEach(x=>x.classList.toggle("on",x.dataset.view===v));
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+document.querySelectorAll(".navbtn").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+
+function wireSearch(inputId,ddId,onPick){
+ const inp=$(inputId),dd=$(ddId);
+ inp.oninput=()=>{
+  const q=inp.value.trim().toLowerCase();
+  if(!q){dd.style.display="none";return}
+  const m=DB.filter(p=>p.name.toLowerCase().includes(q)).slice(0,9);
+  dd.innerHTML=m.map(p=>`<div class="ddi" data-id="${p.id}"><b>${p.name}</b><small>${p.team} • ${p.pos} • ${p.mania} Mania</small></div>`).join("");
+  dd.style.display=m.length?"block":"none";
+  dd.querySelectorAll(".ddi").forEach(x=>x.onclick=()=>{dd.style.display="none";inp.value=byId(x.dataset.id).name;onPick(byId(x.dataset.id))});
+ };
+}
+wireSearch("homeSearch","homeDD",openPlayer);
+wireSearch("playerSearch","playerDD",openPlayer);
+wireSearch("cmpA","cmpADD",p=>{A=p;renderCompare()});
+wireSearch("cmpB","cmpBDD",p=>{B=p;renderCompare()});
+
+function leaders(arr,key,n=3){return [...arr].sort((a,b)=>b[key]-a[key]).slice(0,n)}
+function leadCard(title,arr,key,label){
+ return `<div class="card"><h3>${title}</h3>${arr.map((p,i)=>`<div class="leader" data-id="${p.id}"><div class="num">${i+1}</div><div class="lname">${p.name}<div class="lsub">${p.team} • ${p.pos}</div></div><div class="rating">${label(p)}</div></div>`).join("")}</div>`
+}
+function renderDash(){
+ const risers=[...DB].sort((a,b)=>b.trend_pct-a.trend_pct).slice(0,3);
+ const breakout=[...DB].filter(p=>p.mania>=72&&p.m.ppr<16).sort((a,b)=>(b.buckets.Opportunity+b.buckets.Role)-(a.buckets.Opportunity+a.buckets.Role)).slice(0,3);
+ $("dash").innerHTML=
+  leadCard("⭐ TOP MANIA",leaders(DB,"mania"),"mania",p=>p.mania)+
+  leadCard(`🎯 TOP WEEK ${META.next_week}`,leaders(DB,"start"),"start",p=>p.start)+
+  leadCard("📈 ROLE RISERS",risers,"trend_pct",p=>(p.trend_pct>0?"+":"")+p.trend_pct+"%")+
+  leadCard("👀 BREAKOUT WATCH",breakout,"mania",p=>p.mania);
+ document.querySelectorAll(".leader").forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));
+}
+renderDash();
+
+const COLS=[
+ ["rank","#"],["name","Player"],["mania","Mania"],["start","Start"],["m.ppr","PPR/G"],["m.tgt","TGT/G"],["m.rec","REC/G"],
+ ["m.recy","REC YD/G"],["m.car","CAR/G"],["m.rushy","RUSH YD/G"],["m.snap","SNAP%"],["share","SHARE%"],["rz","RZ"]
+];
+function val(p,k){
+ if(k==="rank")return rankMode==="mania"?p.rank:p.start_rank;
+ if(k==="name")return p.name;
+ if(k==="share")return p.pos==="RB"?p.m.touch:p.m.tshare;
+ if(k==="rz")return p.pos==="RB"?p.m.rzc:p.m.rzt;
+ if(k.startsWith("m."))return p.m[k.slice(2)];
+ return p[k];
+}
+function renderRanks(){
+ let arr=DB.filter(p=>posFilter==="ALL"||p.pos===posFilter);
+ arr.sort((a,b)=>{let x=val(a,sortKey),y=val(b,sortKey);if(typeof x==="string")return sortDir*x.localeCompare(y);return sortDir*(x-y)});
+ $("rankTitle").textContent=rankMode==="mania"?"Overall Rankings":`Week ${META.next_week} Start Rankings`;
+ $("rankSub").textContent=rankMode==="mania"?"Mania Rating: who has the best fantasy profile?":"Current-week rating: Mania + role trend + opponent/similar-player matchup.";
+ $("rankHead").innerHTML="<tr>"+COLS.map(([k,l])=>`<th data-k="${k}">${l}${sortKey===k?(sortDir===-1?" ↓":" ↑"):""}</th>`).join("")+"</tr>";
+ $("rankBody").innerHTML=arr.map(p=>`<tr>
+  <td>${val(p,"rank")}</td><td><span class="playerlink" data-id="${p.id}">${p.name}</span> <span class="tag">${p.team} ${p.pos}</span></td>
+  <td class="mania">${p.mania}</td><td class="start">${p.start}</td><td>${p.m.ppr}</td><td>${p.m.tgt}</td><td>${p.m.rec}</td>
+  <td>${p.m.recy}</td><td>${p.m.car}</td><td>${p.m.rushy}</td><td>${p.m.snap}%</td><td>${val(p,"share")}%</td><td>${val(p,"rz")}</td></tr>`).join("");
+ $("rankHead").querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==="name"?1:-1}renderRanks()});
+ $("rankBody").querySelectorAll(".playerlink").forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));
+}
+document.querySelectorAll(".rankmode").forEach(b=>b.onclick=()=>{
+ rankMode=b.dataset.mode;sortKey=rankMode;sortDir=-1;
+ document.querySelectorAll(".rankmode").forEach(x=>x.classList.toggle("on",x===b));renderRanks();
+});
+document.querySelectorAll(".posf").forEach(b=>b.onclick=()=>{
+ posFilter=b.dataset.pos;document.querySelectorAll(".posf").forEach(x=>x.classList.toggle("on",x===b));renderRanks();
+});
+renderRanks();
+
+function statCard(v,k){return `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`}
+function openPlayer(p){
+ showView("profile");
+ const share=p.pos==="RB"?p.m.touch:p.m.tshare;
+ const shareName=p.pos==="RB"?"Touch Share":"Target Share";
+ const warning=p.confidence!=="High"?`<div class="alert">⚠ ${p.confidence} confidence • ${p.games} played game${p.games===1?"":"s"}${p.partial_games?` • ${p.partial_games} shortened-participation game detected`:""}. Missed games do not count as zeroes.</div>`:"";
+ const roomLabel=p.pos==="RB"?`${p.team} BACKFIELD`:`${p.team} ${p.pos} ROOM`;
+ const room=p.room.map(x=>`<div class="roomrow"><b data-id="${x.id}">${x.name}</b><span>${x.mania}</span><span>${x.opp}</span><span>${x.share}%</span></div>`).join("");
+ const bars=Object.entries(p.buckets).map(([k,v])=>`<div class="barrow"><span class="muted">${k}</span><div class="track"><div class="fill" style="width:${v}%"></div></div><b>${v}</b></div>`).join("");
+ const sims=p.similar.length?p.similar.map(x=>`<div class="roomrow"><b>${x.name}</b><span>${x.sim}%</span><span>${x.normal}</span><span>${x.actual}</span></div>`).join(""):`<p class="muted">Not enough similar-player evidence yet. Early-season matchup effects stay intentionally small.</p>`;
+ const logs=p.logs.map((l,i)=>`<tr><td><input class="gameToggle" type="checkbox" checked data-i="${i}"></td><td>W${l.w} ${l.partial?'<span class="partial">SHORT</span>':""}</td><td>${l.tgt}</td><td>${l.rec}</td><td>${l.ry}</td><td>${l.car}</td><td>${l.ruy}</td><td>${l.snap}%</td><td>${l.ppr}</td></tr>`).join("");
+
+ $("profileBody").innerHTML=`
+ <div class="profileTop"><div><div class="back" id="backRanks">← Rankings</div><h1>${p.name}</h1><div class="meta">${p.team} • ${p.pos} • ${p.games} games • #${p.rank} overall • ${p.pos}${p.pos_rank}</div></div>
+ <div class="ratingHero"><div class="ratingBox"><div class="big blue">${p.mania}</div><small>MANIA RATING<br>${tier(p.mania)}</small></div>
+ <div class="ratingBox"><div class="big green">${p.start}</div><small>WEEK ${META.next_week} START<br>vs ${p.opp}</small></div></div></div>
+ ${warning}
+ <div class="stats">${statCard(p.m.ppr,"PPR / Game")}${statCard(p.m.tgt,"Targets / Game")}${statCard(p.m.rec,"Receptions / Game")}${statCard(p.m.scrim,"Scrimmage Yds / G")}${statCard(share+"%",shareName)}${statCard(p.m.snap+"%","Snap Share")}</div>
+ <div class="two">
+  <div class="card"><h3>MANIA PROFILE</h3><div class="bars">${bars}</div><p class="why">Mania is position-specific. WR/TE carries have no direct rating weight. RB targets and receptions receive extra PPR value. Missed games are excluded; clearly shortened games are automatically downweighted.</p></div>
+  <div class="card"><h3>${roomLabel}</h3><div class="roomrow muted"><span>Player</span><span>Mania</span><span>${p.pos==="RB"?"Opp/G":"Tgt/G"}</span><span>Share</span></div>${room}</div>
+ </div>
+ <div class="two" style="margin-top:14px">
+  <div class="card"><h3>WEEK ${META.next_week} MATCHUP • ${p.opp}</h3>
+   <div style="font-size:32px;font-weight:950" class="${p.matchup_adj>=0?"good":"bad"}">${p.matchup_adj>=0?"+":""}${p.matchup_adj}</div>
+   <p class="why">Matchup adjustment from similar ${p.pos}s who already faced ${p.opp}. It is deliberately dampened early in the season. Recent-role adjustment: ${p.trend_adj>=0?"+":""}${p.trend_adj}.</p>
+   <div class="roomrow muted"><span>Similar player</span><span>Match</span><span>Normal</span><span>vs ${p.opp}</span></div>${sims}
+  </div>
+  <div class="card"><h3>ADVANCED USAGE</h3>
+   ${statCard(p.pos==="RB"?p.m.car:p.m.recy,p.pos==="RB"?"Carries / G":"Receiving Yds / G")}
+   ${statCard(p.pos==="RB"?p.m.rzc:p.m.rzt,p.pos==="RB"?"RZ Carries / G":"RZ Targets / G")}
+   ${statCard(p.pos==="RB"?p.m.gl:p.m.ashare,p.pos==="RB"?"Goal-Line Carries / G":"Air Yard Share %")}
+  </div>
+ </div>
+ <div class="card" style="margin-top:14px"><h3>GAME LOG • CUSTOM VIEW</h3>
+ <div class="custom" id="customLine">Official Mania: <b>${p.mania}</b>. Uncheck a game to inspect the selected-game production; official rankings never change.</div>
+ <div class="tablewrap"><table><thead><tr><th>Use</th><th>Game</th><th>Tgt</th><th>Rec</th><th>Rec Yd</th><th>Car</th><th>Rush Yd</th><th>Snap</th><th>PPR</th></tr></thead><tbody>${logs}</tbody></table></div></div>`;
+
+ $("backRanks").onclick=()=>showView("rankings");
+ $("profileBody").querySelectorAll(".roomrow b[data-id]").forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));
+ $("profileBody").querySelectorAll(".gameToggle").forEach(x=>x.onchange=()=>customProfile(p));
+}
+function customProfile(p){
+ const checked=[...document.querySelectorAll(".gameToggle:checked")].map(x=>p.logs[Number(x.dataset.i)]);
+ if(!checked.length){$("customLine").innerHTML=`Official Mania: <b>${p.mania}</b>. Select at least one game.`;return}
+ const avg=k=>checked.reduce((s,x)=>s+Number(x[k]||0),0)/checked.length;
+ $("customLine").innerHTML=`Official Mania: <b>${p.mania}</b> • Selected ${checked.length} game${checked.length===1?"":"s"}: <b>${fmt(avg("ppr"))} PPR/G</b>, ${fmt(avg("tgt"))} targets/G, ${fmt(avg("car"))} carries/G, ${fmt(avg("snap"))}% snaps. <span class="muted">This sandbox does not alter official Mania.</span>`;
+}
+
+function renderCompare(){
+ if(!A||!B)return;
+ const better=A.mania>B.mania?A:B, starter=A.start>B.start?A:B;
+ const rows=[
+  ["Mania Rating",A.mania,B.mania],["Week Start",A.start,B.start],["PPR/G",A.m.ppr,B.m.ppr],
+  ["Targets/G",A.m.tgt,B.m.tgt],["Receptions/G",A.m.rec,B.m.rec],["Scrimmage Yds/G",A.m.scrim,B.m.scrim],
+  ["Snap %",A.m.snap,B.m.snap]
+ ];
+ $("compareBody").innerHTML=`<div class="versus">
+ <div class="card cmpHero"><h2>${A.name}</h2><div class="muted">${A.team} • ${A.pos}</div><div class="cmpBig blue">${A.mania}</div><div>MANIA</div><div class="cmpBig green" style="font-size:30px;margin-top:10px">${A.start}</div><div>WEEK ${META.next_week} START</div></div>
+ <div class="vs">VS</div>
+ <div class="card cmpHero"><h2>${B.name}</h2><div class="muted">${B.team} • ${B.pos}</div><div class="cmpBig blue">${B.mania}</div><div>MANIA</div><div class="cmpBig green" style="font-size:30px;margin-top:10px">${B.start}</div><div>WEEK ${META.next_week} START</div></div></div>
+ <div class="two" style="margin-top:14px"><div class="card"><h3>WHO'S BETTER OVERALL?</h3><h2>${better.name}</h2><p class="why">${better.mania} Mania Rating. This is the season profile, independent of this week's matchup.</p></div>
+ <div class="card"><h3>WHO SHOULD I START — WEEK ${META.next_week}?</h3><h2>${starter.name}</h2><p class="why">${starter.start} Start Rating. Matchup: ${starter.matchup_adj>=0?"+":""}${starter.matchup_adj}; recent role: ${starter.trend_adj>=0?"+":""}${starter.trend_adj}.</p></div></div>
+ <div class="card" style="margin-top:14px"><div class="tablewrap"><table><thead><tr><th>${A.name}</th><th style="text-align:center">Metric</th><th>${B.name}</th></tr></thead><tbody>
+ ${rows.map(([k,a,b])=>`<tr><td class="${a>b?"good":""}">${a}</td><td style="text-align:center">${k}</td><td class="${b>a?"good":""}">${b}</td></tr>`).join("")}
+ </tbody></table></div></div>`;
+}
+</script>
+</body></html>'''
+
+html = html.replace("__PAYLOAD__", payload).replace("__META__", meta)
+
+os.makedirs("public", exist_ok=True)
+with open("public/index.html", "w", encoding="utf-8") as f:
+    f.write(html)
+
+print("7. FANTASY MANIA built successfully.")
+print(f"   {len(players)} players | Through Week {max_week} | Week {next_week} outlook")
+print("   Output: public/index.html")
