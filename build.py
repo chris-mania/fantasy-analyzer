@@ -1,6 +1,8 @@
 import json
 import math
 import os
+import subprocess
+import sys
 import warnings
 from urllib.error import HTTPError
 
@@ -17,6 +19,10 @@ warnings.filterwarnings("ignore")
 
 SEASON = 2026
 BASE = "https://github.com/nflverse/nflverse-data/releases/download"
+
+# Report card: the build re-runs this script with MANIA_AS_OF_WEEK set. That run uses only the games through
+# that week, prints the start ratings it would have published, and stops before writing the site.
+AS_OF_WEEK = int(os.environ.get("MANIA_AS_OF_WEEK", "0"))
 
 # Core tuning
 QUALIFY_SNAP = 0.30
@@ -116,6 +122,10 @@ try:
             print(f"   Schedule says Weeks 1-{_last_done} are complete.")
 except Exception as e:
     print("   Could not check schedule for completed weeks; using all stats:", e)
+
+if AS_OF_WEEK:
+    stats = stats[safe_num(stats["week"]).astype(int) <= AS_OF_WEEK].copy()
+    snaps = snaps[safe_num(snaps["week"]).astype(int) <= AS_OF_WEEK].copy()
 
 name_col = "player_display_name" if "player_display_name" in stats.columns else "player_name"
 team_col = "team" if "team" in stats.columns else "recent_team"
@@ -681,7 +691,203 @@ def matchup_adjustment(player_row, opponent):
     examples = sorted(examples, key=lambda x: x["sim"], reverse=True)[:12]
     return float(adj), examples
 
+# ============================================================
+# INJURIES (official NFL injury report via nflverse) -> Week rating
+# ============================================================
+print("5b. Applying the latest injury report...")
+inj_by_pid = {}      # player_id -> info for the player himself
+inj_boost = {}       # player_id -> total rating change from teammates' injuries
+inj_why = {}         # player_id -> list of teammates driving that change
+depth_info = {}
+inj_meta = {"ok": False, "updated": "", "n": 0, "out": 0}
+
+def _avail(status, practice):
+    st = str(status).strip().lower() if pd.notna(status) else ""
+    pr = str(practice).strip().lower() if pd.notna(practice) else ""
+    if st == "out":
+        return 0.0, "OUT"
+    if st == "doubtful":
+        return 0.1, "Doubtful"
+    if st == "questionable":
+        return 0.6, "Questionable"
+    if "did not" in pr:
+        return 0.7, "Missed practice"
+    if "limited" in pr:
+        return 0.95, "Limited in practice"
+    return 1.0, ""
+
+if not AS_OF_WEEK:
+    try:
+        inj = pd.read_csv(f"{BASE}/injuries/injuries_{SEASON}.csv", low_memory=False)
+        inj = inj[safe_num(inj["week"]).astype(int) == next_week].copy()
+        if "game_type" in inj.columns:
+            inj = inj[inj["game_type"].astype(str).eq("REG")]
+        inj = inj.drop_duplicates(["gsis_id"], keep="last")
+        gi = g.set_index("player_id")
+        # Starting QB per team = most pass attempts so far.
+        qb_starter = {}
+        if "attempts" in stats.columns:
+            qbs = stats[stats["position"] == "QB"].copy()
+            qbs["attempts"] = safe_num(qbs["attempts"])
+            qbs = qbs.groupby(["team" if "team" in qbs.columns else "recent_team", "player_id"])["attempts"].sum().reset_index()
+            qbs.columns = ["team", "player_id", "attempts"]
+            for t_, grp in qbs.groupby("team"):
+                top = grp.sort_values("attempts", ascending=False).iloc[0]
+                qb_starter[t_] = top["player_id"]
+        qb_avail = {}
+        for _, ir in inj.iterrows():
+            a, label = _avail(ir.get("report_status"), ir.get("practice_status"))
+            pid = ir.get("gsis_id")
+            note = ir.get("report_primary_injury") if pd.notna(ir.get("report_primary_injury")) else ir.get("practice_primary_injury")
+            note = str(note) if pd.notna(note) else ""
+            if ir.get("position") == "QB":
+                if qb_starter.get(ir.get("team")) == pid:
+                    qb_avail[ir.get("team")] = (a, label, str(ir.get("full_name")))
+                continue
+            if pid in gi.index and a < 1.0:
+                inj_by_pid[pid] = {"avail": a, "label": label, "note": note}
+
+        # ---- Roster status: injured reserve / inactive / released players are out ----
+        ROSTER_LABEL = {"RES": "Injured reserve", "INA": "Inactive", "EXE": "Exempt list", "CUT": "Released", "RET": "Retired"}
+        try:
+            ro = pd.read_csv(f"{BASE}/weekly_rosters/roster_weekly_{SEASON}.csv", low_memory=False)
+            ro["week"] = safe_num(ro["week"]).astype(int)
+            wk_r = next_week if (ro["week"] == next_week).any() else int(ro["week"].max())
+            ro = ro[(ro["week"] == wk_r) & ro["status"].isin(list(ROSTER_LABEL))]
+            for _, rr_ in ro.iterrows():
+                key_ = (rr_["gsis_id"], rr_["team"])
+                for _, gr_ in g[(g["player_id"] == rr_["gsis_id"]) & (g["team"] == rr_["team"])].iterrows():
+                    cur = inj_by_pid.get(gr_["player_id"])
+                    if cur is None or cur["avail"] > 0.0:
+                        inj_by_pid[gr_["player_id"]] = {"avail": 0.0, "label": ROSTER_LABEL[rr_["status"]],
+                                                        "note": (cur or {}).get("note", "")}
+        except Exception as e:
+            print("   Roster status unavailable:", e)
+
+        # ---- Depth chart: who is next up at each position ----
+        depth_rank = {}
+        try:
+            dc = pd.read_csv(f"{BASE}/depth_charts/depth_charts_{SEASON}.csv", low_memory=False)
+            dc = dc[dc["dt"] == dc["dt"].max()]
+            dc = dc[dc["pos_abb"].isin(["RB", "WR", "TE"])].copy()
+            dc["pos_rank"] = safe_num(dc["pos_rank"]).astype(int)
+            for _, d_ in dc.iterrows():
+                depth_rank[(d_["gsis_id"], d_["team"])] = int(d_["pos_rank"])
+        except Exception as e:
+            print("   Depth chart unavailable; using usage only:", e)
+
+        # Recent (last two games) work, blended with the season average.
+        rec2 = (merged.sort_values("week").groupby("player_id").tail(2)
+                .groupby("player_id")[["carries", "targets"]].mean())
+        def blend(pid, col, season_val):
+            if pid in rec2.index:
+                return 0.4 * float(season_val) + 0.6 * float(rec2.at[pid, col])
+            return float(season_val)
+
+        DEPTH_W = [1.0, 0.55, 0.3, 0.15, 0.08]
+        def shares(cands, rows, av, depth_ord, use_col):
+            """Split of vacated work: mostly by recent usage, partly by depth-chart order."""
+            if not cands:
+                return {}
+            floor = 0.5 if use_col == "carries" else 0.6
+            us = {k: av[k] * (blend(k, use_col, rows[k][use_col + "_pg"]) + floor) for k in cands}
+            ordered = sorted(cands, key=lambda k: depth_ord.get(k, 99))
+            ds = {k: av[k] * (DEPTH_W[i] if i < len(DEPTH_W) else 0.05) for i, k in enumerate(ordered)}
+            ut, dt_ = sum(us.values()), sum(ds.values())
+            if ut <= 0 and dt_ <= 0:
+                return {}
+            return {k: 0.65 * (us[k] / ut if ut else 0) + 0.35 * (ds[k] / dt_ if dt_ else 0) for k in cands}
+
+        # Spread what injured players leave behind to their healthy teammates.
+        RET = 0.85          # share of vacated work that stays with listed players
+        PPR_CARRY, PPR_TGT_RB, PPR_TGT = 0.65, 1.3, 1.55
+        for team, tg in g.groupby("team"):
+            rows = {r_["player_id"]: r_ for _, r_ in tg.iterrows()}
+            av = {pid: inj_by_pid.get(pid, {}).get("avail", 1.0) for pid in rows}
+            d_ord = {pid: depth_rank.get((pid, team), 99) for pid in rows}
+            # Role check: depth-chart order vs recent usage among healthy players.
+            for pos_ in ("RB", "WR", "TE"):
+                healthy = [k for k, x in rows.items() if x["position"] == pos_ and av[k] > 0.1 and d_ord[k] < 99]
+                if not healthy:
+                    continue
+                by_depth = sorted(healthy, key=lambda k: d_ord[k])
+                by_use = sorted(healthy, key=lambda k: -(blend(k, "carries", rows[k]["carries_pg"]) + 1.5 * blend(k, "targets", rows[k]["targets_pg"])))
+                for i, k in enumerate(by_depth):
+                    depth_info[k] = {"rank": i + 1, "pos": pos_}
+                if pos_ in ("RB", "TE") and len(by_depth) >= 2:
+                    top = by_depth[0]
+                    use_of = lambda k: blend(k, "carries", rows[k]["carries_pg"]) + 1.5 * blend(k, "targets", rows[k]["targets_pg"])
+                    # Only trust the depth chart over usage when the usage gap is small.
+                    if by_use[0] != top and use_of(top) >= 0.6 * use_of(by_use[0]):
+                        inj_boost[top] = inj_boost.get(top, 0.0) + 1.0
+                        inj_why.setdefault(top, []).append({"n": "Depth chart", "pos": pos_, "s": pos_ + "1 now", "pts": 1.0, "kind": "depth"})
+                        old = by_use[0]
+                        inj_boost[old] = inj_boost.get(old, 0.0) - 1.0
+                        inj_why.setdefault(old, []).append({"n": "Depth chart", "pos": pos_, "s": "now behind " + str(rows[top]["player_name"]), "pts": -1.0, "kind": "depth"})
+            for pid, r_ in rows.items():
+                u = 1.0 - av[pid]
+                if u <= 0 or (r_["carries_pg"] + r_["targets_pg"]) < 1.0:
+                    continue
+                pos = r_["position"]
+                v_car = blend(pid, "carries", r_["carries_pg"]) * u * RET
+                v_tgt = blend(pid, "targets", r_["targets_pg"]) * u * RET
+                rbs = [k for k, x in rows.items() if x["position"] == "RB" and k != pid]
+                pcs = [k for k, x in rows.items() if x["position"] in ("WR", "TE") and k != pid]
+                give = []   # (receiver, carries, targets)
+                if v_car > 0:
+                    sh = shares(rbs, rows, av, d_ord, "carries")
+                    give += [(k, v_car * sh[k], 0.0) for k in sh]
+                if v_tgt > 0:
+                    to_rb = 0.6 if pos == "RB" else (0.2 if pos == "WR" else 0.3)
+                    sh = shares(rbs, rows, av, d_ord, "targets")
+                    give += [(k, 0.0, v_tgt * to_rb * sh[k]) for k in sh]
+                    sh = shares(pcs, rows, av, d_ord, "targets")
+                    give += [(k, 0.0, v_tgt * (1 - to_rb) * sh[k]) for k in sh]
+                for k, c_, t_ in give:
+                    rp = rows[k]["position"]
+                    ppr = c_ * PPR_CARRY + t_ * (PPR_TGT_RB if rp == "RB" else PPR_TGT)
+                    pts = (5.5 * ppr / max(float(rows[k]["ppr_pg"]), 6.0) + 0.2 * ppr) * 0.85
+                    if rp == "TE":
+                        pts *= 0.6
+                    if pts < 0.15:
+                        continue
+                    inj_boost[k] = inj_boost.get(k, 0.0) + pts
+                    inj_why.setdefault(k, []).append({"n": str(r_["player_name"]), "pos": pos, "s": inj_by_pid.get(pid, {}).get("label", ""), "pts": round(pts, 1), "kind": "role"})
+            # A hurt starting QB hurts the whole passing game.
+            if team in qb_avail:
+                qa, qlabel, qname = qb_avail[team]
+                uq = 1.0 - qa
+                if uq > 0:
+                    for k, x in rows.items():
+                        d = -2.2 * uq if x["position"] == "WR" else (-1.6 * uq if x["position"] == "TE" else -0.5 * uq)
+                        inj_boost[k] = inj_boost.get(k, 0.0) + d
+                        inj_why.setdefault(k, []).append({"n": qname, "pos": "QB", "s": qlabel, "pts": round(d, 1), "kind": "qb"})
+        inj_meta["ok"] = True
+        inj_meta["n"] = len(inj_by_pid)
+        inj_meta["out"] = sum(1 for v in inj_by_pid.values() if v["avail"] <= 0.1)
+        try:
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            inj_meta["updated"] = datetime.now(ZoneInfo("America/New_York")).strftime("%a %b %-d, %-I:%M %p ET")
+        except Exception:
+            inj_meta["updated"] = ""
+        print(f"   {inj_meta['n']} skill players flagged, {inj_meta['out']} out/doubtful.")
+    except Exception as e:
+        print("   Injury report unavailable; ratings use no injury data:", e)
+
+def inj_why_clean(pid):
+    agg = {}
+    for w in inj_why.get(pid, []):
+        k = (w["n"], w["kind"])
+        if k in agg:
+            agg[k]["pts"] = round(agg[k]["pts"] + w["pts"], 1)
+        else:
+            agg[k] = dict(w)
+    out = [w for w in agg.values() if abs(w["pts"]) >= 0.3]
+    return sorted(out, key=lambda x: -abs(x["pts"]))[:3]
+
 start_vals = []
+inj_totals = {}
 match_examples = {}
 for _, r in g.iterrows():
     opp = opp_map.get(str(r["team"]), "")
@@ -700,13 +906,24 @@ for _, r in g.iterrows():
     context_adj = madj + trend_adj
     if r["position"] == "TE":
         context_adj *= 0.35
-    start = clamp(r["mania"] + context_adj + confidence_adj)
+    own = inj_by_pid.get(r["player_id"])
+    inj_own = -4.0 * (1.0 - own["avail"]) if own else 0.0
+    team_b = max(-4.0, min(6.0, inj_boost.get(r["player_id"], 0.0)))
+    inj_total = inj_own + team_b
+    start = clamp(r["mania"] + context_adj + confidence_adj + inj_total)
+    if own and own["avail"] <= 0.1:
+        start = 0.0
+    inj_totals[r["player_id"]] = inj_total
     start_vals.append((start, madj, trend_adj, opp))
     match_examples[r["player_id"]] = ex
 
 g[["start_rating", "matchup_adj", "trend_adj", "opponent"]] = pd.DataFrame(start_vals, index=g.index)
 g["start_pos_rank"] = g.groupby("position")["start_rating"].rank(ascending=False, method="min").astype(int)
 g["start_overall_rank"] = g["start_rating"].rank(ascending=False, method="min").astype(int)
+
+if AS_OF_WEEK:
+    print("AS_OF " + json.dumps({r["player_id"]: [round(float(r["start_rating"]), 1), str(r["opponent"])] for _, r in g.iterrows()}))
+    sys.exit(0)
 
 # ============================================================
 # BUILD JSON
@@ -805,6 +1022,11 @@ for _, r in g.sort_values("mania", ascending=False).iterrows():
         "matchup_adj": round(float(r["matchup_adj"]), 1),
         "trend_adj": round(float(r["trend_adj"]), 1),
         "trend_pct": round(float(r["trend_pct"]), 1),
+        "inj": inj_by_pid.get(r["player_id"]),
+        "depth": depth_info.get(r["player_id"]),
+        "out": bool(inj_by_pid.get(r["player_id"]) and inj_by_pid[r["player_id"]]["avail"] <= 0.1),
+        "inj_adj": round(float(inj_totals.get(r["player_id"], 0.0)), 1),
+        "inj_why": inj_why_clean(r["player_id"]),
         "buckets": {
             "Production": round(float(r["production"]), 1),
             "Opportunity": round(float(r["opportunity"]), 1),
@@ -832,6 +1054,32 @@ for pos in ["RB", "WR", "TE"]:
         pct_refs[pos][k] = [round(float(v), 3) for v in np.sort(gp[col].replace([np.inf, -np.inf], np.nan).dropna().values)]
 refs_json = json.dumps(pct_refs, separators=(",", ":"))
 
+# ============================================================
+# REPORT CARD — what the model said about the week just played, before it was played
+# ponytail: one extra full run (and its downloads) per build, and only the latest week is graded.
+# Save each week's ratings to the repo instead if a season-long record is wanted.
+# ============================================================
+prev_calls = {}   # player_id -> [start rating, opponent] as of the week before max_week
+if max_week > 1:
+    print(f"   Rebuilding Week {max_week} ratings as of Week {max_week - 1} for the report card...")
+    try:
+        child = subprocess.run(
+            [sys.executable, os.path.abspath(__file__)],
+            env={**os.environ, "MANIA_AS_OF_WEEK": str(max_week - 1)},
+            capture_output=True, text=True, timeout=1200, check=True,
+        )
+        prev_calls = json.loads(next(l for l in child.stdout.splitlines() if l.startswith("AS_OF "))[6:])
+    except Exception as e:
+        print("   WARNING: report card unavailable; site will still build:", e)
+
+# Every team's opponent by week, past and future, for the browser views. A missing week is a bye.
+opps = {}
+if schedule_ok and {"week", "home_team", "away_team"}.issubset(games.columns):
+    for _, game in games.iterrows():
+        h, a, wk = str(game["home_team"]), str(game["away_team"]), int(game["week"])
+        opps.setdefault(h, {})[wk] = a
+        opps.setdefault(a, {})[wk] = h
+
 payload = json.dumps(players, separators=(",", ":"))
 meta = json.dumps({
     "season": SEASON,
@@ -839,7 +1087,10 @@ meta = json.dumps({
     "next_week": next_week,
     "rz": rz_ok,
     "schedule": schedule_ok,
+    "injuries": inj_meta,
     "players": len(players),
+    "opps": opps,
+    "prev": prev_calls,
 })
 
 # ============================================================
@@ -1203,20 +1454,45 @@ body.shot .shotExit{display:block;text-align:center;padding:18px}
 @media(max-width:700px){.cstart .outlook{font-size:11px;padding:4px 7px;white-space:nowrap}.cstart td,.cstart th{padding-left:3px!important;padding-right:3px!important}.cstart th:nth-child(2),.cstart td:nth-child(2){width:26%}}
 .badgePick{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}.badgePick[hidden]{display:none}.bpick{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #c9d6ea;border-radius:999px;padding:4px 12px 4px 5px;font:inherit;font-weight:800;font-size:13px;color:#1c2b4a;cursor:pointer}.bpick i{width:24px;height:27px;display:inline-grid;place-items:center}.bpick svg{width:24px;height:27px}.bpick em{font-style:normal;font-weight:700;font-size:11.5px;color:#6a7b96;background:#eef3fb;border-radius:999px;padding:1px 7px}.bpick.on{background:#1c2b4a;color:#fff;border-color:#1c2b4a}.bpick.on em{background:rgba(255,255,255,.18);color:#fff}@media(max-width:700px){.badgePick{gap:6px}.bpick{font-size:12px;padding:3px 10px 3px 4px}.bpick i,.bpick svg{width:20px;height:23px}}
 .badgePick.sel{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}.badgePick.sel .bpick{flex:0 0 auto}
+/* insights — one nav tab; its sub-tabs appear once there is more than one */
+.insNav{display:flex;gap:4px;overflow-x:auto;white-space:nowrap;border-bottom:1px solid var(--line);margin:-14px 0 26px;scrollbar-width:none}.insNav::-webkit-scrollbar{display:none}.insNav:has(.insTab:only-child){display:none}
+.insTab{flex:0 0 auto;border:0;background:none;font:inherit;font-size:15px;font-weight:800;color:var(--muted);padding:12px 14px;cursor:pointer;border-bottom:2px solid transparent}.insTab.on,.insTab:hover{color:var(--ink);border-bottom-color:var(--blue)}
+.insPane{display:none}.insPane.on{display:block}
+/* report card */
+.rcGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0 4px}
+/* schedule strength */
+.sch{display:inline-block;margin:0 6px 6px 0;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:13px;font-weight:700}.sch.good,.scTable td.good{background:#e7f7ee}.sch.bad,.scTable td.bad{background:#fde9eb}.sch.muted{font-weight:600}
+.scTable .c{text-align:center}.scWho{margin-left:10px;font-size:13px;font-weight:600;color:var(--muted)}
+/* buy low / sell high */
+.mkGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;align-items:start}.mkRow{display:grid;grid-template-columns:24px minmax(0,1fr) 64px 64px;gap:10px;align-items:center;padding:13px 0;border-top:1px solid #e9eff8}.mkRow .n{color:#8a99b1;font-size:14px}.mkRow .tag{white-space:nowrap}.mkRow .partial{margin-left:6px;padding:3px 6px;font-size:10px;font-weight:800;white-space:nowrap}.mkWhy{font-size:13.5px;color:var(--muted);line-height:1.45;margin-top:4px}.mkPct{text-align:center}.mkPct .pctNum{margin:0 auto}.mkPct small{display:block;font-size:10.5px;color:var(--muted);font-weight:700;margin-top:4px}
+@media(max-width:700px){.mkGrid{grid-template-columns:minmax(0,1fr)}.mkRow{grid-template-columns:18px minmax(0,1fr) 58px 58px;gap:6px}}
+@media(max-width:700px){.navb{font-size:10px!important;padding:0 4px!important;letter-spacing:0!important;flex:1 1 auto}.links{justify-content:space-between}#insights table{font-size:12.5px}#insights th,#insights td{padding:9px 4px!important;white-space:normal}#insights th{font-size:10.5px;letter-spacing:.2px}#insights .tag{display:none}#insights .tablewrap{overflow-x:visible}}
+.injc{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:800;vertical-align:middle;letter-spacing:.3px}.injc.o{background:#fde9eb;color:#c0303d}.injc.q{background:#fff3d6;color:#9a6a00}.injBox{background:#fff;border:1px solid #dbe5f4;border-radius:14px;padding:14px 16px;margin:14px 0}.injHd{font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#6a7b96;margin-bottom:6px}.injRow{font-size:14px;line-height:1.45;padding:8px 0 8px 12px;border-left:3px solid #9aa8bd;margin-top:6px;color:#33445f}.injRow b{color:#1c2b4a}.injRow.o{border-color:#e2505b}.injRow.q{border-color:#e3a21a}.injRow.up{border-color:#22a45d}
 </style></head><body>
-<div class="topbar"><div class="nav"><div class="brand">FANTASY <span>MANIA</span></div><div class="links"><button class="navb on" data-v="home">HOME</button><button class="navb" data-v="players">PLAYERS</button><button class="navb" data-v="rankings">RANKINGS</button><button class="navb" data-v="teamshare">TEAM SHARE</button><button class="navb" data-v="compare">COMPARE</button></div></div></div>
+<div class="topbar"><div class="nav"><div class="brand">FANTASY <span>MANIA</span></div><div class="links"><button class="navb on" data-v="home">HOME</button><button class="navb" data-v="players">PLAYERS</button><button class="navb" data-v="rankings">RANKINGS</button><button class="navb" data-v="teamshare">TEAM SHARE</button><button class="navb" data-v="compare">COMPARE</button><button class="navb" data-v="insights">INSIGHTS</button></div></div></div>
 <main class="wrap">
-<section id="home" class="view on"><div class="homeHero"><div class="kicker">2026 Fantasy Football • Through Week <span id="homeWeek"></span></div><h1>Who's actually getting the work.</h1><p class="sub">Usage, role and matchup for every RB, WR and TE, boiled down to one rating.</p><div class="search homeSearch"><input id="homeQ" placeholder="Search any RB, WR or TE"><div class="dd" id="homeDD"></div></div><div class="homeActions"><button class="cta" id="homeRanks">VIEW RANKINGS</button><button class="cta" id="homeCompare">COMPARE PLAYERS</button><button class="cta" id="homeShare">TEAM SHARE</button><button class="cta" id="homePlayers">BROWSE PLAYERS</button></div></div><div class="homeGrid"><div class="homeBlock"><div class="sectionTitle">Top players right now</div><div id="homeLeaders" class="miniRank"></div><p class="disclaimer left" id="homeDisc"></p></div><div class="homeBlock"><div class="sectionTitle">How Mania works</div><div class="how3"><div><b>Mania Rating</b>How strong his role and production have been this season, compared with other players at his position. It blends production, volume, team role, red-zone work and efficiency.</div><div><b>Week <span class="nextWeekText"></span> Rating</b>His Mania Rating adjusted for this week: the opponent, how players with a similar role have done against that defense, and his recent usage.</div><div><b>Percentiles and colors</b>Every bar shows where he ranks among players at his position. Green is the top 30%, yellow is the middle, red is the bottom 40%.</div></div></div></div></section>
+<section id="home" class="view on"><div class="homeHero"><div class="kicker">2026 Fantasy Football • Through Week <span id="homeWeek"></span></div><h1>Who's actually getting the work.</h1><p class="sub">Usage, role and matchup for every RB, WR and TE, boiled down to one rating.</p><div class="search homeSearch"><input id="homeQ" placeholder="Search any RB, WR or TE"><div class="dd" id="homeDD"></div></div><div class="homeActions"><button class="cta" id="homeRanks">VIEW RANKINGS</button><button class="cta" id="homeCompare">COMPARE PLAYERS</button><button class="cta" id="homeShare">TEAM SHARE</button><button class="cta" id="homePlayers">BROWSE PLAYERS</button><button class="cta" id="homeInsights">INSIGHTS</button></div></div><div class="homeGrid"><div class="homeBlock"><div class="sectionTitle">Top players right now</div><div id="homeLeaders" class="miniRank"></div><p class="disclaimer left" id="homeDisc"></p></div><div class="homeBlock"><div class="sectionTitle">How Mania works</div><div class="how3"><div><b>Mania Rating</b>How strong his role and production have been this season, compared with other players at his position. It blends production, volume, team role, red-zone work and efficiency.</div><div><b>Week <span class="nextWeekText"></span> Rating</b>His Mania Rating adjusted for this week: the opponent, how players with a similar role have done against that defense, and his recent usage.</div><div><b>Percentiles and colors</b>Every bar shows where he ranks among players at his position. Green is the top 30%, yellow is the middle, red is the bottom 40%.</div></div></div></div></section>
 <section id="players" class="view"><h1 class="title">Players</h1><p class="sub">Search a player to open the full Mania profile.</p><div class="search"><input id="playerQ" placeholder="Search player"><div class="dd" id="playerDD"></div></div></section>
 <section id="rankings" class="view"><div class="kicker">Through Week <span id="wk"></span></div><h1 class="title" id="rankTitle">Overall Rankings</h1><p class="sub" id="rankSub"></p><div class="toolbar"><button class="pill rankmode on" data-mode="mania">Mania Rating</button><button class="pill rankmode" data-mode="start">Week start rating</button><button class="pill rankmode" data-mode="badges">Badges</button><span style="width:8px"></span><button class="pill posf on" data-pos="ALL">ALL</button><button class="pill posf" data-pos="RB">RB</button><button class="pill posf" data-pos="WR">WR</button><button class="pill posf" data-pos="TE">TE</button></div><div id="badgePick" class="badgePick" hidden></div><select id="sortSel" class="teamSelect sortSel"></select><p class="disclaimer left" id="rankDisc"></p><div class="tablewrap rankDesk"><table><thead id="rankHead"></thead><tbody id="rankBody"></tbody></table></div><div class="rankCards" id="rankCards"></div></section>
 <section id="teamshare" class="view"><div class="kicker">Through Week <span id="shareWeek"></span></div><h1 class="title">Team Share</h1><p class="sub">See who is actually on the field and who is earning the offense each week. Every player name opens the full Fantasy Mania profile.</p><div class="teamControls"><select id="teamPick" class="teamSelect"></select><button class="pill shareMode on" data-share="snap">SNAP SHARE</button><button class="pill shareMode" data-share="target">TARGET SHARE</button></div><div id="teamShareBody"></div></section><section id="profile" class="view"><div id="profileBody"></div></section>
+<section id="insights" class="view"><div class="insNav"><button class="insTab on" data-v="movers">Risers &amp; Fallers</button><button class="insTab" data-v="market">Buy Low / Sell High</button><button class="insTab" data-v="defense">Defense vs. Position</button><button class="insTab" data-v="schedule">Schedule Strength</button><button class="insTab" data-v="report">Report Card</button></div>
+<div class="insPane on" id="ins-movers"><div class="kicker">Week <span class="mvWeek"></span> against earlier games</div><h1 class="title">Risers &amp; Fallers</h1><p class="sub">Whose role changed the most in Week <span class="mvWeek"></span>, compared with his average over his earlier games. A bigger role usually shows up before the points do.</p><div class="toolbar"><button class="pill mvDir on" data-v="1">Risers</button><button class="pill mvDir" data-v="-1">Fallers</button><span style="width:8px"></span><button class="pill mvKey on" data-v="snap">Snap share</button><button class="pill mvKey" data-v="share">Touch / target share</button><span style="width:8px"></span><button class="pill mvPos on" data-v="ALL">ALL</button><button class="pill mvPos" data-v="RB">RB</button><button class="pill mvPos" data-v="WR">WR</button><button class="pill mvPos" data-v="TE">TE</button></div><div class="shareNote" id="moversNote"></div><div class="panel" id="moversBody"></div></div>
+<div class="insPane" id="ins-market"><div class="kicker">Through Week <span id="mkWeek"></span></div><h1 class="title">Buy Low / Sell High</h1><p class="sub">Players whose role and fantasy points disagree. Usage is how much work he gets: volume, team role and red-zone chances. Production is the points and yards he has turned it into. Both are percentiles at his position.</p><div class="toolbar"><button class="pill mkPos on" data-v="ALL">ALL</button><button class="pill mkPos" data-v="RB">RB</button><button class="pill mkPos" data-v="WR">WR</button><button class="pill mkPos" data-v="TE">TE</button></div><div class="mkGrid" id="marketBody"></div><p class="disclaimer left">This compares usage and production so far this season. It flags a player who left his last game early or missed it, but it does not see injury reports, depth-chart changes or a new quarterback, and this early a game or two can swing it. Treat it as a list of names to look into, not a trade verdict.</p></div>
+<div class="insPane" id="ins-defense"><div class="kicker">Through Week <span id="dvWeek"></span></div><h1 class="title">Defense vs. Position</h1><p class="sub">What each defense has given up to running backs, receivers and tight ends. "Vs usual" compares what players scored against this defense with what those same players normally score, so a defense is not punished for a schedule full of great offenses.</p><div class="toolbar"><button class="pill dvPos on" data-v="RB">RB</button><button class="pill dvPos" data-v="WR">WR</button><button class="pill dvPos" data-v="TE">TE</button></div><div class="shareNote">Easiest matchups first. Green defenses have allowed 10%+ more than usual, red ones 10%+ less.</div><div class="panel" id="defenseBody"></div></div>
+<div class="insPane" id="ins-schedule"><div class="kicker">Week <span id="scWeek"></span> onward</div><h1 class="title">Schedule Strength</h1><p class="sub">Every team's remaining opponents, graded by what those defenses have given up to the position so far. It is the "vs usual" number from Defense vs. Position, looked up for each game still to come. Easiest schedules first.</p><div class="toolbar"><button class="pill scPos on" data-v="RB">RB</button><button class="pill scPos" data-v="WR">WR</button><button class="pill scPos" data-v="TE">TE</button><span style="width:8px"></span><button class="pill scWin on" data-v="next4">Next 4 weeks</button><button class="pill scWin" data-v="all">Rest of season</button><button class="pill scWin" data-v="playoffs">Weeks 15-17</button></div><div class="shareNote">Green is a defense allowing 10%+ more than usual to the position, red is 10%+ less. This early most defenses have only a few games behind them, so expect these to move.</div><div class="panel" id="scheduleBody"></div></div>
+<div class="insPane" id="ins-report"><div class="kicker">Week <span class="rcWeek"></span> results</div><h1 class="title">Report Card</h1><p class="sub">How the Week <span class="rcWeek"></span> ratings held up. These are the ratings the model gives using only the games before Week <span class="rcWeek"></span>, set against what each player then scored.</p><div class="rcGrid" id="reportTiles"></div><div class="toolbar"><button class="pill rcPos on" data-v="RB">RB</button><button class="pill rcPos" data-v="WR">WR</button><button class="pill rcPos" data-v="TE">TE</button></div><div id="reportBody"></div></div>
+</section>
 <section id="compare" class="view"><div class="topRow"><h1 class="title">Compare Players</h1><button class="shotBtn" onclick="toggleShot(true)">Screenshot view</button></div><p class="sub">Overall value and Week <span id="cmpWeek"></span> start decision. Change the games used for either player and the model recalculates.</p><div class="grid2"><div class="search"><input id="aQ" placeholder="Player A"><div class="dd" id="aDD"></div></div><div class="search"><input id="bQ" placeholder="Player B"><div class="dd" id="bDD"></div></div></div><div id="compareBody"></div></section>
 <div class="shotMark">FANTASY MANIA &bull; 2026 &bull; Through Week <span id="shotWk"></span></div></main><div class="shotExit"><button class="pill" onclick="toggleShot(false)">Exit screenshot view</button></div><script>
 const DB=__PAYLOAD__, META=__META__, REFS=__REFS__; const $=id=>document.getElementById(id),byId=id=>DB.find(p=>p.id===id),fmt=n=>Math.round(Number(n)*10)/10;$('wk').textContent=META.week;$('shotWk').textContent=META.week;$('cmpWeek').textContent=META.next_week;
-const DISC=`Week ${META.next_week} Rating is an estimate built from a player's recent role and his opponent. It does not account for injuries to the QB or to other players on his team, which can change a role fast. Check the injury report before you set your lineup. Badges describe how a player is used, not how good he is, and the rank is his spot at his position by Week rating.`;
+const DISC=`Week ${META.next_week} Rating is an estimate built from a player's recent role, his opponent and the latest NFL injury report${META.injuries&&META.injuries.updated?' (updated '+META.injuries.updated+')':''}. Injuries shift carries and targets to teammates, but the model cannot know final inactives or depth-chart decisions, so check the injury report before you set your lineup. Badges describe how a player is used, not how good he is, and the rank is his spot at his position by Week rating.`;
 function ord(n){n=Math.round(n);let v=n%100,x=['th','st','nd','rd'];return n+(x[(v-20)%10]||x[v]||x[0])}
+function fs(p,v){return p.out?'OUT':Number(v).toFixed(1)}
+function injChip(p){if(!p.inj||p.inj.avail>0.6)return '';let t=p.out?'OUT':p.inj.label==='Missed practice'?'DNP':'Q';return `<span class="injc ${p.out?'o':'q'}" title="${p.inj.label}${p.inj.note?' ('+p.inj.note+')':''}">${t}</span>`}
+function injHTML(p){let wk=META.next_week,o=[],pm=x=>(x>0?'+':'')+x.toFixed(1);if(p.inj){let pen=(4*(1-p.inj.avail)).toFixed(1);o.push(`<div class="injRow ${p.out?'o':'q'}"><b>${p.inj.label}</b>${p.inj.note?' ('+p.inj.note+')':''}. ${p.out?'He is not expected to play this week, so there is no Week '+wk+' Rating.':'His Week '+wk+' Rating is lowered by '+pen+' for the injury risk.'}</div>`)}(p.inj_why||[]).forEach(w=>{o.push(w.kind==='depth'?`<div class="injRow ${w.pts>0?'up':'q'}"><b>Depth chart</b> (${w.s}) ${pm(w.pts)} on Week ${wk} Rating. ${w.pts>0?'He is first up at his position, ahead of players who got more work earlier.':'The depth chart now has someone else ahead of him.'}</div>`:w.kind==='qb'?`<div class="injRow ${w.pts<0?'q':'up'}"><b>${w.n}</b> (QB, ${w.s}) ${pm(w.pts)} on Week ${wk} Rating. A hurt starting quarterback hurts the whole passing game.</div>`:`<div class="injRow up"><b>${w.n}</b> (${w.pos}, ${w.s}) ${pm(w.pts)} on Week ${wk} Rating. His carries and targets are expected to shift to teammates.</div>`)});return o.length?`<div class="injBox"><div class="injHd">Injury report${META.injuries&&META.injuries.updated?' \u2022 updated '+META.injuries.updated:''}</div>${o.join('')}</div>`:''}
 function outlook(p,start){
  if(p.opp==='BYE')return {t:'On bye',d:'',c:'g0',r:999};
+ if(p.out)return {t:'OUT',d:'',c:'g0',r:998};
  let a=(REFS[p.pos]||{}).start||[],r=Math.abs(start-p.start)<1e-9?p.start_pos_rank:Math.max(1,1+a.filter(x=>x>start+.0005).length-(p.start>start?1:0)),lim=p.pos==='TE'?[6,12]:[12,24];
  return {t:p.pos+r+' this week',d:'',c:r<=lim[0]?'g90':r<=lim[1]?'g70':'g0',r}
 }
@@ -1278,7 +1554,7 @@ let shareMode='snap';function renderTeamShare(){let teams=[...new Set(DB.map(p=>
  let seasonOf=p=>isSnap?p.m.snap:(p.pos==='RB'?p.m.tshare:p.m.tshare);
  $('teamShareBody').innerHTML=`<div class="shareNote">${isSnap?'Share of the offense snaps each player was on the field.':'Share of the team passes thrown to each player.'} Green or red numbers moved 5+ points from the week before.</div>`+['RB','WR','TE'].map(pos=>{let q=ps.filter(p=>p.pos===pos&&(p.m.snap>=8||p.m.tshare>=3));if(!q.length)return'';q.sort((a,b)=>seasonOf(b)-seasonOf(a));return `<div class="shareSection"><h2>${pos==='RB'?'Running backs':pos==='WR'?'Wide receivers':'Tight ends'}</h2><div class="tablewrap"><table class="shareTable"><thead><tr><th>Player</th>${weeks.map(w=>`<th>Wk ${w}</th>`).join('')}<th>Season</th></tr></thead><tbody>${q.map(p=>{let prev=null,cells=weeks.map(w=>{let l=p.logs.find(x=>x.w===w);if(!l){return '<td>—</td>'}let v=isSnap?l.snap:l.tshare,cls=prev==null?'':(v-prev>=5?'up':v-prev<=-5?'down':'');prev=v;return `<td class="${cls}">${fmt(v)}%</td>`}).join('');return `<tr><td><span class="sharePlayer" data-id="${p.id}">${p.name}</span></td>${cells}<td class="season">${fmt(seasonOf(p))}%</td></tr>`}).join('')}</tbody></table></div></div>`}).join('');
  $('teamShareBody').querySelectorAll('.sharePlayer').forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)))}
-function renderHome(){if($('homeWeek'))$('homeWeek').textContent=META.week;document.querySelectorAll('.nextWeekText').forEach(x=>x.textContent=META.next_week);let top=[...DB].sort((a,b)=>b.mania-a.mania).slice(0,5);$('homeLeaders').innerHTML=`<div class="miniRow miniHead"><span></span><span>Player</span><span style="text-align:right">Mania Rating</span><span style="text-align:right">Week ${META.next_week} Rating</span></div>`+top.map((p,i)=>`<div class="miniRow"><span class="n">${i+1}</span><span class="pn" data-id="${p.id}">${p.name} <span class="tag">${p.team} ${p.pos}</span></span><span class="score ${grade(p.mania)}">${Number(p.mania).toFixed(1)}</span><span class="score ${grade(p.start)}">${Number(p.start).toFixed(1)}</span></div>`).join('');$('homeLeaders').querySelectorAll('.pn').forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));$('homeDisc').textContent=DISC;$('homeRanks').onclick=()=>showView('rankings');$('homeCompare').onclick=()=>showView('compare');$('homeShare').onclick=()=>showView('teamshare');$('homePlayers').onclick=()=>showView('players')}
+function renderHome(){if($('homeWeek'))$('homeWeek').textContent=META.week;document.querySelectorAll('.nextWeekText').forEach(x=>x.textContent=META.next_week);let top=[...DB].sort((a,b)=>b.mania-a.mania).slice(0,5);$('homeLeaders').innerHTML=`<div class="miniRow miniHead"><span></span><span>Player</span><span style="text-align:right">Mania Rating</span><span style="text-align:right">Week ${META.next_week} Rating</span></div>`+top.map((p,i)=>`<div class="miniRow"><span class="n">${i+1}</span><span class="pn" data-id="${p.id}">${p.name} <span class="tag">${p.team} ${p.pos}</span></span><span class="score ${grade(p.mania)}">${Number(p.mania).toFixed(1)}</span><span class="score ${grade(p.start)}">${fs(p,p.start)}</span></div>`).join('');$('homeLeaders').querySelectorAll('.pn').forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));$('homeDisc').textContent=DISC;$('homeRanks').onclick=()=>showView('rankings');$('homeCompare').onclick=()=>showView('compare');$('homeShare').onclick=()=>showView('teamshare');$('homePlayers').onclick=()=>showView('players')}
 function sg(v){v=Number(v);return (v>0?'+':'')+v.toFixed(1)}
 function renderRanks(){let CL=COLS();if(!CL.some(c=>c[0]===sortKey))sortKey=rankMode;let bp=$('badgePick'),inB=rankMode==='badges';bp.hidden=!inB;let pool=DB.filter(p=>posFilter==='ALL'||p.pos===posFilter);
  if(inB){let cnt={},ds={};pool.forEach(p=>p.bl.forEach(b=>{cnt[b.n]=(cnt[b.n]||0)+1;ds[b.n]=b.d}));let gen=n=>n==='Role Player'||n==='Depth Back'?1:0,names=Object.keys(cnt).sort((a,b)=>gen(a)-gen(b)||cnt[b]-cnt[a]);if(selBadge&&!cnt[selBadge])selBadge=null;bp.classList.toggle('sel',!!selBadge);bp.innerHTML=names.map(n=>`<button type="button" class="bpick${n===selBadge?' on':''}" data-n="${n}"><i>${bIcon(n)}</i><span>${n}</span><em>${cnt[n]}</em></button>`).join('');bp.querySelectorAll('.bpick').forEach(x=>x.onclick=()=>{selBadge=selBadge===x.dataset.n?null:x.dataset.n;renderRanks()});window._bd=ds;let on=bp.querySelector('.on');if(on)bp.scrollLeft=Math.max(0,on.offsetLeft-bp.offsetLeft-12)}
@@ -1286,18 +1562,18 @@ function renderRanks(){let CL=COLS();if(!CL.some(c=>c[0]===sortKey))sortKey=rank
  let sel=$('sortSel');sel.innerHTML=CL.filter(c=>c[0]!=='rank').map(([k,l])=>`<option value="${k}">Sort by: ${k==='start'?'Week '+META.next_week+' Rating':k==='mania'?'Mania Rating':l}</option>`).join('');sel.value=sortKey;sel.onchange=()=>{sortKey=sel.value;sortDir=sortKey==='name'||sortKey==='opp'?1:-1;renderRanks()};
  $('rankHead').innerHTML='<tr>'+CL.map(([k,l])=>`<th data-k="${k}">${k==='start'?'Wk '+META.next_week:l}${sortKey===k?(sortDir<0?' ↓':' ↑'):''}</th>`).join('')+'</tr>';
  let tg=p=>p.opp==='BYE'?'<span class="tag">BYE</span>':'';
- let cell={rank:(p,i)=>`<td>${i+1}</td>`,name:p=>`<td><span class="playerlink" data-id="${p.id}">${p.name}</span><span class="tag">${p.team} ${p.pos}</span>${tg(p)}${bIcons(p.bl)}</td>`,mania:p=>`<td class="grade ${grade(p.mania)}">${p.mania}</td>`,start:p=>`<td class="grade ${grade(p.start)}">${p.start}</td>`,opp:p=>`<td>${p.opp}</td>`,matchup_adj:p=>`<td class="${p.matchup_adj>0.4?'good':p.matchup_adj<-0.4?'bad':'muted'}">${p.opp==='BYE'?'—':sg(p.matchup_adj)}</td>`,trend_adj:p=>`<td class="${p.trend_adj>0.4?'good':p.trend_adj<-0.4?'bad':'muted'}">${sg(p.trend_adj)}</td>`,outlook:p=>`<td class="olCell"><span class="olTag ${p.oc}">${p.ol.replace(' this week','')}</span></td>`,bds:p=>`<td class="bdsCell">${p.bds}</td>`};
+ let cell={rank:(p,i)=>`<td>${i+1}</td>`,name:p=>`<td><span class="playerlink" data-id="${p.id}">${p.name}</span><span class="tag">${p.team} ${p.pos}</span>${tg(p)}${injChip(p)}${bIcons(p.bl)}</td>`,mania:p=>`<td class="grade ${grade(p.mania)}">${p.mania}</td>`,start:p=>`<td class="grade ${grade(p.start)}">${p.out?'OUT':p.start}</td>`,opp:p=>`<td>${p.opp}</td>`,matchup_adj:p=>`<td class="${p.matchup_adj>0.4?'good':p.matchup_adj<-0.4?'bad':'muted'}">${p.opp==='BYE'?'—':sg(p.matchup_adj)}</td>`,trend_adj:p=>`<td class="${p.trend_adj>0.4?'good':p.trend_adj<-0.4?'bad':'muted'}">${sg(p.trend_adj)}</td>`,outlook:p=>`<td class="olCell"><span class="olTag ${p.oc}">${p.ol.replace(' this week','')}</span></td>`,bds:p=>`<td class="bdsCell">${p.bds}</td>`};
  $('rankBody').innerHTML=arr.map((p,i)=>'<tr>'+CL.map(([k])=>cell[k]?cell[k](p,i):`<td>${k==='share'?val(p,'share')+'%':k==='rz'?val(p,'rz'):k==='m.snap'?p.m.snap+'%':val(p,k)}</td>`).join('')+'</tr>').join('');
  let first=rankMode!=='start'?['mania','Mania','start','Wk '+META.next_week]:['start','Wk '+META.next_week,'mania','Mania'];
  let chips=p=>{let c=p.pos==='RB'?[[p.m.ppr,'PPR/G'],[p.m.car,'CAR/G'],[p.m.tgt,'TGT/G'],[p.m.rec,'REC/G'],[p.m.rushy,'RUSH YD/G'],[p.m.snap+'%','SNAP'],[p.m.touch+'%','TOUCH SH'],[p.m.rzc,'RZ CAR/G']]:[[p.m.ppr,'PPR/G'],[p.m.tgt,'TGT/G'],[p.m.rec,'REC/G'],[p.m.recy,'REC YD/G'],[p.m.snap+'%','SNAP'],[p.m.tshare+'%','TGT SH'],[p.m.rzt,'RZ TGT/G'],[p.m.ez,'EZ TGT/G']];
   if(rankMode==='start')c=[[p.opp==='BYE'?'BYE':p.opp,'OPP'],[p.opp==='BYE'?'—':sg(p.matchup_adj),'MATCHUP'],[sg(p.trend_adj),'ROLE TREND'],[p.m.ppr,'PPR/G']];
   return `<div class="rchips c${c.length>4?4:c.length}">${c.map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>`};
- $('rankCards').innerHTML=`<div class="rcHead"><span>#</span><span>Player</span><span>${first[1]}</span><span>${first[3]}</span></div>`+arr.map((p,i)=>`<div class="rcard" data-id="${p.id}"><div class="rn">${i+1}</div><div class="rmain"><div class="rname">${p.name} <span class="tag">${p.team} ${p.pos}</span></div><div class="rsub"><span class="olTag ${rankMode!=='start'?'g90':p.oc}">${rankMode!=='start'?p.pos+p.pos_rank:p.ol.replace(' this week','')}</span>${bIcons(p.bl)}</div></div><div class="rs ${grade(p[first[0]])}">${p[first[0]]}</div><div class="rs sec ${grade(p[first[2]])}">${p[first[2]]}</div>${chips(p)}</div>`).join('');
+ $('rankCards').innerHTML=`<div class="rcHead"><span>#</span><span>Player</span><span>${first[1]}</span><span>${first[3]}</span></div>`+arr.map((p,i)=>`<div class="rcard" data-id="${p.id}"><div class="rn">${i+1}</div><div class="rmain"><div class="rname">${p.name} <span class="tag">${p.team} ${p.pos}</span>${injChip(p)}</div><div class="rsub"><span class="olTag ${rankMode!=='start'?'g90':p.oc}">${rankMode!=='start'?p.pos+p.pos_rank:p.ol.replace(' this week','')}</span>${bIcons(p.bl)}</div></div><div class="rs ${grade(p[first[0]])}">${p.out&&first[0]==='start'?'OUT':p[first[0]]}</div><div class="rs sec ${grade(p[first[2]])}">${p.out&&first[2]==='start'?'OUT':p[first[2]]}</div>${chips(p)}</div>`).join('');
  $('rankHead').querySelectorAll('th').forEach(th=>th.onclick=()=>{let k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='name'||k==='opp'?1:-1}renderRanks()});$('rankBody').querySelectorAll('.playerlink').forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));$('rankCards').querySelectorAll('.rcard').forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)))}
 document.querySelectorAll('.rankmode').forEach(b=>b.onclick=()=>{rankMode=b.dataset.mode;sortKey=rankMode==='start'?'start':'mania';sortDir=-1;document.querySelectorAll('.rankmode').forEach(x=>x.classList.toggle('on',x===b));renderRanks()});document.querySelectorAll('.posf').forEach(b=>b.onclick=()=>{posFilter=b.dataset.pos;document.querySelectorAll('.posf').forEach(x=>x.classList.toggle('on',x===b));renderRanks()});renderRanks();
 function percentile(pos,key,v){let a=(REFS[pos]||{})[key]||[];if(!a.length)return 0;let lo=0,hi=a.length;while(lo<hi){let m=(lo+hi)>>1;if(a[m]<=v+1e-5)lo=m+1;else hi=m}return Math.min(100,lo/a.length*100)}function avg(a,k,w=true){let den=0,num=0;a.forEach(x=>{let z=w?(x.weight||1):1;num+=Number(x[k]||0)*z;den+=z});return den?num/den:0}function sum(a,k){return a.reduce((s,x)=>s+Number(x[k]||0)*(x.weight||1),0)}
 function customMatch(p,M){let ex=p.similar||[];if(!ex.length)return {adj:p.matchup_adj,list:[]};let scored=ex.map(x=>{let share=p.pos==='RB'?M.touch_share:M.target_share,rz=p.pos==='RB'?M.rz_carries_pg:M.rz_targets_pg;let dif=[Math.abs(M.targets_pg-x.tgt)/Math.max(3,x.tgt,1),Math.abs(M.rec_pg-x.rec)/Math.max(2,x.rec,1),Math.abs(M.snap_pct-x.snap)/35,Math.abs(share-x.share)/20,Math.abs(rz-x.rz)/2];let sim=Math.max(.15,Math.exp(-.8*dif.reduce((a,b)=>a+b,0)/dif.length));return {...x,csim:sim,delta:(x.actual/Math.max(x.normal,3)-1)*100}}).sort((a,b)=>b.csim-a.csim);let use=scored.filter(x=>x.csim>=.28),den=use.reduce((s,x)=>s+x.csim*x.csim,0);if(!den)return {adj:0,list:scored.slice(0,4)};let eff=use.reduce((s,x)=>s+x.delta*x.csim*x.csim,0)/den,maturity=Math.min(1,META.week/8),evidence=Math.min(1,use.length/6),adj=Math.max(-6,Math.min(6,eff/25*6))*maturity*(.45+.55*evidence);return {adj:p.pos==='TE'?adj*.35:adj,list:scored.slice(0,4)}}
-function calc(p,idxs){let L=idxs.map(i=>p.logs[i]).filter(Boolean);if(!L.length)return null;let M={};M.ppr_pg=avg(L,'ppr');M.targets_pg=avg(L,'tgt');M.rec_pg=avg(L,'rec');M.rec_yards_pg=avg(L,'ry');M.carries_pg=avg(L,'car');M.rush_yards_pg=avg(L,'ruy');M.scrim_pg=M.rec_yards_pg+M.rush_yards_pg;M.td_pg=avg(L,'rtd')+avg(L,'rutd');M.snap_pct=avg(L,'snap');M.target_share=avg(L,'tshare');M.air_share=avg(L,'ashare');M.touch_share=avg(L,'touch');M.rz_targets_pg=avg(L,'rzt');M.endzone_targets_pg=avg(L,'ez');M.rz_carries_pg=avg(L,'rzc');M.gl_carries_pg=avg(L,'gl');M.yards_per_target=sum(L,'tgt')?sum(L,'ry')/sum(L,'tgt'):0;M.catch_rate=sum(L,'tgt')?sum(L,'rec')/sum(L,'tgt')*100:0;M.yards_per_carry=sum(L,'car')?sum(L,'ruy')/sum(L,'car'):0;let opp=sum(L,'car')+2*sum(L,'tgt');M.fp_per_weighted_opp=opp?sum(L,'ppr')/opp:0;let P={};Object.keys(M).forEach(k=>P[k]=percentile(p.pos,k,M[k]));let prod,op,role,hv,eff;if(p.pos==='RB'){prod=.55*P.ppr_pg+.30*P.scrim_pg+.15*P.td_pg;op=.45*P.carries_pg+.35*P.targets_pg+.20*P.rec_pg;role=.60*P.touch_share+.40*P.snap_pct;hv=.40*P.rz_carries_pg+.35*P.gl_carries_pg+.25*P.rz_targets_pg;eff=.55*P.fp_per_weighted_opp+.25*P.yards_per_carry+.20*P.catch_rate}else{prod=.55*P.ppr_pg+.30*P.rec_yards_pg+.15*P.td_pg;op=.50*P.targets_pg+.30*P.rec_pg+.20*P.target_share;role=.45*P.target_share+.30*P.air_share+.25*P.snap_pct;hv=.60*P.rz_targets_pg+.40*P.endzone_targets_pg;eff=.45*P.yards_per_target+.30*P.catch_rate+.25*P.fp_per_weighted_opp}let W=p.pos==='RB'?[.30,.30,.20,.125,.075]:[.30,.30,.225,.10,.075],raw=W[0]*prod+W[1]*op+W[2]*role+W[3]*hv+W[4]*eff,base0=45+.52*raw,base=(p.pos==='TE'&&base0<93.6)?Math.max(35,93.6-(93.6-base0)*1.5):base0,eg=L.reduce((s,x)=>s+(x.weight||1),0),conf=Math.min(1,eg/Math.max(META.week,1)),sh=(1-conf)*.12,mania=Math.max(0,Math.min(99.5,base*(1-sh)+72*sh));let recent=L.slice(-Math.min(2,L.length)),recentOpp=recent.reduce((s,x)=>s+2*x.tgt+x.car,0)/recent.length,seasonOpp=M.targets_pg*2+M.carries_pg,tr=seasonOpp?((recentOpp/seasonOpp)-1)*100:0,trend=Math.max(-2.5,Math.min(2.5,tr/20*2.5));if(L.length<2)trend*=.25;let mt=customMatch(p,M),start=Math.max(0,Math.min(100,mania+mt.adj+trend));if(idxs.length===p.logs.length){mania=p.mania;start=p.start}return {mania,start,M,match:mt,b:p.pos==='RB'?{'Fantasy Production':prod,'Touch Volume':op,'Backfield Control':role,'Goal-Line / Red-Zone':hv,'Per-Touch Efficiency':eff}:{'Fantasy Production':prod,'Target Volume':op,'Team Target Role':role,'Red-Zone Threat':hv,'Per-Target Efficiency':eff}}}
+function calc(p,idxs){let L=idxs.map(i=>p.logs[i]).filter(Boolean);if(!L.length)return null;let M={};M.ppr_pg=avg(L,'ppr');M.targets_pg=avg(L,'tgt');M.rec_pg=avg(L,'rec');M.rec_yards_pg=avg(L,'ry');M.carries_pg=avg(L,'car');M.rush_yards_pg=avg(L,'ruy');M.scrim_pg=M.rec_yards_pg+M.rush_yards_pg;M.td_pg=avg(L,'rtd')+avg(L,'rutd');M.snap_pct=avg(L,'snap');M.target_share=avg(L,'tshare');M.air_share=avg(L,'ashare');M.touch_share=avg(L,'touch');M.rz_targets_pg=avg(L,'rzt');M.endzone_targets_pg=avg(L,'ez');M.rz_carries_pg=avg(L,'rzc');M.gl_carries_pg=avg(L,'gl');M.yards_per_target=sum(L,'tgt')?sum(L,'ry')/sum(L,'tgt'):0;M.catch_rate=sum(L,'tgt')?sum(L,'rec')/sum(L,'tgt')*100:0;M.yards_per_carry=sum(L,'car')?sum(L,'ruy')/sum(L,'car'):0;let opp=sum(L,'car')+2*sum(L,'tgt');M.fp_per_weighted_opp=opp?sum(L,'ppr')/opp:0;let P={};Object.keys(M).forEach(k=>P[k]=percentile(p.pos,k,M[k]));let prod,op,role,hv,eff;if(p.pos==='RB'){prod=.55*P.ppr_pg+.30*P.scrim_pg+.15*P.td_pg;op=.45*P.carries_pg+.35*P.targets_pg+.20*P.rec_pg;role=.60*P.touch_share+.40*P.snap_pct;hv=.40*P.rz_carries_pg+.35*P.gl_carries_pg+.25*P.rz_targets_pg;eff=.55*P.fp_per_weighted_opp+.25*P.yards_per_carry+.20*P.catch_rate}else{prod=.55*P.ppr_pg+.30*P.rec_yards_pg+.15*P.td_pg;op=.50*P.targets_pg+.30*P.rec_pg+.20*P.target_share;role=.45*P.target_share+.30*P.air_share+.25*P.snap_pct;hv=.60*P.rz_targets_pg+.40*P.endzone_targets_pg;eff=.45*P.yards_per_target+.30*P.catch_rate+.25*P.fp_per_weighted_opp}let W=p.pos==='RB'?[.30,.30,.20,.125,.075]:[.30,.30,.225,.10,.075],raw=W[0]*prod+W[1]*op+W[2]*role+W[3]*hv+W[4]*eff,base0=45+.52*raw,base=(p.pos==='TE'&&base0<93.6)?Math.max(35,93.6-(93.6-base0)*1.5):base0,eg=L.reduce((s,x)=>s+(x.weight||1),0),conf=Math.min(1,eg/Math.max(META.week,1)),sh=(1-conf)*.12,mania=Math.max(0,Math.min(99.5,base*(1-sh)+72*sh));let recent=L.slice(-Math.min(2,L.length)),recentOpp=recent.reduce((s,x)=>s+2*x.tgt+x.car,0)/recent.length,seasonOpp=M.targets_pg*2+M.carries_pg,tr=seasonOpp?((recentOpp/seasonOpp)-1)*100:0,trend=Math.max(-2.5,Math.min(2.5,tr/20*2.5));if(L.length<2)trend*=.25;let mt=customMatch(p,M),start=Math.max(0,Math.min(100,mania+mt.adj+trend+(p.inj_adj||0)));if(p.out)start=0;if(idxs.length===p.logs.length){mania=p.mania;start=p.start}return {mania,start,M,match:mt,b:p.pos==='RB'?{'Fantasy Production':prod,'Touch Volume':op,'Backfield Control':role,'Goal-Line / Red-Zone':hv,'Per-Touch Efficiency':eff}:{'Fantasy Production':prod,'Target Volume':op,'Team Target Role':role,'Red-Zone Threat':hv,'Per-Target Efficiency':eff}}}
 function barColor(v){return v>=70?'#22a45d':v>=40?'#e3a21a':'#e2505b'}function barGrade(v){return v>=70?'g90':v>=40?'g70':'g0'}function stat(v,k,pos,key,raw){let pc=key?Math.max(1,Math.min(99,Math.round(percentile(pos,key,raw)))):null;return `<div class="stat"><div class="sv">${v}</div><div class="sk">${k}</div>${pc!==null?`<div class="spc ${barGrade(pc)}">${ord(pc)} percentile</div>`:''}</div>`}
 function roomHTML(p){let weeks=[...new Set(p.room.flatMap(x=>x.weekly.map(w=>w.w)))].sort((a,b)=>a-b);return `<div class="tablewrap"><table class="roomtable"><thead><tr><th>Player</th>${weeks.map(w=>`<th>W${w}</th>`).join('')}<th>Season</th></tr></thead><tbody>${p.room.map(x=>`<tr><td class="${x.id===p.id?'you':''}" data-id="${x.id}">${x.name}</td>${weeks.map(w=>{let z=x.weekly.find(q=>q.w===w);return `<td>${z?`${p.pos==='RB'?z.car+z.tgt:z.tgt} / ${z.share}%`:'—'}</td>`}).join('')}<td><b>${x.share}%</b></td></tr>`).join('')}</tbody></table></div><div class="explain">Each week shows ${p.pos==='RB'?'carries + targets':'targets'} / share of the team ${p.pos==='RB'?'touches':'targets'}. Click a name to open that player.</div>`}
 function matchupHTML(p,c){let m=c?c.match:{adj:p.matchup_adj,list:p.similar.slice(0,4)},wk=META.next_week,L=m.list||[],n=L.length,avgN=n?L.reduce((s,x)=>s+Number(x.normal),0)/n:0,avgA=n?L.reduce((s,x)=>s+Number(x.actual),0)/n:0,adj=m.adj,sg=adj>=0?'+':'',why;
@@ -1340,8 +1616,8 @@ function usageHTML(p,c){let M=c.M,isRB=p.pos==='RB',pc=x=>x?'%':'';
  return `<div class="ph">Usage details <button class="infoBtn" id="usageInfo">ⓘ</button></div><div class="explain" id="usageExplain" style="display:none;margin-bottom:14px">These are the raw numbers behind his score. Each one shows where he ranks among players at his position (100th is the best) and the position average. Green is the top 30%, yellow the middle, red the bottom 40%.</div><div class="usageGrid">${items.map(([l,v,mk,pk,d,isP])=>{let pr=percentile(p.pos,pk,v),col=barColor(pr);return `<div class="usageItem"><div class="uv ${barGrade(pr)}">${fmt(v)}${pc(isP)}</div><div class="ul">${l}</div><div class="ubar"><i style="width:${Math.max(4,pr)}%;background:${col}"></i></div><div class="uPct ${barGrade(pr)}">${ord(pr)} percentile <span>among ${p.pos}s</span></div><div class="uavg">${p.pos} average: ${fmt(posAvg(p.pos,mk))}${pc(isP)}</div><div class="ud">${d}</div></div>`}).join('')}</div>`}
 function wireInfo(){document.querySelectorAll('.infoBtn[data-help]').forEach(b=>b.onclick=()=>{let e=$(b.dataset.help);if(e)e.classList.toggle('open')})}
 function wireUsage(){let b=$('usageInfo'),e=$('usageExplain');if(b&&e)b.onclick=()=>e.style.display=e.style.display==='none'?'block':'none'}
-function openPlayer(p){showView('profile');let share=p.pos==='RB'?p.m.touch:p.m.tshare,shareName=p.pos==='RB'?'Touch Share':'Target Share',official=calc(p,p.logs.map((_,i)=>i)),bars=bucketRows(official.b,p),logs=p.logs.map((l,i)=>`<tr><td><input class="gameToggle" type="checkbox" checked data-i="${i}"></td><td>W${l.w} ${l.partial?'<span class="partial">SHORT</span>':''}</td><td class="grade ${grade(Math.min(99,l.ppr*4))}">${l.ppr}</td><td>${l.tgt}</td><td>${l.rec}</td><td>${l.ry}</td><td>${l.car}</td><td>${l.ruy}</td><td>${(l.rtd||0)+(l.rutd||0)}</td><td>${l.snap}%</td></tr>`).join('');$('profileBody').innerHTML=`<div class="topRow"><div class="kicker playerlink" id="backRanks">← Rankings</div><button class="shotBtn" onclick="toggleShot(true)">Screenshot view</button></div><div class="hero2"><div class="hs left"><div id="maniaTop" class="scorebig ${grade(p.mania)}">${Number(p.mania).toFixed(1)}</div><div class="scorelab">Mania Rating</div><div class="scoresub">Overall profile • ${tier(p.mania)}</div></div><div class="hp"><div class="portrait" id="portrait" style="--score:${p.mania};--ring:${ring(p.mania)}">${pic(p)}</div></div><div class="hs right"><div id="startTop" class="scorebig ${grade(p.start)}">${Number(p.start).toFixed(1)}</div><div class="scorelab">Week ${META.next_week} Rating</div><div class="scoresub">${p.opp==='BYE'?'Bye week':p.opp==='TBD'?'Matchup TBD':'Start value vs '+p.opp}</div></div><div class="hid"><h1>${p.name}</h1><div class="meta">${p.team} • ${p.pos} • ${p.games} games</div><div class="rankline">#${p.rank} Overall &nbsp;•&nbsp; ${p.pos}${p.pos_rank} &nbsp;•&nbsp; #${p.team_rank} ${p.pos} on ${p.team}</div></div><div class="hol" id="olBox">${olHTML(p,outlook(p,p.start))}</div></div><div class="panel gamePanelTop"><div style="display:flex;justify-content:space-between;align-items:center"><div class="ph">Games counted</div><button class="reset" id="resetGames">RESET</button></div><div class="custom" id="customLine">Untick a game (like one where he got hurt) and Mania Rating, matchup and Week ${META.next_week} Rating all recalculate. Official Mania Rating <b>${p.mania}</b>.</div><div class="gameControls"><label class="gamechip allchip"><input id="allGames" type="checkbox" checked>ALL</label>${p.logs.map((l,i)=>`<label class="gamechip"><input class="gameToggleChip" type="checkbox" checked data-i="${i}">W${l.w} • ${l.ppr} PPR${(l.rtd+l.rutd)?' • '+(l.rtd+l.rutd)+' TD':''}</label>`).join('')}</div></div><div class="disclaimer">${DISC}</div><div class="stats">${stat(p.m.ppr,'PPR / Game',p.pos,'ppr_pg',p.m.ppr)}${stat(p.m.tgt,'Targets / Game',p.pos,'targets_pg',p.m.tgt)}${stat(p.m.rec,'Receptions / Game',p.pos,'rec_pg',p.m.rec)}${stat(p.m.scrim,'Scrimmage Yds / G',p.pos,'scrim_pg',p.m.scrim)}${stat(share+'%',shareName,p.pos,p.pos==='RB'?'touch_share':'target_share',share)}${stat(p.m.snap+'%','Snap Share',p.pos,'snap_pct',p.m.snap)}${stat(p.m.td,'TDs / Game',p.pos,'td_pg',p.m.td)}</div><div class="grid2"><div class="colL"><div class="panel"><div class="ph">Mania breakdown</div><div class="pctHead">Percentile among ${p.pos}s. 100 is the best, 50 is average.</div><div id="profileBars">${bars}</div><div class="legend"><span><i style="background:#22a45d"></i>Top 30%</span><span><i style="background:#e3a21a"></i>Middle</span><span><i style="background:#e2505b"></i>Bottom 40%</span><span>Tap a category to see what it means.</span></div></div><div class="panel" id="matchPanel">${matchupHTML(p,official)}</div></div><div class="colR"><div class="panel" id="usagePanel">${usageHTML(p,official)}</div></div></div><div class="panel"><div class="ph">${p.team} ${p.pos} room, week by week</div>${roomHTML(p)}</div><div class="panel"><div class="ph">Game log</div><div class="tablewrap"><table><thead><tr><th>Use</th><th>Game</th><th>PPR</th><th>Tgt</th><th>Rec</th><th>Rec Yd</th><th>Car</th><th>Rush Yd</th><th>TD</th><th>Snap</th></tr></thead><tbody>${logs}</tbody></table></div></div>`;wireInfo();wireUsage();$('backRanks').onclick=()=>showView('rankings');$('profileBody').querySelectorAll('.roomtable td[data-id]').forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));let sync=()=>customProfile(p);document.querySelectorAll('.gameToggle,.gameToggleChip').forEach(x=>x.onchange=e=>{let i=e.target.dataset.i,checked=e.target.checked;document.querySelectorAll(`[data-i="${i}"]`).forEach(y=>y.checked=checked);sync()});$('allGames').onchange=e=>{document.querySelectorAll('.gameToggle,.gameToggleChip').forEach(x=>x.checked=e.target.checked);sync()};$('resetGames').onclick=()=>{document.querySelectorAll('.gameToggle,.gameToggleChip').forEach(x=>x.checked=true);$('allGames').checked=true;sync()}}
-function customProfile(p){let idx=[...document.querySelectorAll('.gameToggle:checked')].map(x=>Number(x.dataset.i));let c=calc(p,idx);if(!c){$('customLine').textContent='Select at least one game.';return}$('maniaTop').textContent=c.mania.toFixed(1);$('maniaTop').className='scorebig '+grade(c.mania);$('startTop').textContent=c.start.toFixed(1);$('olBox').innerHTML=olHTML(p,outlook(p,c.start),idx);$('startTop').className='scorebig '+grade(c.start);$('portrait').style.setProperty('--score',c.mania);$('portrait').style.setProperty('--ring',ring(c.mania));$('profileBars').innerHTML=bucketRows(c.b,p);wireInfo();$('usagePanel').innerHTML=usageHTML(p,c);wireUsage();$('matchPanel').innerHTML=matchupHTML(p,c);$('customLine').innerHTML=`Official <b>${p.mania}</b> → Mania Rating <b class="${grade(c.mania)}">${fmt(c.mania)}</b> • Week ${META.next_week} Rating <b class="${grade(c.start)}">${fmt(c.start)}</b> • ${idx.length} game${idx.length===1?'':'s'} used.`;$('allGames').checked=idx.length===p.logs.length}
+function openPlayer(p){showView('profile');let share=p.pos==='RB'?p.m.touch:p.m.tshare,shareName=p.pos==='RB'?'Touch Share':'Target Share',official=calc(p,p.logs.map((_,i)=>i)),bars=bucketRows(official.b,p),logs=p.logs.map((l,i)=>`<tr><td><input class="gameToggle" type="checkbox" checked data-i="${i}"></td><td>W${l.w} ${l.partial?'<span class="partial">SHORT</span>':''}</td><td class="grade ${grade(Math.min(99,l.ppr*4))}">${l.ppr}</td><td>${l.tgt}</td><td>${l.rec}</td><td>${l.ry}</td><td>${l.car}</td><td>${l.ruy}</td><td>${(l.rtd||0)+(l.rutd||0)}</td><td>${l.snap}%</td></tr>`).join('');$('profileBody').innerHTML=`<div class="topRow"><div class="kicker playerlink" id="backRanks">← Rankings</div><button class="shotBtn" onclick="toggleShot(true)">Screenshot view</button></div><div class="hero2"><div class="hs left"><div id="maniaTop" class="scorebig ${grade(p.mania)}">${Number(p.mania).toFixed(1)}</div><div class="scorelab">Mania Rating</div><div class="scoresub">Overall profile • ${tier(p.mania)}</div></div><div class="hp"><div class="portrait" id="portrait" style="--score:${p.mania};--ring:${ring(p.mania)}">${pic(p)}</div></div><div class="hs right"><div id="startTop" class="scorebig ${grade(p.start)}">${fs(p,p.start)}</div><div class="scorelab">Week ${META.next_week} Rating</div><div class="scoresub">${p.opp==='BYE'?'Bye week':p.opp==='TBD'?'Matchup TBD':'Start value vs '+p.opp}</div></div><div class="hid"><h1>${p.name}</h1><div class="meta">${p.team} • ${p.pos} • ${p.games} games</div><div class="rankline">#${p.rank} Overall &nbsp;•&nbsp; ${p.pos}${p.pos_rank} &nbsp;•&nbsp; #${p.team_rank} ${p.pos} on ${p.team}${p.depth?' &nbsp;\u2022&nbsp; Depth chart '+p.pos+p.depth.rank:''}</div></div><div class="hol" id="olBox">${olHTML(p,outlook(p,p.start))}</div></div><div class="panel gamePanelTop"><div style="display:flex;justify-content:space-between;align-items:center"><div class="ph">Games counted</div><button class="reset" id="resetGames">RESET</button></div><div class="custom" id="customLine">Untick a game (like one where he got hurt) and Mania Rating, matchup and Week ${META.next_week} Rating all recalculate. Official Mania Rating <b>${p.mania}</b>.</div><div class="gameControls"><label class="gamechip allchip"><input id="allGames" type="checkbox" checked>ALL</label>${p.logs.map((l,i)=>`<label class="gamechip"><input class="gameToggleChip" type="checkbox" checked data-i="${i}">W${l.w} • ${l.ppr} PPR${(l.rtd+l.rutd)?' • '+(l.rtd+l.rutd)+' TD':''}</label>`).join('')}</div></div>${injHTML(p)}<div class="disclaimer">${DISC}</div><div class="stats">${stat(p.m.ppr,'PPR / Game',p.pos,'ppr_pg',p.m.ppr)}${stat(p.m.tgt,'Targets / Game',p.pos,'targets_pg',p.m.tgt)}${stat(p.m.rec,'Receptions / Game',p.pos,'rec_pg',p.m.rec)}${stat(p.m.scrim,'Scrimmage Yds / G',p.pos,'scrim_pg',p.m.scrim)}${stat(share+'%',shareName,p.pos,p.pos==='RB'?'touch_share':'target_share',share)}${stat(p.m.snap+'%','Snap Share',p.pos,'snap_pct',p.m.snap)}${stat(p.m.td,'TDs / Game',p.pos,'td_pg',p.m.td)}</div><div class="grid2"><div class="colL"><div class="panel"><div class="ph">Mania breakdown</div><div class="pctHead">Percentile among ${p.pos}s. 100 is the best, 50 is average.</div><div id="profileBars">${bars}</div><div class="legend"><span><i style="background:#22a45d"></i>Top 30%</span><span><i style="background:#e3a21a"></i>Middle</span><span><i style="background:#e2505b"></i>Bottom 40%</span><span>Tap a category to see what it means.</span></div></div><div class="panel" id="matchPanel">${matchupHTML(p,official)}</div></div><div class="colR"><div class="panel" id="usagePanel">${usageHTML(p,official)}</div></div></div><div class="panel"><div class="ph">${p.team} ${p.pos} room, week by week</div>${roomHTML(p)}</div>${schedHTML(p)}<div class="panel"><div class="ph">Game log</div><div class="tablewrap"><table><thead><tr><th>Use</th><th>Game</th><th>PPR</th><th>Tgt</th><th>Rec</th><th>Rec Yd</th><th>Car</th><th>Rush Yd</th><th>TD</th><th>Snap</th></tr></thead><tbody>${logs}</tbody></table></div></div>`;wireInfo();wireUsage();$('backRanks').onclick=()=>showView('rankings');$('profileBody').querySelectorAll('.roomtable td[data-id]').forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));let sync=()=>customProfile(p);document.querySelectorAll('.gameToggle,.gameToggleChip').forEach(x=>x.onchange=e=>{let i=e.target.dataset.i,checked=e.target.checked;document.querySelectorAll(`[data-i="${i}"]`).forEach(y=>y.checked=checked);sync()});$('allGames').onchange=e=>{document.querySelectorAll('.gameToggle,.gameToggleChip').forEach(x=>x.checked=e.target.checked);sync()};$('resetGames').onclick=()=>{document.querySelectorAll('.gameToggle,.gameToggleChip').forEach(x=>x.checked=true);$('allGames').checked=true;sync()}}
+function customProfile(p){let idx=[...document.querySelectorAll('.gameToggle:checked')].map(x=>Number(x.dataset.i));let c=calc(p,idx);if(!c){$('customLine').textContent='Select at least one game.';return}$('maniaTop').textContent=c.mania.toFixed(1);$('maniaTop').className='scorebig '+grade(c.mania);$('startTop').textContent=fs(p,c.start);$('olBox').innerHTML=olHTML(p,outlook(p,c.start),idx);$('startTop').className='scorebig '+grade(c.start);$('portrait').style.setProperty('--score',c.mania);$('portrait').style.setProperty('--ring',ring(c.mania));$('profileBars').innerHTML=bucketRows(c.b,p);wireInfo();$('usagePanel').innerHTML=usageHTML(p,c);wireUsage();$('matchPanel').innerHTML=matchupHTML(p,c);$('customLine').innerHTML=`Official <b>${p.mania}</b> → Mania Rating <b class="${grade(c.mania)}">${fmt(c.mania)}</b> • Week ${META.next_week} Rating <b class="${grade(c.start)}">${fmt(c.start)}</b> • ${idx.length} game${idx.length===1?'':'s'} used.`;$('allGames').checked=idx.length===p.logs.length}
 var chipsOpen={A:false,B:false};
 function chips(p,side,sel){return `<details class="gdet" data-side="${side}" ${chipsOpen[side]?'open':''}><summary>Choose games (${sel.length} of ${p.logs.length})</summary><div class="gameControls" style="justify-content:center"><label class="gamechip allchip"><input type="checkbox" class="cmpAll" data-side="${side}" ${sel.length===p.logs.length?'checked':''}>ALL</label>${p.logs.map((l,i)=>`<label class="gamechip"><input type="checkbox" class="cmpGame" data-side="${side}" data-i="${i}" ${sel.includes(i)?'checked':''}>W${l.w} • ${l.ppr} PPR</label>`).join('')}</div></details>`}
 var cmpOpen={start:false,brk:false};
@@ -1351,17 +1627,76 @@ function bkCompare(A,B,ca,cb){let la=Object.keys(ca.b),lb=Object.keys(cb.b),gen=
  return `<div class="cbhead"><span>${A.name}</span><span>${B.name}</span></div>`+la.map((k,i)=>{let pa=Math.round(percentile(A.pos,BK[i],ca.b[k])),pb=Math.round(percentile(B.pos,BK[i],cb.b[lb[i]])),lab=la[i]===lb[i]?la[i]:gen[i];
   return `<div class="cbrow"><div class="cbl">${lab}</div><div class="cbbars">${pctBub(pa)}<div class="cbt l"><div style="width:${Math.max(3,pa)}%;background:${barColor(pa)}"></div></div><div class="cbt r"><div style="width:${Math.max(3,pb)}%;background:${barColor(pb)}"></div></div>${pctBub(pb)}</div></div>`}).join('')+`<div class="cexp">Each bubble is a percentile among players at that position. 100 is the best, 50 is average.</div>`}
 function renderCompare(){if(!A||!B)return;if(!selA)selA=A.logs.map((_,i)=>i);if(!selB)selB=B.logs.map((_,i)=>i);let ca=calc(A,selA),cb=calc(B,selB);if(!ca||!cb)return;
- let wk=META.next_week,oa=outlook(A,ca.start),ob=outlook(B,cb.start),aB=A.opp==='BYE',bB=B.opp==='BYE',starter=aB&&!bB?B:bB&&!aB?A:ca.start>=cb.start?A:B,
+ let wk=META.next_week,oa=outlook(A,ca.start),ob=outlook(B,cb.start),aB=A.opp==='BYE'||A.out,bB=B.opp==='BYE'||B.out,starter=aB&&!bB?B:bB&&!aB?A:ca.start>=cb.start?A:B,
  rows=[['Mania Rating',ca.mania,cb.mania],['PPR/G',ca.M.ppr_pg,cb.M.ppr_pg],['Targets/G',ca.M.targets_pg,cb.M.targets_pg],['Receptions/G',ca.M.rec_pg,cb.M.rec_pg],['Scrimmage Yds/G',ca.M.scrim_pg,cb.M.scrim_pg],['Snap %',ca.M.snap_pct,cb.M.snap_pct],['Target Share %',ca.M.target_share,cb.M.target_share],['Touch Share %',ca.M.touch_share,cb.M.touch_share],['Air-Yard Share %',ca.M.air_share,cb.M.air_share],['Red-Zone Targets/G',ca.M.rz_targets_pg,cb.M.rz_targets_pg],['End-Zone Targets/G',ca.M.endzone_targets_pg,cb.M.endzone_targets_pg],['Red-Zone Carries/G',ca.M.rz_carries_pg,cb.M.rz_carries_pg],['Goal-Line Carries/G',ca.M.gl_carries_pg,cb.M.gl_carries_pg]],
  sg=v=>(v>=0?'+':'')+v.toFixed(1),oppT=q=>q.opp==='BYE'?'Bye':q.opp==='TBD'?'TBD':q.opp,
- srows=[['Week '+wk+' Rating',ca.start.toFixed(1),cb.start.toFixed(1),ca.start,cb.start],['Opponent',oppT(A),oppT(B),0,0],['Matchup boost',sg(ca.match.adj),sg(cb.match.adj),ca.match.adj,cb.match.adj],['Rank',`<span class="outlook ${oa.c}">${oa.t}</span>`,`<span class="outlook ${ob.c}">${ob.t}</span>`,0,0]],
- startHTML=`<details class="cdet" data-k="start" ${cmpOpen.start?'open':''}><summary><span>Who should you start in Week ${wk}?</span><i>Tap to see</i></summary><div class="cdBody"><div class="cwin"><div class="cwk">Our pick</div><strong>${starter.name}</strong><div class="sub">${ca.start.toFixed(1)} ${A.name} &nbsp;vs&nbsp; ${cb.start.toFixed(1)} ${B.name}</div></div><table class="cstart"><thead><tr><th>${A.name}</th><th></th><th>${B.name}</th></tr></thead><tbody>${srows.map(([k,a,b,x,y])=>`<tr><td class="${x>y?'good':''}">${a}</td><td class="cmid">${k}</td><td class="${y>x?'good':''}">${b}</td></tr>`).join('')}</tbody></table><div class="cexp"><b>Matchup boost</b> is how much the opponent moves a player's Week ${wk} Rating. Positive means similar players have done well against that defense. Negative means they struggled.</div><div class="disclaimer">${DISC}</div></div></details>`,
+ srows=[['Week '+wk+' Rating',fs(A,ca.start),fs(B,cb.start),A.out?-1:ca.start,B.out?-1:cb.start],['Opponent',oppT(A),oppT(B),0,0],['Injury impact',A.out?'OUT':A.inj_adj===0?'None':sg(A.inj_adj),B.out?'OUT':B.inj_adj===0?'None':sg(B.inj_adj),A.out?-99:A.inj_adj,B.out?-99:B.inj_adj],['Matchup boost',sg(ca.match.adj),sg(cb.match.adj),ca.match.adj,cb.match.adj],['Rank',`<span class="outlook ${oa.c}">${oa.t}</span>`,`<span class="outlook ${ob.c}">${ob.t}</span>`,0,0]],
+ startHTML=`<details class="cdet" data-k="start" ${cmpOpen.start?'open':''}><summary><span>Who should you start in Week ${wk}?</span><i>Tap to see</i></summary><div class="cdBody"><div class="cwin"><div class="cwk">Our pick</div><strong>${starter.name}</strong><div class="sub">${fs(A,ca.start)} ${A.name} &nbsp;vs&nbsp; ${fs(B,cb.start)} ${B.name}</div></div><table class="cstart"><thead><tr><th>${A.name}</th><th></th><th>${B.name}</th></tr></thead><tbody>${srows.map(([k,a,b,x,y])=>`<tr><td class="${x>y?'good':''}">${a}</td><td class="cmid">${k}</td><td class="${y>x?'good':''}">${b}</td></tr>`).join('')}</tbody></table><div class="cexp"><b>Matchup boost</b> is how much the opponent moves a player's Week ${wk} Rating. Positive means similar players have done well against that defense. Negative means they struggled.</div><div class="disclaimer">${DISC}</div></div></details>`,
  brkHTML=`<details class="cdet" data-k="brk" ${cmpOpen.brk?'open':''}><summary><span>Compare the Mania breakdown</span><i>Tap to see</i></summary><div class="cdBody">${bkCompare(A,B,ca,cb)}</div></details>`;
  $('compareBody').innerHTML=`<div class="compareHero"><div class="comparePlayer"><div class="cmpPortrait" style="--score:${ca.mania};--ring:${ring(ca.mania)}">${pic(A)}</div><h2 class="playerlink cmpOpen" data-id="${A.id}">${A.name}</h2><div class="meta">${A.team} • ${A.pos} • vs ${A.opp}</div><div class="scorebig ${grade(ca.mania)}">${ca.mania.toFixed(1)}</div><div class="scorelab">Mania Rating</div>${bdgPills(A,selA)}${chips(A,'A',selA)}</div><div class="vs">VS</div><div class="comparePlayer"><div class="cmpPortrait" style="--score:${cb.mania};--ring:${ring(cb.mania)}">${pic(B)}</div><h2 class="playerlink cmpOpen" data-id="${B.id}">${B.name}</h2><div class="meta">${B.team} • ${B.pos} • vs ${B.opp}</div><div class="scorebig ${grade(cb.mania)}">${cb.mania.toFixed(1)}</div><div class="scorelab">Mania Rating</div>${bdgPills(B,selB)}${chips(B,'B',selB)}</div></div>${startHTML}${brkHTML}<div class="cmpStats tablewrap"><table><thead><tr><th>${A.name}</th><th style="text-align:center">Metric</th><th>${B.name}</th></tr></thead><tbody>${rows.map(([k,a,b])=>`<tr><td class="${a>b?'good':''}">${/Rating/.test(k)?Number(a).toFixed(1):fmt(a)}</td><td style="text-align:center">${k}</td><td class="${b>a?'good':''}">${/Rating/.test(k)?Number(b).toFixed(1):fmt(b)}</td></tr>`).join('')}</tbody></table></div>`;
  document.querySelectorAll('.cdet').forEach(d=>d.ontoggle=()=>{cmpOpen[d.dataset.k]=d.open});
  document.querySelectorAll('.gdet').forEach(d=>d.ontoggle=()=>{chipsOpen[d.dataset.side]=d.open});document.querySelectorAll('.cmpOpen').forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));document.querySelectorAll('.cmpGame').forEach(x=>x.onchange=()=>{let side=x.dataset.side,i=Number(x.dataset.i),arr=side==='A'?selA:selB;if(x.checked){if(!arr.includes(i))arr.push(i)}else if(arr.length>1)arr.splice(arr.indexOf(i),1);arr.sort((a,b)=>a-b);renderCompare()});document.querySelectorAll('.cmpAll').forEach(x=>x.onchange=()=>{let p=x.dataset.side==='A'?A:B,arr=p.logs.map((_,i)=>i);if(x.dataset.side==='A')selA=x.checked?arr:[arr[arr.length-1]];else selB=x.checked?arr:[arr[arr.length-1]];renderCompare()})}
 function toggleShot(on){document.body.classList.toggle('shot',on);window.scrollTo(0,0)}
 $('teamPick').onchange=renderTeamShare;document.querySelectorAll('.shareMode').forEach(b=>b.onclick=()=>{shareMode=b.dataset.share;document.querySelectorAll('.shareMode').forEach(x=>x.classList.toggle('on',x===b));renderTeamShare()});renderTeamShare();renderHome();showView('home');
+/* Insights: one nav tab holding the extra views. Each sub-tab shows its own pane. */
+function showInsight(k){document.querySelectorAll('.insPane').forEach(x=>x.classList.toggle('on',x.id==='ins-'+k));document.querySelectorAll('.insTab').forEach(x=>x.classList.toggle('on',x.dataset.v===k))}
+document.querySelectorAll('.insTab').forEach(b=>b.onclick=()=>showInsight(b.dataset.v));$('homeInsights').onclick=()=>showView('insights');
+function pillGroup(c,set,render){document.querySelectorAll('.'+c).forEach(b=>b.onclick=()=>{set(b.dataset.v);document.querySelectorAll('.'+c).forEach(x=>x.classList.toggle('on',x===b));render()})}
+/* Risers & Fallers: a player's latest game against the weighted average of his earlier games.
+   Shortened games count less in that average (same game weights as Mania), and only moves of 5+ points are listed, like Team Share. */
+const MOVE_MIN=5,MOVE_ROWS=25;let mvDir=1,mvKey='snap',mvPos='ALL';
+function movers(key,dir,pos){return DB.filter(p=>(pos==='ALL'||p.pos===pos)&&p.logs.length>1&&p.logs[p.logs.length-1].w===META.week).map(p=>{let last=p.logs[p.logs.length-1],k=key==='snap'?'snap':p.pos==='RB'?'touch':'tshare',before=avg(p.logs.slice(0,-1),k);return {p,last,before,now:last[k],d:last[k]-before}}).filter(x=>x.d*dir>=MOVE_MIN).sort((a,b)=>(b.d-a.d)*dir).slice(0,MOVE_ROWS)}
+function renderMovers(){let wk=META.week,rows=movers(mvKey,mvDir,mvPos),up=mvDir>0;
+ $('moversNote').textContent=(mvKey==='snap'?'Share of the offense snaps he was on the field for.':'Share of the team touches for running backs, share of the team targets for receivers and tight ends.')+' SHORT marks a game he left early. Players who did not play in Week '+wk+' are not listed.';
+ $('moversBody').innerHTML=rows.length?`<div class="tablewrap"><table><thead><tr><th>#</th><th>Player</th><th>Change</th><th>Before</th><th>Wk ${wk}</th><th>Wk ${wk} PPR</th><th>Mania</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${i+1}</td><td><span class="playerlink" data-open="${x.p.id}">${x.p.name}</span><span class="tag">${x.p.team} ${x.p.pos}</span>${x.last.partial?' <span class="partial">SHORT</span>':''}</td><td class="${up?'good':'bad'}">${sg(x.d)}</td><td>${fmt(x.before)}%</td><td>${fmt(x.now)}%</td><td>${fmt(x.last.ppr)}</td><td class="grade ${grade(x.p.mania)}">${x.p.mania}</td></tr>`).join('')}</tbody></table></div>`:`<div class="muted">No ${up?'risers':'fallers'} of ${MOVE_MIN}+ points here yet. This needs at least two games from a player, including Week ${wk}.</div>`}
+document.querySelectorAll('.mvWeek').forEach(x=>x.textContent=META.week);
+pillGroup('mvDir',v=>mvDir=Number(v),renderMovers);pillGroup('mvKey',v=>mvKey=v,renderMovers);pillGroup('mvPos',v=>mvPos=v,renderMovers);renderMovers();
+/* Buy Low / Sell High: usage percentile against production percentile at his position.
+   Usage blends the volume, team-role and red-zone buckets with the same weights as BUCKET_W in the Python above (keep them in sync).
+   A player is listed when the two are 15+ percentile points apart and the bigger one is above 55, so there is something worth buying or selling.
+   The page has no injury report, so "hurt" is what the game logs show: he left the latest week early, or his team played it without him. */
+const GAP_MIN=15,RELEVANT=55,MARKET_ROWS=10;let mkPos='ALL';
+function market(pos){let wk=META.week,teamsPlayed=new Set(DB.filter(p=>p.logs.some(l=>l.w===wk)).map(p=>p.team)),hurt=p=>{let last=p.logs[p.logs.length-1];return last.w===wk?(last.partial?`Left Wk ${wk} early`:''):teamsPlayed.has(p.team)?`Missed Wk ${wk}`:''},
+ rows=DB.filter(p=>(pos==='ALL'||p.pos===pos)&&p.games>1).map(p=>{let b=p.buckets,P=(k,v)=>percentile(p.pos,k,v),prod=P('b_production',b.Production),eff=P('b_efficiency',b.Efficiency),w=p.pos==='RB'?[.30,.20,.125]:[.30,.225,.10],usage=(w[0]*P('b_opportunity',b.Opportunity)+w[1]*P('b_role',b.Role)+w[2]*P('b_high_value',b['High Value']))/(w[0]+w[1]+w[2]),td=p.logs.reduce((s,l)=>s+l.rtd+l.rutd,0),pts=p.logs.reduce((s,l)=>s+l.ppr,0);return {p,usage,prod,eff,gap:usage-prod,td,rz:p.logs.reduce((s,l)=>s+l.rzt+l.rzc,0),tdShare:pts>0?6*td/pts:0,hurt:hurt(p)}});
+ return {buy:rows.filter(x=>x.gap>=GAP_MIN&&x.usage>=RELEVANT).sort((a,b)=>b.gap-a.gap).slice(0,MARKET_ROWS),sell:rows.filter(x=>-x.gap>=GAP_MIN&&x.prod>=RELEVANT).sort((a,b)=>a.gap-b.gap).slice(0,MARKET_ROWS)}}
+function marketWhy(x,buy){let pc=v=>ord(Math.max(1,Math.min(99,v))),first=x.hurt?'Check his status before you make a move. ':'';
+ if(buy)return first+(x.td===0&&x.rz>=3?`No touchdowns yet on ${x.rz} red-zone looks.`:x.eff<=30?`He is getting the work, but his efficiency is only ${pc(x.eff)} percentile. Volume tends to outlast a cold stretch.`:'His role is bigger than his box scores so far.');
+ return first+(x.tdShare>=.4?`${Math.round(x.tdShare*100)}% of his points have come from touchdowns.`:x.eff>=85?`${pc(x.eff)} percentile efficiency on ${pc(x.usage)} percentile usage. That is hard to keep up.`:'He is scoring more than his role usually supports.')}
+function renderMarket(){let m=market(mkPos),row=buy=>(x,i)=>`<div class="mkRow"><span class="n">${i+1}</span><div><span class="playerlink" data-open="${x.p.id}">${x.p.name}</span><span class="tag">${x.p.team} ${x.p.pos}</span>${x.hurt?`<span class="partial">${x.hurt.toUpperCase()}</span>`:''}<div class="mkWhy">${marketWhy(x,buy)}</div></div><div class="mkPct">${pctBub(Math.round(x.usage))}<small>Usage</small></div><div class="mkPct">${pctBub(Math.round(x.prod))}<small>Production</small></div></div>`,none='<div class="muted">Nobody stands out here yet. This needs at least two games from a player.</div>';
+ $('marketBody').innerHTML=`<div class="panel"><div class="ph">Buy low</div><div class="pctHead">A bigger role than his points show.</div>${m.buy.map(row(true)).join('')||none}</div><div class="panel"><div class="ph">Sell high</div><div class="pctHead">More points than his role supports.</div>${m.sell.map(row(false)).join('')||none}</div>`}
+$('mkWeek').textContent=META.week;pillGroup('mkPos',v=>mkPos=v,renderMarket);renderMarket();
+/* Defense vs Position: what each defense has allowed to a position, per game and against what those players usually score.
+   "Vs usual" follows the matchup engine: players under 3 PPR a game are left out and shortened games count less. */
+const DEF_EDGE=10;let dvPos='RB';
+function oppOf(team,wk){return ((META.opps||{})[team]||{})[wk]||''}
+function defenseVs(pos){let d={};DB.filter(p=>p.pos===pos).forEach(p=>p.logs.forEach(l=>{let o=oppOf(p.team,l.w),w=l.weight||1;if(!o)return;let x=d[o]||(d[o]={team:o,pts:0,weeks:new Set(),act:0,usual:0});x.pts+=l.ppr;x.weeks.add(l.w);if(p.m.ppr>=3){x.act+=l.ppr*w;x.usual+=p.m.ppr*w}}));return Object.values(d).map(x=>({team:x.team,games:x.weeks.size,pg:x.pts/x.weeks.size,vs:x.usual?(x.act/x.usual-1)*100:0})).sort((a,b)=>b.vs-a.vs)}
+function edgeClass(v){return v>=DEF_EDGE?'good':v<=-DEF_EDGE?'bad':'muted'}
+function renderDefense(){let rows=defenseVs(dvPos),nw=META.next_week;$('defenseBody').innerHTML=rows.length?`<div class="tablewrap"><table><thead><tr><th>#</th><th>Defense</th><th>Vs usual</th><th>PPR/G allowed</th><th>Games</th><th>Wk ${nw} opponent</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${i+1}</td><td><b>${x.team}</b></td><td class="${edgeClass(x.vs)}">${sg(x.vs)}%</td><td>${fmt(x.pg)}</td><td>${x.games}</td><td>${oppOf(x.team,nw)||'Bye'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">No completed games with a schedule to compare yet.</div>'}
+$('dvWeek').textContent=META.week;pillGroup('dvPos',v=>dvPos=v,renderDefense);renderDefense();
+/* Schedule Strength: each team's games still to come, graded by that defense's "vs usual" number for the position.
+   A defense with no games yet counts as neutral, and bye weeks are left out of the average. */
+let scPos='RB',scWin='next4';
+function scheduleWeeks(win){let all=[...new Set(Object.values(META.opps||{}).flatMap(o=>Object.keys(o).map(Number)))].filter(w=>w>=META.next_week).sort((a,b)=>a-b);return win==='next4'?all.slice(0,4):win==='playoffs'?all.filter(w=>w>=15&&w<=17):all}
+function schedule(pos,win){let vs=Object.fromEntries(defenseVs(pos).map(x=>[x.team,x.vs])),weeks=scheduleWeeks(win);return Object.keys(META.opps||{}).map(team=>{let games=weeks.map(w=>{let opp=oppOf(team,w);return {w,opp,vs:opp?(vs[opp]||0):null}}),played=games.filter(x=>x.opp);return {team,games,avg:played.length?played.reduce((s,x)=>s+x.vs,0)/played.length:0}}).sort((a,b)=>b.avg-a.avg)}
+function renderSchedule(){let rows=schedule(scPos,scWin),weeks=scheduleWeeks(scWin),who=t=>DB.filter(p=>p.team===t&&p.pos===scPos).slice(0,2).map(p=>`<span data-open="${p.id}">${p.name}</span>`).join(', ');
+ $('scheduleBody').innerHTML=rows.length&&weeks.length?`<div class="tablewrap"><table class="scTable"><thead><tr><th>#</th><th>Team</th><th>Average</th>${weeks.map(w=>`<th class="c">Wk ${w}</th>`).join('')}</tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${i+1}</td><td><b>${x.team}</b><span class="scWho">${who(x.team)}</span></td><td class="${edgeClass(x.avg)}">${sg(x.avg)}%</td>${x.games.map(g=>g.opp?`<td class="c ${edgeClass(g.vs)}" title="${g.opp} has allowed ${sg(g.vs)}% vs usual to ${scPos}s">${g.opp}</td>`:'<td class="c muted">bye</td>').join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="muted">No games left on the schedule for this window.</div>'}
+function schedHTML(p){let row=schedule(p.pos,'all').find(x=>x.team===p.team);return row&&row.games.length?`<div class="panel"><div class="ph">Schedule ahead</div><div class="pctHead">Colored by what each defense has given up to ${p.pos}s so far. Green is an easier matchup, red is a tougher one.</div>${row.games.map(g=>g.opp?`<span class="sch ${edgeClass(g.vs)}" title="${sg(g.vs)}% vs usual">Wk ${g.w} ${g.opp}</span>`:`<span class="sch muted">Wk ${g.w} bye</span>`).join('')}</div>`:''}
+$('scWeek').textContent=META.next_week;pillGroup('scPos',v=>scPos=v,renderSchedule);pillGroup('scWin',v=>scWin=v,renderSchedule);renderSchedule();
+/* Report Card: last week's start ratings (META.prev, rebuilt by the build from the games before that week) against what happened.
+   A "start" is a top-12 rating at RB and WR and top-6 at TE, the same cut as the green "this week" tag. A hit is a finish inside twice that.
+   Players on bye are not ranked, and a start who did not play is left out of the hit count. */
+let rcPos='RB';
+function reportCard(pos){let wk=META.week,prev=META.prev||{},cut=pos==='TE'?6:12,finish={};
+ DB.filter(p=>p.pos===pos&&p.logs.some(l=>l.w===wk)).map(p=>({id:p.id,ppr:p.logs.find(l=>l.w===wk).ppr})).sort((a,b)=>b.ppr-a.ppr).forEach((x,i)=>finish[x.id]={ppr:x.ppr,rank:i+1});
+ let rated=DB.filter(p=>p.pos===pos&&prev[p.id]&&prev[p.id][1]!=='BYE').sort((a,b)=>prev[b.id][0]-prev[a.id][0]).map((p,i)=>({p,rank:i+1,rating:prev[p.id][0],ppr:finish[p.id]?finish[p.id].ppr:null,finish:finish[p.id]?finish[p.id].rank:null})),
+ starts=rated.slice(0,cut).filter(x=>x.finish),
+ missed=DB.filter(p=>p.pos===pos&&finish[p.id]&&finish[p.id].rank<=cut).map(p=>{let r=rated.find(x=>x.p===p);return {p,ppr:finish[p.id].ppr,finish:finish[p.id].rank,rank:r?r.rank:null}}).filter(x=>!x.rank||x.rank>cut*2).sort((a,b)=>a.finish-b.finish);
+ return {cut,rows:rated.slice(0,cut*2),starts:starts.length,hits:starts.filter(x=>x.finish<=cut*2).length,missed}}
+function renderReport(){let wk=META.week,r=reportCard(rcPos),cut=r.cut,fin=x=>x.finish?`<span class="olTag ${x.finish<=cut?'g90':x.finish<=cut*2?'g70':'g0'}">${rcPos}${x.finish}</span>`:'<span class="muted">Did not play</span>',who=x=>`<span class="playerlink" data-open="${x.p.id}">${x.p.name}</span><span class="tag">${x.p.team} ${x.p.pos}</span>`;
+ if(!Object.keys(META.prev||{}).length){$('reportTiles').innerHTML='';$('reportBody').innerHTML='<div class="panel muted">The report card starts once two weeks have been played.</div>';return}
+ $('reportTiles').innerHTML=['RB','WR','TE'].map(pos=>{let c=reportCard(pos),rate=c.starts?c.hits/c.starts:0;return `<div class="usageItem"><div class="uv ${rate>=.75?'g90':rate>=.5?'g70':'g0'}">${c.hits} of ${c.starts}</div><div class="ul">top-${c.cut} ${pos} starts finished top ${c.cut*2}</div></div>`}).join('');
+ $('reportBody').innerHTML=`<div class="panel"><div class="ph">The ${cut*2} highest-rated ${rcPos}s going into Week ${wk}</div><div class="pctHead">Green finished top ${cut}, yellow top ${cut*2}, red lower.</div><div class="tablewrap"><table><thead><tr><th>#</th><th>Player</th><th>Wk ${wk} rating</th><th>PPR</th><th>Finish</th></tr></thead><tbody>${r.rows.map(x=>`<tr><td>${x.rank}</td><td>${who(x)}</td><td class="grade ${grade(x.rating)}">${x.rating}</td><td>${x.ppr===null?'—':fmt(x.ppr)}</td><td>${fin(x)}</td></tr>`).join('')}</tbody></table></div></div><div class="panel"><div class="ph">Top-${cut} finishes the ratings missed</div><div class="pctHead">Finished top ${cut} at ${rcPos} while rated outside the top ${cut*2}, or not rated yet.</div>${r.missed.length?`<div class="tablewrap"><table><thead><tr><th>#</th><th>Player</th><th>Rated</th><th>PPR</th><th>Finish</th></tr></thead><tbody>${r.missed.map((x,i)=>`<tr><td>${i+1}</td><td>${who(x)}</td><td>${x.rank?rcPos+x.rank:'Not rated'}</td><td>${fmt(x.ppr)}</td><td>${fin(x)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">None this week.</div>'}</div>`}
+document.querySelectorAll('.rcWeek').forEach(x=>x.textContent=META.week);pillGroup('rcPos',v=>rcPos=v,renderReport);renderReport();
 </script></body></html>'''
 
 html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("__REFS__", refs_json)
