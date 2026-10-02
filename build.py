@@ -832,6 +832,14 @@ for pos in ["RB", "WR", "TE"]:
         pct_refs[pos][k] = [round(float(v), 3) for v in np.sort(gp[col].replace([np.inf, -np.inf], np.nan).dropna().values)]
 refs_json = json.dumps(pct_refs, separators=(",", ":"))
 
+# Every team's opponent by week, past and future, for the browser views. A missing week is a bye.
+opps = {}
+if schedule_ok and {"week", "home_team", "away_team"}.issubset(games.columns):
+    for _, game in games.iterrows():
+        h, a, wk = str(game["home_team"]), str(game["away_team"]), int(game["week"])
+        opps.setdefault(h, {})[wk] = a
+        opps.setdefault(a, {})[wk] = h
+
 payload = json.dumps(players, separators=(",", ":"))
 meta = json.dumps({
     "season": SEASON,
@@ -840,6 +848,7 @@ meta = json.dumps({
     "rz": rz_ok,
     "schedule": schedule_ok,
     "players": len(players),
+    "opps": opps,
 })
 
 # ============================================================
@@ -1217,9 +1226,10 @@ body.shot .shotExit{display:block;text-align:center;padding:18px}
 <section id="players" class="view"><h1 class="title">Players</h1><p class="sub">Search a player to open the full Mania profile.</p><div class="search"><input id="playerQ" placeholder="Search player"><div class="dd" id="playerDD"></div></div></section>
 <section id="rankings" class="view"><div class="kicker">Through Week <span id="wk"></span></div><h1 class="title" id="rankTitle">Overall Rankings</h1><p class="sub" id="rankSub"></p><div class="toolbar"><button class="pill rankmode on" data-mode="mania">Mania Rating</button><button class="pill rankmode" data-mode="start">Week start rating</button><button class="pill rankmode" data-mode="badges">Badges</button><span style="width:8px"></span><button class="pill posf on" data-pos="ALL">ALL</button><button class="pill posf" data-pos="RB">RB</button><button class="pill posf" data-pos="WR">WR</button><button class="pill posf" data-pos="TE">TE</button></div><div id="badgePick" class="badgePick" hidden></div><select id="sortSel" class="teamSelect sortSel"></select><p class="disclaimer left" id="rankDisc"></p><div class="tablewrap rankDesk"><table><thead id="rankHead"></thead><tbody id="rankBody"></tbody></table></div><div class="rankCards" id="rankCards"></div></section>
 <section id="teamshare" class="view"><div class="kicker">Through Week <span id="shareWeek"></span></div><h1 class="title">Team Share</h1><p class="sub">See who is actually on the field and who is earning the offense each week. Every player name opens the full Fantasy Mania profile.</p><div class="teamControls"><select id="teamPick" class="teamSelect"></select><button class="pill shareMode on" data-share="snap">SNAP SHARE</button><button class="pill shareMode" data-share="target">TARGET SHARE</button></div><div id="teamShareBody"></div></section><section id="profile" class="view"><div id="profileBody"></div></section>
-<section id="insights" class="view"><div class="insNav"><button class="insTab on" data-v="movers">Risers &amp; Fallers</button><button class="insTab" data-v="market">Buy Low / Sell High</button></div>
+<section id="insights" class="view"><div class="insNav"><button class="insTab on" data-v="movers">Risers &amp; Fallers</button><button class="insTab" data-v="market">Buy Low / Sell High</button><button class="insTab" data-v="defense">Defense vs. Position</button></div>
 <div class="insPane on" id="ins-movers"><div class="kicker">Week <span class="mvWeek"></span> against earlier games</div><h1 class="title">Risers &amp; Fallers</h1><p class="sub">Whose role changed the most in Week <span class="mvWeek"></span>, compared with his average over his earlier games. A bigger role usually shows up before the points do.</p><div class="toolbar"><button class="pill mvDir on" data-v="1">Risers</button><button class="pill mvDir" data-v="-1">Fallers</button><span style="width:8px"></span><button class="pill mvKey on" data-v="snap">Snap share</button><button class="pill mvKey" data-v="share">Touch / target share</button><span style="width:8px"></span><button class="pill mvPos on" data-v="ALL">ALL</button><button class="pill mvPos" data-v="RB">RB</button><button class="pill mvPos" data-v="WR">WR</button><button class="pill mvPos" data-v="TE">TE</button></div><div class="shareNote" id="moversNote"></div><div class="panel" id="moversBody"></div></div>
 <div class="insPane" id="ins-market"><div class="kicker">Through Week <span id="mkWeek"></span></div><h1 class="title">Buy Low / Sell High</h1><p class="sub">Players whose role and fantasy points disagree. Usage is how much work he gets: volume, team role and red-zone chances. Production is the points and yards he has turned it into. Both are percentiles at his position.</p><div class="toolbar"><button class="pill mkPos on" data-v="ALL">ALL</button><button class="pill mkPos" data-v="RB">RB</button><button class="pill mkPos" data-v="WR">WR</button><button class="pill mkPos" data-v="TE">TE</button></div><div class="mkGrid" id="marketBody"></div><p class="disclaimer left">This compares usage and production so far this season. It flags a player who left his last game early or missed it, but it does not see injury reports, depth-chart changes or a new quarterback, and this early a game or two can swing it. Treat it as a list of names to look into, not a trade verdict.</p></div>
+<div class="insPane" id="ins-defense"><div class="kicker">Through Week <span id="dvWeek"></span></div><h1 class="title">Defense vs. Position</h1><p class="sub">What each defense has given up to running backs, receivers and tight ends. "Vs usual" compares what players scored against this defense with what those same players normally score, so a defense is not punished for a schedule full of great offenses.</p><div class="toolbar"><button class="pill dvPos on" data-v="RB">RB</button><button class="pill dvPos" data-v="WR">WR</button><button class="pill dvPos" data-v="TE">TE</button></div><div class="shareNote">Easiest matchups first. Green defenses have allowed 10%+ more than usual, red ones 10%+ less.</div><div class="panel" id="defenseBody"></div></div>
 </section>
 <section id="compare" class="view"><div class="topRow"><h1 class="title">Compare Players</h1><button class="shotBtn" onclick="toggleShot(true)">Screenshot view</button></div><p class="sub">Overall value and Week <span id="cmpWeek"></span> start decision. Change the games used for either player and the model recalculates.</p><div class="grid2"><div class="search"><input id="aQ" placeholder="Player A"><div class="dd" id="aDD"></div></div><div class="search"><input id="bQ" placeholder="Player B"><div class="dd" id="bDD"></div></div></div><div id="compareBody"></div></section>
 <div class="shotMark">FANTASY MANIA &bull; 2026 &bull; Through Week <span id="shotWk"></span></div></main><div class="shotExit"><button class="pill" onclick="toggleShot(false)">Exit screenshot view</button></div><script>
@@ -1400,6 +1410,14 @@ function marketWhy(x,buy){let pc=v=>ord(Math.max(1,Math.min(99,v))),first=x.hurt
 function renderMarket(){let m=market(mkPos),row=buy=>(x,i)=>`<div class="mkRow"><span class="n">${i+1}</span><div><span class="playerlink" data-open="${x.p.id}">${x.p.name}</span><span class="tag">${x.p.team} ${x.p.pos}</span>${x.hurt?`<span class="partial">${x.hurt.toUpperCase()}</span>`:''}<div class="mkWhy">${marketWhy(x,buy)}</div></div><div class="mkPct">${pctBub(Math.round(x.usage))}<small>Usage</small></div><div class="mkPct">${pctBub(Math.round(x.prod))}<small>Production</small></div></div>`,none='<div class="muted">Nobody stands out here yet. This needs at least two games from a player.</div>';
  $('marketBody').innerHTML=`<div class="panel"><div class="ph">Buy low</div><div class="pctHead">A bigger role than his points show.</div>${m.buy.map(row(true)).join('')||none}</div><div class="panel"><div class="ph">Sell high</div><div class="pctHead">More points than his role supports.</div>${m.sell.map(row(false)).join('')||none}</div>`}
 $('mkWeek').textContent=META.week;pillGroup('mkPos',v=>mkPos=v,renderMarket);renderMarket();
+/* Defense vs Position: what each defense has allowed to a position, per game and against what those players usually score.
+   "Vs usual" follows the matchup engine: players under 3 PPR a game are left out and shortened games count less. */
+const DEF_EDGE=10;let dvPos='RB';
+function oppOf(team,wk){return ((META.opps||{})[team]||{})[wk]||''}
+function defenseVs(pos){let d={};DB.filter(p=>p.pos===pos).forEach(p=>p.logs.forEach(l=>{let o=oppOf(p.team,l.w),w=l.weight||1;if(!o)return;let x=d[o]||(d[o]={team:o,pts:0,weeks:new Set(),act:0,usual:0});x.pts+=l.ppr;x.weeks.add(l.w);if(p.m.ppr>=3){x.act+=l.ppr*w;x.usual+=p.m.ppr*w}}));return Object.values(d).map(x=>({team:x.team,games:x.weeks.size,pg:x.pts/x.weeks.size,vs:x.usual?(x.act/x.usual-1)*100:0})).sort((a,b)=>b.vs-a.vs)}
+function edgeClass(v){return v>=DEF_EDGE?'good':v<=-DEF_EDGE?'bad':'muted'}
+function renderDefense(){let rows=defenseVs(dvPos),nw=META.next_week;$('defenseBody').innerHTML=rows.length?`<div class="tablewrap"><table><thead><tr><th>#</th><th>Defense</th><th>Vs usual</th><th>PPR/G allowed</th><th>Games</th><th>Wk ${nw} opponent</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${i+1}</td><td><b>${x.team}</b></td><td class="${edgeClass(x.vs)}">${sg(x.vs)}%</td><td>${fmt(x.pg)}</td><td>${x.games}</td><td>${oppOf(x.team,nw)||'Bye'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">No completed games with a schedule to compare yet.</div>'}
+$('dvWeek').textContent=META.week;pillGroup('dvPos',v=>dvPos=v,renderDefense);renderDefense();
 </script></body></html>'''
 
 html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("__REFS__", refs_json)

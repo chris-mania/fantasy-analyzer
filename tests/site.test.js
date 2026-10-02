@@ -10,12 +10,12 @@ const script = fs.readFileSync(path.join(__dirname, '..', 'build.py'), 'utf8').m
 // Every DOM lookup, property and call resolves to this same do-nothing object.
 const dom = new Proxy(function () {}, { get: (_, k) => (k === Symbol.toPrimitive ? () => '' : dom), apply: () => dom, set: () => true });
 
-function loadSite(players, week, refs = { RB: {}, WR: {}, TE: {} }) {
+function loadSite(players, week, refs = { RB: {}, WR: {}, TE: {} }, meta = {}) {
   const src = script
     .replace('__PAYLOAD__', () => JSON.stringify(players))
-    .replace('__META__', () => JSON.stringify({ season: 2026, week, next_week: week + 1 }))
+    .replace('__META__', () => JSON.stringify({ season: 2026, week, next_week: week + 1, ...meta }))
     .replace('__REFS__', () => JSON.stringify(refs));
-  return new Function('document', 'window', src + ';return {movers,market,marketWhy}')(dom, dom);
+  return new Function('document', 'window', src + ';return {movers,market,marketWhy,defenseVs}')(dom, dom);
 }
 
 const LOG = { tgt: 0, rec: 0, ry: 0, rtd: 0, air: 0, car: 0, ruy: 0, rutd: 0, ppr: 0, snap: 0, tshare: 0, ashare: 0, touch: 0, rzt: 0, ez: 0, rzc: 0, gl: 0, partial: false, weight: 1 };
@@ -151,6 +151,41 @@ assert.deepStrictEqual(loadSite([], 1, REFS).market('ALL'), { buy: [], sell: [] 
   assert.deepStrictEqual(Object.fromEntries(buy.map(x => [x.p.name, x.hurt])), { 'On Bye': '', 'Sat Out': 'Missed Wk 3', 'Left Early': 'Left Wk 3 early', Healthy: '' });
   assert.strictEqual(site.marketWhy(buy.find(x => x.p.name === 'Sat Out'), true), 'Check his status before you make a move. His role is bigger than his box scores so far.');
   assert.strictEqual(site.marketWhy(buy.find(x => x.p.name === 'Healthy'), true), 'His role is bigger than his box scores so far.');
+}
+
+// ---- Defense vs Position ----
+const NO_REFS = { RB: {}, WR: {}, TE: {} };
+// usual: his season PPR per game, which "vs usual" compares each game against.
+const scorer = (name, pos, team, usual, logs) => player(name, pos, logs, { team, m: { ppr: usual } });
+{
+  // AAA played DDD in Week 1 and EEE in Week 2; BBB played them the other way round.
+  const opps = { AAA: { 1: 'DDD', 2: 'EEE' }, BBB: { 1: 'EEE', 2: 'DDD' }, DDD: { 1: 'AAA', 2: 'BBB' }, EEE: { 1: 'BBB', 2: 'AAA' } };
+  const site = loadSite([
+    scorer('Back One', 'RB', 'AAA', 10, [{ ppr: 20 }, { ppr: 5 }]),
+    scorer('Back Two', 'RB', 'AAA', 10, [{ ppr: 10 }, { ppr: 5 }]),
+    scorer('Back Three', 'RB', 'BBB', 20, [{ ppr: 10 }, { ppr: 30 }]),
+    scorer('Deep Bench', 'RB', 'BBB', 1, [{ ppr: 0 }, { ppr: 6 }]),
+    scorer('Receiver', 'WR', 'AAA', 10, [{ ppr: 40 }, { ppr: 40 }]),
+  ], 2, NO_REFS, { opps });
+
+  const [easy, tough] = site.defenseVs('RB');
+  // DDD: backs who usually score 10 + 10 + 20 scored 20 + 10 + 30, which is +50%. The 1-PPR back is ignored for
+  // "vs usual" but his 6 points still count toward points allowed: 66 over 2 games.
+  assert.deepStrictEqual([easy.team, easy.games, easy.pg, Math.round(easy.vs)], ['DDD', 2, 33, 50]);
+  // EEE: usual 10 + 10 + 20, actual 5 + 5 + 10, which is -50%.
+  assert.deepStrictEqual([tough.team, tough.games, tough.pg, Math.round(tough.vs)], ['EEE', 2, 10, -50]);
+  assert.deepStrictEqual(site.defenseVs('WR').map(x => x.team), ['DDD', 'EEE'], 'positions are kept apart');
+  assert.deepStrictEqual(site.defenseVs('TE'), []);
+}
+{
+  // A game he left early counts less: (30*1 + 0*0.25) / (10*1 + 10*0.25) = +140%, where a plain average would say +50%.
+  const site = loadSite([
+    scorer('Finished', 'RB', 'AAA', 10, [{ ppr: 30 }]),
+    scorer('Left Early', 'RB', 'AAA', 10, [{ ppr: 0, partial: true, weight: 0.25 }]),
+  ], 1, NO_REFS, { opps: { AAA: { 1: 'DDD' }, DDD: { 1: 'AAA' } } });
+  assert.strictEqual(Math.round(site.defenseVs('RB')[0].vs), 140);
+  // No schedule in the page: nothing to show, and nothing breaks.
+  assert.deepStrictEqual(loadSite([scorer('Finished', 'RB', 'AAA', 10, [{ ppr: 30 }])], 1).defenseVs('RB'), []);
 }
 
 console.log('site tests passed');
