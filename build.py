@@ -5,6 +5,7 @@ import warnings
 from urllib.error import HTTPError
 
 import numpy as np
+import re
 import pandas as pd
 
 warnings.filterwarnings("ignore")
@@ -146,11 +147,34 @@ if snap_name:
     sn = snaps[[snap_name, "team", "week", "offense_snaps", "offense_pct"]].copy()
     sn = sn.rename(columns={snap_name: "snap_name"})
     sn["week"] = safe_num(sn["week"]).astype(int)
-    sn = sn.drop_duplicates(["snap_name", "team", "week"])
+    def _nk(x):
+        x = re.sub(r"[.'\u2019`-]", "", str(x).lower())
+        x = re.sub(r"\b(jr|sr|ii|iii|iv|v)\b", "", x)
+        return re.sub(r"[^a-z]", "", x)
+    sn["_nk"] = sn["snap_name"].map(_nk)
+    sn = sn.drop_duplicates(["_nk", "team", "week"])
+    s["_nk"] = s["player_name"].map(_nk)
     merged = s.merge(
-        sn, left_on=["player_name", "team", "week"],
-        right_on=["snap_name", "team", "week"], how="left"
+        sn.drop(columns=["snap_name"]), on=["_nk", "team", "week"], how="left"
     )
+    # Fallback for nickname mismatches (Kenny/Kenneth): same last name, team, week and position.
+    def _ln(x):
+        parts = re.sub(r"[.'\u2019`]", "", str(x).lower()).replace("-", " ").split()
+        parts = [p for p in parts if p not in ("jr", "sr", "ii", "iii", "iv", "v")]
+        return re.sub(r"[^a-z]", "", parts[-1]) if parts else ""
+    _sn2 = snaps[[snap_name, "team", "week", "position", "offense_snaps", "offense_pct"]].copy()
+    _sn2["_ln"] = _sn2[snap_name].map(_ln)
+    _sn2["week"] = safe_num(_sn2["week"]).astype(int)
+    _cnt = _sn2.groupby(["_ln", "team", "week", "position"])[snap_name].transform("count")
+    _sn2 = _sn2[_cnt == 1].set_index(["_ln", "team", "week", "position"])
+    _na = merged["offense_pct"].isna()
+    for _i in merged.index[_na]:
+        _k = (_ln(merged.at[_i, "player_name"]), merged.at[_i, "team"], merged.at[_i, "week"], merged.at[_i, "position"])
+        if _k in _sn2.index:
+            merged.at[_i, "offense_pct"] = _sn2.at[_k, "offense_pct"]
+            merged.at[_i, "offense_snaps"] = _sn2.at[_k, "offense_snaps"]
+    _miss = merged[merged["offense_pct"].isna() & ((merged["targets"] + merged["carries"]) >= 3)]
+    print(f"   Snap match: {len(_miss)} meaningful player-games still unmatched.")
 else:
     merged = s.copy()
     merged["offense_snaps"] = 0
@@ -485,6 +509,16 @@ g[["production", "opportunity", "role_score", "high_value", "efficiency", "raw_p
 # Transform to an intuitive Madden-like 0-100 fantasy scale while keeping ordering intact.
 # 90+ remains rare; elite complete profiles can get there.
 g["mania_base"] = 45 + 0.52 * g["raw_profile"]
+# Tight ends are ranked against a small, top-heavy pool, so mid-tier TEs looked as good as
+# top-tier RBs/WRs. Keep elite TEs (93.6+) as-is and spread the rest out so a rating
+# means roughly the same thing across positions.
+TE_PIVOT, TE_SPREAD = 93.6, 1.5
+_te = g["position"] == "TE"
+g.loc[_te, "mania_base"] = np.where(
+    g.loc[_te, "mania_base"] >= TE_PIVOT,
+    g.loc[_te, "mania_base"],
+    np.maximum(35.0, TE_PIVOT - (TE_PIVOT - g.loc[_te, "mania_base"]) * TE_SPREAD),
+)
 
 # Confidence: modest shrink toward 72, NOT a huge punishment.
 # One strong game remains capable of a mid/high-80s score but is labeled low-confidence.
@@ -1165,6 +1199,8 @@ body.shot .shotExit{display:block;text-align:center;padding:18px}
 .bi{display:inline-flex;gap:3px;margin-left:7px;vertical-align:middle}.bi i{width:22px;height:22px;border-radius:50%;background:#e6edfa;color:#27407a;display:inline-grid;place-items:center}.bi svg{width:13px;height:13px}.rsub .bi{margin-left:6px}.bdgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;justify-content:center}.bdgBtn{display:inline-flex;align-items:center;gap:7px;background:#eef3fb;border:1px solid #c5d3ea;border-radius:999px;padding:4px 12px 4px 4px;font:inherit;font-weight:800;font-size:12.5px;color:#1c2b4a;cursor:pointer}.bdgBtn i{width:24px;height:24px;border-radius:50%;background:#27407a;color:#fff;display:inline-grid;place-items:center}.bdgBtn svg{width:14px;height:14px}.bdgBtn.on{background:#1c2b4a;color:#fff;border-color:#1c2b4a}.bdgBtn.on i{background:#fff;color:#1c2b4a}.bdgD{margin:10px auto 0;font-size:13.5px;color:#33445f;line-height:1.4;max-width:420px;text-align:center}.bdgD[hidden]{display:none}.bdgD b{color:#1c2b4a}.hol{flex-direction:column!important;align-items:center!important;text-align:center!important;gap:0!important}.cmpBd .bdgs{margin-top:8px}.cmpBd .bdgBtn{font-size:11.5px}.cmpBd .bdgD{font-size:12.5px}.hol .outlook{margin:0}
 .compareHero{align-items:start!important}.compareHero .vs{align-self:center}
 .bi i{width:22px;height:25px;border-radius:0;background:none;color:inherit}.bi svg{width:22px;height:25px}.bi{gap:2px}.bdgBtn{padding:3px 12px 3px 5px}.bdgBtn i{width:24px;height:27px;border-radius:0;background:none;color:inherit}.bdgBtn svg{width:24px;height:27px}.bdgBtn.on i{background:none;color:inherit}.bdgBtn.on{background:#1c2b4a;color:#fff}.cmpBd .bdgBtn svg{width:20px;height:23px}.cmpBd .bdgBtn i{width:20px;height:23px}
+.cmpStats table,.cstart{width:100%;table-layout:fixed}.cmpStats th,.cmpStats td,.cstart th,.cstart td{text-align:center!important;padding-left:6px!important;padding-right:6px!important}.cmpStats th:nth-child(2),.cmpStats td:nth-child(2),.cstart th:nth-child(2),.cstart td:nth-child(2){width:38%}.cmpStats th:first-child,.cmpStats th:last-child{white-space:normal;overflow-wrap:anywhere}.cmpStats.tablewrap{overflow-x:visible}
+@media(max-width:700px){.cstart .outlook{font-size:11px;padding:4px 7px;white-space:nowrap}.cstart td,.cstart th{padding-left:3px!important;padding-right:3px!important}.cstart th:nth-child(2),.cstart td:nth-child(2){width:26%}}
 </style></head><body>
 <div class="topbar"><div class="nav"><div class="brand">FANTASY <span>MANIA</span></div><div class="links"><button class="navb on" data-v="home">HOME</button><button class="navb" data-v="players">PLAYERS</button><button class="navb" data-v="rankings">RANKINGS</button><button class="navb" data-v="teamshare">TEAM SHARE</button><button class="navb" data-v="compare">COMPARE</button></div></div></div>
 <main class="wrap">
@@ -1257,7 +1293,7 @@ function renderRanks(){let CL=COLS();if(!CL.some(c=>c[0]===sortKey))sortKey=rank
 document.querySelectorAll('.rankmode').forEach(b=>b.onclick=()=>{rankMode=b.dataset.mode;sortKey=rankMode;sortDir=-1;document.querySelectorAll('.rankmode').forEach(x=>x.classList.toggle('on',x===b));renderRanks()});document.querySelectorAll('.posf').forEach(b=>b.onclick=()=>{posFilter=b.dataset.pos;document.querySelectorAll('.posf').forEach(x=>x.classList.toggle('on',x===b));renderRanks()});renderRanks();
 function percentile(pos,key,v){let a=(REFS[pos]||{})[key]||[];if(!a.length)return 0;let lo=0,hi=a.length;while(lo<hi){let m=(lo+hi)>>1;if(a[m]<=v+1e-5)lo=m+1;else hi=m}return Math.min(100,lo/a.length*100)}function avg(a,k,w=true){let den=0,num=0;a.forEach(x=>{let z=w?(x.weight||1):1;num+=Number(x[k]||0)*z;den+=z});return den?num/den:0}function sum(a,k){return a.reduce((s,x)=>s+Number(x[k]||0)*(x.weight||1),0)}
 function customMatch(p,M){let ex=p.similar||[];if(!ex.length)return {adj:p.matchup_adj,list:[]};let scored=ex.map(x=>{let share=p.pos==='RB'?M.touch_share:M.target_share,rz=p.pos==='RB'?M.rz_carries_pg:M.rz_targets_pg;let dif=[Math.abs(M.targets_pg-x.tgt)/Math.max(3,x.tgt,1),Math.abs(M.rec_pg-x.rec)/Math.max(2,x.rec,1),Math.abs(M.snap_pct-x.snap)/35,Math.abs(share-x.share)/20,Math.abs(rz-x.rz)/2];let sim=Math.max(.15,Math.exp(-.8*dif.reduce((a,b)=>a+b,0)/dif.length));return {...x,csim:sim,delta:(x.actual/Math.max(x.normal,3)-1)*100}}).sort((a,b)=>b.csim-a.csim);let use=scored.filter(x=>x.csim>=.28),den=use.reduce((s,x)=>s+x.csim*x.csim,0);if(!den)return {adj:0,list:scored.slice(0,4)};let eff=use.reduce((s,x)=>s+x.delta*x.csim*x.csim,0)/den,maturity=Math.min(1,META.week/8),evidence=Math.min(1,use.length/6),adj=Math.max(-6,Math.min(6,eff/25*6))*maturity*(.45+.55*evidence);return {adj:p.pos==='TE'?adj*.35:adj,list:scored.slice(0,4)}}
-function calc(p,idxs){let L=idxs.map(i=>p.logs[i]).filter(Boolean);if(!L.length)return null;let M={};M.ppr_pg=avg(L,'ppr');M.targets_pg=avg(L,'tgt');M.rec_pg=avg(L,'rec');M.rec_yards_pg=avg(L,'ry');M.carries_pg=avg(L,'car');M.rush_yards_pg=avg(L,'ruy');M.scrim_pg=M.rec_yards_pg+M.rush_yards_pg;M.td_pg=avg(L,'rtd')+avg(L,'rutd');M.snap_pct=avg(L,'snap');M.target_share=avg(L,'tshare');M.air_share=avg(L,'ashare');M.touch_share=avg(L,'touch');M.rz_targets_pg=avg(L,'rzt');M.endzone_targets_pg=avg(L,'ez');M.rz_carries_pg=avg(L,'rzc');M.gl_carries_pg=avg(L,'gl');M.yards_per_target=sum(L,'tgt')?sum(L,'ry')/sum(L,'tgt'):0;M.catch_rate=sum(L,'tgt')?sum(L,'rec')/sum(L,'tgt')*100:0;M.yards_per_carry=sum(L,'car')?sum(L,'ruy')/sum(L,'car'):0;let opp=sum(L,'car')+2*sum(L,'tgt');M.fp_per_weighted_opp=opp?sum(L,'ppr')/opp:0;let P={};Object.keys(M).forEach(k=>P[k]=percentile(p.pos,k,M[k]));let prod,op,role,hv,eff;if(p.pos==='RB'){prod=.55*P.ppr_pg+.30*P.scrim_pg+.15*P.td_pg;op=.45*P.carries_pg+.35*P.targets_pg+.20*P.rec_pg;role=.60*P.touch_share+.40*P.snap_pct;hv=.40*P.rz_carries_pg+.35*P.gl_carries_pg+.25*P.rz_targets_pg;eff=.55*P.fp_per_weighted_opp+.25*P.yards_per_carry+.20*P.catch_rate}else{prod=.55*P.ppr_pg+.30*P.rec_yards_pg+.15*P.td_pg;op=.50*P.targets_pg+.30*P.rec_pg+.20*P.target_share;role=.45*P.target_share+.30*P.air_share+.25*P.snap_pct;hv=.60*P.rz_targets_pg+.40*P.endzone_targets_pg;eff=.45*P.yards_per_target+.30*P.catch_rate+.25*P.fp_per_weighted_opp}let W=p.pos==='RB'?[.30,.30,.20,.125,.075]:[.30,.30,.225,.10,.075],raw=W[0]*prod+W[1]*op+W[2]*role+W[3]*hv+W[4]*eff,base=45+.52*raw,eg=L.reduce((s,x)=>s+(x.weight||1),0),conf=Math.min(1,eg/Math.max(META.week,1)),sh=(1-conf)*.12,mania=Math.max(0,Math.min(99.5,base*(1-sh)+72*sh));let recent=L.slice(-Math.min(2,L.length)),recentOpp=recent.reduce((s,x)=>s+2*x.tgt+x.car,0)/recent.length,seasonOpp=M.targets_pg*2+M.carries_pg,tr=seasonOpp?((recentOpp/seasonOpp)-1)*100:0,trend=Math.max(-2.5,Math.min(2.5,tr/20*2.5));if(L.length<2)trend*=.25;let mt=customMatch(p,M),start=Math.max(0,Math.min(100,mania+mt.adj+trend));if(idxs.length===p.logs.length){mania=p.mania;start=p.start}return {mania,start,M,match:mt,b:p.pos==='RB'?{'Fantasy Production':prod,'Touch Volume':op,'Backfield Control':role,'Goal-Line / Red-Zone':hv,'Per-Touch Efficiency':eff}:{'Fantasy Production':prod,'Target Volume':op,'Team Target Role':role,'Red-Zone Threat':hv,'Per-Target Efficiency':eff}}}
+function calc(p,idxs){let L=idxs.map(i=>p.logs[i]).filter(Boolean);if(!L.length)return null;let M={};M.ppr_pg=avg(L,'ppr');M.targets_pg=avg(L,'tgt');M.rec_pg=avg(L,'rec');M.rec_yards_pg=avg(L,'ry');M.carries_pg=avg(L,'car');M.rush_yards_pg=avg(L,'ruy');M.scrim_pg=M.rec_yards_pg+M.rush_yards_pg;M.td_pg=avg(L,'rtd')+avg(L,'rutd');M.snap_pct=avg(L,'snap');M.target_share=avg(L,'tshare');M.air_share=avg(L,'ashare');M.touch_share=avg(L,'touch');M.rz_targets_pg=avg(L,'rzt');M.endzone_targets_pg=avg(L,'ez');M.rz_carries_pg=avg(L,'rzc');M.gl_carries_pg=avg(L,'gl');M.yards_per_target=sum(L,'tgt')?sum(L,'ry')/sum(L,'tgt'):0;M.catch_rate=sum(L,'tgt')?sum(L,'rec')/sum(L,'tgt')*100:0;M.yards_per_carry=sum(L,'car')?sum(L,'ruy')/sum(L,'car'):0;let opp=sum(L,'car')+2*sum(L,'tgt');M.fp_per_weighted_opp=opp?sum(L,'ppr')/opp:0;let P={};Object.keys(M).forEach(k=>P[k]=percentile(p.pos,k,M[k]));let prod,op,role,hv,eff;if(p.pos==='RB'){prod=.55*P.ppr_pg+.30*P.scrim_pg+.15*P.td_pg;op=.45*P.carries_pg+.35*P.targets_pg+.20*P.rec_pg;role=.60*P.touch_share+.40*P.snap_pct;hv=.40*P.rz_carries_pg+.35*P.gl_carries_pg+.25*P.rz_targets_pg;eff=.55*P.fp_per_weighted_opp+.25*P.yards_per_carry+.20*P.catch_rate}else{prod=.55*P.ppr_pg+.30*P.rec_yards_pg+.15*P.td_pg;op=.50*P.targets_pg+.30*P.rec_pg+.20*P.target_share;role=.45*P.target_share+.30*P.air_share+.25*P.snap_pct;hv=.60*P.rz_targets_pg+.40*P.endzone_targets_pg;eff=.45*P.yards_per_target+.30*P.catch_rate+.25*P.fp_per_weighted_opp}let W=p.pos==='RB'?[.30,.30,.20,.125,.075]:[.30,.30,.225,.10,.075],raw=W[0]*prod+W[1]*op+W[2]*role+W[3]*hv+W[4]*eff,base0=45+.52*raw,base=(p.pos==='TE'&&base0<93.6)?Math.max(35,93.6-(93.6-base0)*1.5):base0,eg=L.reduce((s,x)=>s+(x.weight||1),0),conf=Math.min(1,eg/Math.max(META.week,1)),sh=(1-conf)*.12,mania=Math.max(0,Math.min(99.5,base*(1-sh)+72*sh));let recent=L.slice(-Math.min(2,L.length)),recentOpp=recent.reduce((s,x)=>s+2*x.tgt+x.car,0)/recent.length,seasonOpp=M.targets_pg*2+M.carries_pg,tr=seasonOpp?((recentOpp/seasonOpp)-1)*100:0,trend=Math.max(-2.5,Math.min(2.5,tr/20*2.5));if(L.length<2)trend*=.25;let mt=customMatch(p,M),start=Math.max(0,Math.min(100,mania+mt.adj+trend));if(idxs.length===p.logs.length){mania=p.mania;start=p.start}return {mania,start,M,match:mt,b:p.pos==='RB'?{'Fantasy Production':prod,'Touch Volume':op,'Backfield Control':role,'Goal-Line / Red-Zone':hv,'Per-Touch Efficiency':eff}:{'Fantasy Production':prod,'Target Volume':op,'Team Target Role':role,'Red-Zone Threat':hv,'Per-Target Efficiency':eff}}}
 function barColor(v){return v>=70?'#22a45d':v>=40?'#e3a21a':'#e2505b'}function barGrade(v){return v>=70?'g90':v>=40?'g70':'g0'}function stat(v,k,pos,key,raw){let pc=key?Math.max(1,Math.min(99,Math.round(percentile(pos,key,raw)))):null;return `<div class="stat"><div class="sv">${v}</div><div class="sk">${k}</div>${pc!==null?`<div class="spc ${barGrade(pc)}">${ord(pc)} percentile</div>`:''}</div>`}
 function roomHTML(p){let weeks=[...new Set(p.room.flatMap(x=>x.weekly.map(w=>w.w)))].sort((a,b)=>a-b);return `<div class="tablewrap"><table class="roomtable"><thead><tr><th>Player</th>${weeks.map(w=>`<th>W${w}</th>`).join('')}<th>Season</th></tr></thead><tbody>${p.room.map(x=>`<tr><td class="${x.id===p.id?'you':''}" data-id="${x.id}">${x.name}</td>${weeks.map(w=>{let z=x.weekly.find(q=>q.w===w);return `<td>${z?`${p.pos==='RB'?z.car+z.tgt:z.tgt} / ${z.share}%`:'—'}</td>`}).join('')}<td><b>${x.share}%</b></td></tr>`).join('')}</tbody></table></div><div class="explain">Each week shows ${p.pos==='RB'?'carries + targets':'targets'} / share of the team ${p.pos==='RB'?'touches':'targets'}. Click a name to open that player.</div>`}
 function matchupHTML(p,c){let m=c?c.match:{adj:p.matchup_adj,list:p.similar.slice(0,4)},wk=META.next_week,L=m.list||[],n=L.length,avgN=n?L.reduce((s,x)=>s+Number(x.normal),0)/n:0,avgA=n?L.reduce((s,x)=>s+Number(x.actual),0)/n:0,adj=m.adj,sg=adj>=0?'+':'',why;
