@@ -15,7 +15,7 @@ function loadSite(players, week, refs = { RB: {}, WR: {}, TE: {} }) {
     .replace('__PAYLOAD__', () => JSON.stringify(players))
     .replace('__META__', () => JSON.stringify({ season: 2026, week, next_week: week + 1 }))
     .replace('__REFS__', () => JSON.stringify(refs));
-  return new Function('document', 'window', src + ';return {movers}')(dom, dom);
+  return new Function('document', 'window', src + ';return {movers,market,marketWhy}')(dom, dom);
 }
 
 const LOG = { tgt: 0, rec: 0, ry: 0, rtd: 0, air: 0, car: 0, ruy: 0, rutd: 0, ppr: 0, snap: 0, tshare: 0, ashare: 0, touch: 0, rzt: 0, ez: 0, rzc: 0, gl: 0, partial: false, weight: 1 };
@@ -77,6 +77,80 @@ const names = rows => rows.map(x => x.p.name);
   // Week 1: nobody has an earlier game to compare with.
   assert.deepStrictEqual(loadSite([player('Opening Day', 'WR', [{ snap: 95 }])], 1).movers('snap', 1, 'ALL'), []);
   assert.deepStrictEqual(loadSite([], 1).movers('snap', -1, 'ALL'), []);
+}
+
+// ---- Buy Low / Sell High ----
+// With these reference lists a bucket score of N sits at the Nth percentile, so the fixtures read as percentiles.
+const TENS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+const POS_REFS = { b_production: TENS, b_opportunity: TENS, b_role: TENS, b_high_value: TENS, b_efficiency: TENS };
+const REFS = { RB: POS_REFS, WR: POS_REFS, TE: POS_REFS };
+const TWO_GAMES = [{ ppr: 10 }, { ppr: 10 }];
+// usage: one number used for all three usage buckets, or [volume, role, red zone].
+function rated(name, pos, usage, production, { efficiency = 50, logs = TWO_GAMES } = {}) {
+  const [Opportunity, Role, HighValue] = Array.isArray(usage) ? usage : [usage, usage, usage];
+  return player(name, pos, logs, { buckets: { Production: production, Opportunity, Role, 'High Value': HighValue, Efficiency: efficiency } });
+}
+{
+  const site = loadSite([
+    rated('Buy Me', 'WR', 90, 50),
+    rated('Buy Me More', 'RB', 90, 30),
+    rated('Small Gap', 'WR', 80, 70),
+    rated('Nobody Wants Him', 'WR', 40, 10),
+    rated('Sell Me', 'TE', 50, 90),
+    rated('Nothing To Sell', 'TE', 10, 40),
+    rated('Balanced Star', 'WR', 95, 95),
+    rated('One Game', 'WR', 90, 20, { logs: [{ ppr: 10 }] }),
+  ], 2, REFS);
+
+  const all = site.market('ALL');
+  assert.deepStrictEqual(names(all.buy), ['Buy Me More', 'Buy Me'], 'biggest gap first; small gaps, low usage and one-game players are left out');
+  assert.deepStrictEqual(names(all.sell), ['Sell Me'], 'low producers are not sell-highs');
+  assert.deepStrictEqual(names(site.market('WR').buy), ['Buy Me']);
+  assert.deepStrictEqual(site.market('RB').sell, []);
+}
+{
+  // Usage uses the Mania bucket weights, which differ by position:
+  // RB (.30*100 + .20*50 + .125*0) / .625 = 64, WR (.30*100 + .225*50 + .10*0) / .625 = 66.
+  const { buy } = loadSite([rated('Back', 'RB', [100, 50, 0], 10), rated('Receiver', 'WR', [100, 50, 0], 10)], 2, REFS).market('ALL');
+  const usage = Object.fromEntries(buy.map(x => [x.p.name, x.usage]));
+  assert.ok(Math.abs(usage.Back - 64) < 1e-9 && Math.abs(usage.Receiver - 66) < 1e-9, JSON.stringify(usage));
+}
+{
+  // The one-line reason picks the most concrete fact available.
+  const site = loadSite([
+    rated('Snakebit', 'WR', 90, 50, { logs: [{ ppr: 8, rzt: 2 }, { ppr: 8, rzc: 1 }] }),
+    rated('Cold', 'WR', 90, 50, { efficiency: 20 }),
+    rated('Plain Buy', 'WR', 90, 50, { logs: [{ ppr: 14, rtd: 1 }, { ppr: 6 }] }),
+    rated('TD Luck', 'RB', 30, 90, { logs: [{ ppr: 12, rutd: 1 }, { ppr: 12, rtd: 1 }] }),
+    rated('Hot Hand', 'RB', 30, 90, { efficiency: 90 }),
+    rated('Plain Sell', 'RB', 30, 90),
+  ], 2, REFS);
+  const { buy, sell } = site.market('ALL');
+  const why = (rows, isBuy) => Object.fromEntries(rows.map(x => [x.p.name, site.marketWhy(x, isBuy)]));
+  assert.deepStrictEqual(why(buy, true), {
+    Snakebit: 'No touchdowns yet on 3 red-zone looks.',
+    Cold: 'He is getting the work, but his efficiency is only 20th percentile. Volume tends to outlast a cold stretch.',
+    'Plain Buy': 'His role is bigger than his box scores so far.',
+  });
+  assert.deepStrictEqual(why(sell, false), {
+    'TD Luck': '50% of his points have come from touchdowns.',
+    'Hot Hand': '90th percentile efficiency on 30th percentile usage. That is hard to keep up.',
+    'Plain Sell': 'He is scoring more than his role usually supports.',
+  });
+}
+assert.deepStrictEqual(loadSite([], 1, REFS).market('ALL'), { buy: [], sell: [] });
+{
+  // Injury flags come from the game logs: he left the latest week early, or his team played it without him.
+  const site = loadSite([
+    rated('Healthy', 'WR', 90, 50, { logs: [{ ppr: 10 }, { ppr: 10 }, { ppr: 10 }] }),
+    rated('Left Early', 'WR', 90, 45, { logs: [{ ppr: 10 }, { ppr: 10 }, { ppr: 2, partial: true, weight: 0.3 }] }),
+    rated('Sat Out', 'WR', 90, 40),
+    Object.assign(rated('On Bye', 'WR', 90, 35), { team: 'BYE' }),
+  ], 3, REFS);
+  const { buy } = site.market('ALL');
+  assert.deepStrictEqual(Object.fromEntries(buy.map(x => [x.p.name, x.hurt])), { 'On Bye': '', 'Sat Out': 'Missed Wk 3', 'Left Early': 'Left Wk 3 early', Healthy: '' });
+  assert.strictEqual(site.marketWhy(buy.find(x => x.p.name === 'Sat Out'), true), 'Check his status before you make a move. His role is bigger than his box scores so far.');
+  assert.strictEqual(site.marketWhy(buy.find(x => x.p.name === 'Healthy'), true), 'His role is bigger than his box scores so far.');
 }
 
 console.log('site tests passed');
