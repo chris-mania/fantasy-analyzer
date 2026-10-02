@@ -1035,7 +1035,7 @@ for _, r in g.iterrows():
     own = inj_by_pid.get(r["player_id"])
     inj_own = -4.0 * (1.0 - own["avail"]) if own else 0.0
     team_b = max(-6.0, min(26.0, inj_boost.get(r["player_id"], 0.0)))
-    if team_b > 0 and r["player_id"] not in inj_has_ev:   # only for model guesses, not real with/without games
+    if team_b > 0:
     # harder to climb when already near the top: boost shrinks as Mania rises
         team_b *= max(0.25, min(1.0, (100.0 - float(r["mania"])) / 40.0))
     inj_total = inj_own + team_b
