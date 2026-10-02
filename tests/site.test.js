@@ -15,7 +15,7 @@ function loadSite(players, week, refs = { RB: {}, WR: {}, TE: {} }, meta = {}) {
     .replace('__PAYLOAD__', () => JSON.stringify(players))
     .replace('__META__', () => JSON.stringify({ season: 2026, week, next_week: week + 1, ...meta }))
     .replace('__REFS__', () => JSON.stringify(refs));
-  return new Function('document', 'window', src + ';return {movers,market,marketWhy,defenseVs}')(dom, dom);
+  return new Function('document', 'window', src + ';return {movers,market,marketWhy,defenseVs,schedule,scheduleWeeks,schedHTML}')(dom, dom);
 }
 
 const LOG = { tgt: 0, rec: 0, ry: 0, rtd: 0, air: 0, car: 0, ruy: 0, rutd: 0, ppr: 0, snap: 0, tshare: 0, ashare: 0, touch: 0, rzt: 0, ez: 0, rzc: 0, gl: 0, partial: false, weight: 1 };
@@ -186,6 +186,37 @@ const scorer = (name, pos, team, usual, logs) => player(name, pos, logs, { team,
   assert.strictEqual(Math.round(site.defenseVs('RB')[0].vs), 140);
   // No schedule in the page: nothing to show, and nothing breaks.
   assert.deepStrictEqual(loadSite([scorer('Finished', 'RB', 'AAA', 10, [{ ppr: 30 }])], 1).defenseVs('RB'), []);
+}
+
+// ---- Schedule Strength ----
+{
+  // Through Week 1: DDD has been easy on backs (+100%), EEE tough (-50%), FFF has not played yet.
+  // AAA still has DDD, a bye, FFF, EEE and DDD again; BBB gets EEE every week.
+  const opps = {
+    AAA: { 1: 'DDD', 2: 'DDD', 4: 'FFF', 5: 'EEE', 6: 'DDD', 16: 'EEE' },
+    BBB: { 1: 'EEE', 2: 'EEE', 3: 'EEE', 4: 'EEE', 5: 'EEE', 6: 'EEE', 16: 'DDD' },
+  };
+  const site = loadSite([
+    scorer('Home Back', 'RB', 'AAA', 10, [{ ppr: 20 }]),
+    scorer('Away Back', 'RB', 'BBB', 10, [{ ppr: 5 }]),
+  ], 1, NO_REFS, { opps });
+
+  assert.deepStrictEqual(site.scheduleWeeks('next4'), [2, 3, 4, 5]);
+  assert.deepStrictEqual(site.scheduleWeeks('all'), [2, 3, 4, 5, 6, 16]);
+  assert.deepStrictEqual(site.scheduleWeeks('playoffs'), [16]);
+
+  const [first, second] = site.schedule('RB', 'next4');
+  assert.strictEqual(first.team, 'AAA', 'easiest schedule first');
+  assert.deepStrictEqual(first.games.map(g => [g.w, g.opp, g.vs === null ? null : Math.round(g.vs)]), [[2, 'DDD', 100], [3, '', null], [4, 'FFF', 0], [5, 'EEE', -50]]);
+  assert.ok(Math.abs(first.avg - 50 / 3) < 1e-9, 'the bye is left out of the average and the unseen defense counts as neutral');
+  assert.deepStrictEqual([second.team, Math.round(second.avg)], ['BBB', -50]);
+  assert.deepStrictEqual(site.schedule('RB', 'playoffs').map(x => [x.team, Math.round(x.avg)]), [['BBB', 100], ['AAA', -50]]);
+
+  // The profile panel lists every game left, byes included, and is empty when there is no schedule.
+  const panel = site.schedHTML({ pos: 'RB', team: 'AAA' });
+  assert.ok(panel.includes('Wk 2 DDD') && panel.includes('Wk 3 bye') && panel.includes('Wk 16 EEE'), panel);
+  assert.strictEqual(loadSite([scorer('Home Back', 'RB', 'AAA', 10, [{ ppr: 20 }])], 1).schedHTML({ pos: 'RB', team: 'AAA' }), '');
+  assert.deepStrictEqual(loadSite([], 1).schedule('RB', 'all'), []);
 }
 
 console.log('site tests passed');
