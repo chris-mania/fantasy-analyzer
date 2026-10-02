@@ -740,6 +740,7 @@ inj_boost = {}       # player_id -> total rating change from teammates' injuries
 inj_why = {}         # player_id -> list of teammates driving that change
 depth_info = {}
 inj_repl = {}
+inj_has_ev = set()
 inj_meta = {"ok": False, "updated": "", "n": 0, "out": 0}
 
 def _avail(status, practice):
@@ -905,7 +906,7 @@ if not AS_OF_WEEK:
                     model[k] = model.get(k, 0.0) + (c_ * PPR_CARRY + t_ * (PPR_TGT_RB if rp == "RB" else PPR_TGT)) * star_x
                 # With / without evidence: how teammates actually did in games this player missed.
                 pw_i = pw.get(pid, {})
-                absent = [w_ for w_ in tw if w_ not in pw_i and pw_i and w_ > min(pw_i)]
+                absent = [w_ for w_ in tw if pw_i and w_ > min(pw_i) and (w_ not in pw_i or pw_i[w_][0] < 0.5)]
                 never_played = (not pw_i) and len(tw) >= 2
                 recv = [k for k, x in rows.items() if k != pid and x["position"] in ("RB", "WR", "TE")]
                 for k in recv:
@@ -918,7 +919,7 @@ if not AS_OF_WEEK:
                         mean_n = float(np.mean([pw_k[w_][1] for w_ in N]))
                         base_ = float(np.mean([pw_k[w_][1] for w_ in W])) if len(W) >= 2 else float(rows[k]["ppr_pg"])
                         obs = float(np.clip(mean_n - base_, -1.5, 8.0))
-                        wgt = u * len(N) / (len(N) + 1.5)
+                        wgt = u * len(N) / (len(N) + 0.5)
                         d_ppr = (1 - wgt) * m_d + wgt * obs
                         ev = {"games": len(N), "with": round(base_, 1), "without": round(mean_n, 1)}
                     else:
@@ -928,6 +929,8 @@ if not AS_OF_WEEK:
                     if abs(d_ppr) < 0.3:
                         continue
                     dppr[k] = dppr.get(k, 0.0) + d_ppr
+                    if ev:
+                        inj_has_ev.add(k)
                     pairs.setdefault(k, []).append((pid, str(r_["player_name"]), pos, inj_by_pid.get(pid, {}).get("label", ""), d_ppr, ev))
             # Turn the extra points per game into a rating change: where would his projected
             # PPR/G rank at his position, and what Mania Rating do players at that rank have?
@@ -1032,6 +1035,9 @@ for _, r in g.iterrows():
     own = inj_by_pid.get(r["player_id"])
     inj_own = -4.0 * (1.0 - own["avail"]) if own else 0.0
     team_b = max(-6.0, min(26.0, inj_boost.get(r["player_id"], 0.0)))
+    if team_b > 0 and r["player_id"] not in inj_has_ev:   # only for model guesses, not real with/without games
+    # harder to climb when already near the top: boost shrinks as Mania rises
+        team_b *= max(0.25, min(1.0, (100.0 - float(r["mania"])) / 40.0))
     inj_total = inj_own + team_b
     start = clamp(r["mania"] + context_adj + confidence_adj + inj_total)
     if own and own["avail"] <= 0.1:
