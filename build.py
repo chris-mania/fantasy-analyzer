@@ -811,10 +811,20 @@ if not AS_OF_WEEK:
 
         # ---- Depth chart: who is next up at each position ----
         depth_rank = {}
+        depth_pre = {}
         try:
             dc = pd.read_csv(f"{BASE}/depth_charts/depth_charts_{SEASON}.csv", low_memory=False)
+            _all = dc.copy()
             dc = dc[dc["dt"] == dc["dt"].max()]
             dc = dc[dc["pos_abb"].isin(["RB", "WR", "TE"])].copy()
+            # The chart as it stood right after Week 1: shows who was a starter before injuries reshuffled it.
+            _all["_d"] = _all["dt"].astype(str).str[:10]
+            _after = sorted(x for x in _all["_d"].unique() if x >= f"{SEASON}-09-12")
+            _ref = _after[0] if _after else sorted(_all["_d"].unique())[0]
+            _p = _all[(_all["_d"] == _ref) & _all["pos_abb"].isin(["RB", "WR", "TE"])].copy()
+            _p["pos_rank"] = safe_num(_p["pos_rank"]).astype(int)
+            for _, d_ in _p.iterrows():
+                depth_pre[(d_["gsis_id"], d_["team"])] = int(d_["pos_rank"])
             dc["pos_rank"] = safe_num(dc["pos_rank"]).astype(int)
             for _, d_ in dc.iterrows():
                 depth_rank[(d_["gsis_id"], d_["team"])] = int(d_["pos_rank"])
@@ -857,7 +867,7 @@ if not AS_OF_WEEK:
             tw = sorted(set(int(w_) for w_ in mt["week"]))
             pw = {}
             for _r in mt.itertuples():
-                pw.setdefault(_r.player_id, {})[int(_r.week)] = (float(_r.game_weight), float(_r.fantasy_points_ppr))
+                pw.setdefault(_r.player_id, {})[int(_r.week)] = (float(_r.game_weight), float(_r.fantasy_points_ppr), float(_r.targets), float(_r.carries), float(_r.offense_pct))
             dppr, pairs = {}, {}
             av = {pid: inj_by_pid.get(pid, {}).get("avail", 1.0) for pid in rows}
             d_ord = {pid: depth_rank.get((pid, team), 99) for pid in rows}
@@ -882,11 +892,26 @@ if not AS_OF_WEEK:
                         inj_why.setdefault(old, []).append({"n": "Depth chart", "pos": pos_, "s": "now behind " + str(rows[top]["player_name"]), "pts": -1.0, "kind": "depth"})
             for pid, r_ in rows.items():
                 u = 1.0 - av[pid]
-                if u <= 0 or (r_["carries_pg"] + r_["targets_pg"]) < 1.0:
-                    continue
                 pos = r_["position"]
-                v_car = blend(pid, "carries", r_["carries_pg"]) * u * RET
-                v_tgt = blend(pid, "targets", r_["targets_pg"]) * u * RET
+                if u <= 0 or pos not in ("RB", "WR", "TE"):
+                    continue
+                pw_i = pw.get(pid, {})
+                # ---- How big was his role? Healthy-game usage blended with where the depth chart had him.
+                mx_i = max([v_[4] for v_ in pw_i.values()] or [0.0])
+                full = [v_ for v_ in pw_i.values() if v_[0] >= 1.0 and mx_i > 0 and v_[4] >= 0.75 * mx_i]
+                rk_pre = depth_pre.get((pid, team), 9)
+                pri_t = {"WR": {1: 7.0, 2: 5.5, 3: 3.8, 4: 2.0, 5: 1.0}, "TE": {1: 5.0, 2: 2.0}, "RB": {1: 3.5, 2: 2.0, 3: 0.8}}[pos].get(rk_pre, 0.4)
+                pri_c = {"RB": {1: 14.0, 2: 6.0, 3: 2.0}}.get(pos, {}).get(rk_pre, 0.0)
+                nf = len(full)
+                use_t = float(np.mean([v_[2] for v_ in full])) if full else 0.0
+                use_c = float(np.mean([v_[3] for v_ in full])) if full else 0.0
+                role_t = (nf * use_t + 2.0 * pri_t) / (nf + 2.0)
+                role_c = (nf * use_c + 2.0 * pri_c) / (nf + 2.0)
+                role_ppr = role_c * PPR_CARRY + role_t * (PPR_TGT_RB if pos == "RB" else PPR_TGT)
+                if role_t + role_c * 0.45 < 1.5:
+                    continue
+                v_car = role_c * u
+                v_tgt = role_t * u
                 rbs = [k for k, x in rows.items() if x["position"] == "RB" and k != pid]
                 pcs = [k for k, x in rows.items() if x["position"] in ("WR", "TE") and k != pid]
                 give = []   # (receiver, carries, targets)
@@ -904,24 +929,50 @@ if not AS_OF_WEEK:
                 for k, c_, t_ in give:
                     rp = rows[k]["position"]
                     model[k] = model.get(k, 0.0) + (c_ * PPR_CARRY + t_ * (PPR_TGT_RB if rp == "RB" else PPR_TGT)) * star_x
-                # With / without evidence: how teammates actually did in games this player missed.
-                pw_i = pw.get(pid, {})
-                absent = [w_ for w_ in tw if pw_i and w_ > min(pw_i) and (w_ not in pw_i or pw_i[w_][0] < 0.5)]
+                # ---- With / without evidence, measured in targets and carries (not fantasy points).
+                # A game counts as "without him" in proportion to the snaps he missed.
+                absw = {}
+                if pw_i:
+                    for w_ in tw:
+                        if w_ <= min(pw_i):
+                            continue
+                        if w_ not in pw_i:
+                            absw[w_] = 1.0
+                        elif mx_i > 0 and pw_i[w_][4] < 0.6 * mx_i:
+                            absw[w_] = max(0.0, 1.0 - pw_i[w_][4] / mx_i)
                 never_played = (not pw_i) and len(tw) >= 2
                 recv = [k for k, x in rows.items() if k != pid and x["position"] in ("RB", "WR", "TE")]
+                obs, nn_ = {}, {}
+                for k in recv:
+                    pw_k = pw.get(k, {})
+                    Nw = [(w_, a_) for w_, a_ in absw.items() if a_ > 0 and w_ in pw_k and pw_k[w_][0] >= 0.5]
+                    if not Nw:
+                        continue
+                    rpk = rows[k]["position"]
+                    tv = PPR_TGT_RB if rpk == "RB" else PPR_TGT
+                    val = lambda v_: v_[2] * tv + v_[3] * PPR_CARRY
+                    na = sum(a_ for _, a_ in Nw)
+                    mean_n = sum(a_ * val(pw_k[w_]) for w_, a_ in Nw) / na
+                    Wk = [w_ for w_ in pw_k if absw.get(w_, 0) == 0 and w_ in pw_i and pw_k[w_][0] >= 0.5]
+                    pool = Wk or [w_ for w_ in pw_k if absw.get(w_, 0) == 0 and pw_k[w_][0] >= 0.5]
+                    if not pool:
+                        continue
+                    base_ = float(np.mean([val(pw_k[w_]) for w_ in pool]))
+                    obs[k] = mean_n - base_
+                    nn_[k] = (na, round(base_, 1), round(mean_n, 1), sum(1 for _ in Nw))
+                # Teammates together cannot gain more than the injured player actually had.
+                psum = sum(max(v_, 0.0) for v_ in obs.values())
+                scale = min(1.0, 1.25 * role_ppr / psum) if psum > 0 else 1.0
+                sig = min(1.0, role_ppr / 7.5)
                 for k in recv:
                     m_d = model.get(k, 0.0)
-                    pw_k = pw.get(k, {})
-                    N = [w_ for w_ in absent if w_ in pw_k and pw_k[w_][0] >= 0.5]
-                    W = [w_ for w_ in pw_k if w_ in pw_i and pw_k[w_][0] >= 0.5]
                     ev = None
-                    if N:
-                        mean_n = float(np.mean([pw_k[w_][1] for w_ in N]))
-                        base_ = float(np.mean([pw_k[w_][1] for w_ in W])) if len(W) >= 2 else float(rows[k]["ppr_pg"])
-                        obs = float(np.clip(mean_n - base_, -1.5, 8.0))
-                        wgt = u * len(N) / (len(N) + 0.5)
-                        d_ppr = (1 - wgt) * m_d + wgt * obs
-                        ev = {"games": len(N), "with": round(base_, 1), "without": round(mean_n, 1)}
+                    if k in obs:
+                        o_ = float(np.clip(obs[k] * scale, -1.5, 0.6 * role_ppr + 1.0))
+                        na, b_, m_n, ng = nn_[k]
+                        wgt = u * sig * na / (na + 1.5)
+                        d_ppr = (1 - wgt) * m_d + wgt * o_
+                        ev = {"games": ng, "with": b_, "without": m_n}
                     else:
                         d_ppr = m_d * (0.4 if never_played else 1.0)
                     if rows[k]["position"] == "TE":
@@ -1037,7 +1088,7 @@ for _, r in g.iterrows():
     team_b = max(-6.0, min(26.0, inj_boost.get(r["player_id"], 0.0)))
     if team_b > 0:
     # harder to climb when already near the top: boost shrinks as Mania rises
-        team_b *= max(0.25, min(1.0, (100.0 - float(r["mania"])) / 40.0))
+        team_b *= max(0.2, min(1.0, 1.0 - (float(r["mania"]) - 70.0) / 21.0))
     inj_total = inj_own + team_b
     start = clamp(r["mania"] + context_adj + confidence_adj + inj_total)
     if own and own["avail"] <= 0.1:
@@ -1622,7 +1673,7 @@ const DISC=`Week ${META.next_week} Rating is an estimate built from a player's r
 function ord(n){n=Math.round(n);let v=n%100,x=['th','st','nd','rd'];return n+(x[(v-20)%10]||x[v]||x[0])}
 function fs(p,v){return p.out?'OUT':Number(v).toFixed(1)}
 function injChip(p){if(!p.inj||p.inj.avail>0.6)return '';let t=p.out?'OUT':p.inj.label==='Missed practice'?'DNP':'Q';return `<span class="injc ${p.out?'o':'q'}" title="${p.inj.label}${p.inj.note?' ('+p.inj.note+')':''}">${t}</span>`}
-function injHTML(p){let wk=META.next_week,o=[],pm=x=>(x>0?'+':'')+x.toFixed(1);if(p.inj){let pen=(4*(1-p.inj.avail)).toFixed(1);o.push(`<div class="injRow ${p.out?'o':'q'}"><b>${p.inj.label}</b>${p.inj.note?' ('+p.inj.note+')':''}. ${p.out?'He is not expected to play this week, so there is no Week '+wk+' Rating.':'His Week '+wk+' Rating is lowered by '+pen+' for the injury risk.'}</div>`)}(p.inj_why||[]).forEach(w=>{o.push(w.kind==='depth'?`<div class="injRow ${w.pts>0?'up':'q'}"><b>Depth chart</b> (${w.s}) ${pm(w.pts)} on Week ${wk} Rating. ${w.pts>0?'He is first up at his position, ahead of players who got more work earlier.':'The depth chart now has someone else ahead of him.'}</div>`:w.kind==='qb'?`<div class="injRow ${w.pts<0?'q':'up'}"><b>${w.n}</b> (QB, ${w.s}) ${pm(w.pts)} on Week ${wk} Rating. A hurt starting quarterback hurts the whole passing game.</div>`:`<div class="injRow up"><b>${w.n}</b> (${w.pos}, ${w.s}) ${pm(w.pts)} on Week ${wk} Rating. ${w.ev?`In the ${w.ev.games} game${w.ev.games>1?'s':''} he played without ${w.n}, he averaged ${w.ev.without} PPR (${w.ev.with} when ${w.n} played), so that counts heavily.`:'His carries and targets are expected to shift to teammates.'}</div>`)});return o.length?`<div class="injBox"><div class="injHd">Injury report${META.injuries&&META.injuries.updated?' \u2022 updated '+META.injuries.updated:''}</div>${o.join('')}</div>`:''}
+function injHTML(p){let wk=META.next_week,o=[],pm=x=>(x>0?'+':'')+x.toFixed(1);if(p.inj){let pen=(4*(1-p.inj.avail)).toFixed(1);o.push(`<div class="injRow ${p.out?'o':'q'}"><b>${p.inj.label}</b>${p.inj.note?' ('+p.inj.note+')':''}. ${p.out?'He is not expected to play this week, so there is no Week '+wk+' Rating.':'His Week '+wk+' Rating is lowered by '+pen+' for the injury risk.'}</div>`)}(p.inj_why||[]).forEach(w=>{o.push(w.kind==='depth'?`<div class="injRow ${w.pts>0?'up':'q'}"><b>Depth chart</b> (${w.s}) ${pm(w.pts)} on Week ${wk} Rating. ${w.pts>0?'He is first up at his position, ahead of players who got more work earlier.':'The depth chart now has someone else ahead of him.'}</div>`:w.kind==='qb'?`<div class="injRow ${w.pts<0?'q':'up'}"><b>${w.n}</b> (QB, ${w.s}) ${pm(w.pts)} on Week ${wk} Rating. A hurt starting quarterback hurts the whole passing game.</div>`:`<div class="injRow up"><b>${w.n}</b> (${w.pos}, ${w.s}) ${pm(w.pts)} on Week ${wk} Rating. ${w.ev?`In the ${w.ev.games} game${w.ev.games>1?'s':''} without ${w.n}, his targets and carries were worth about ${w.ev.without} points, against ${w.ev.with} when ${w.n} played. That counts, scaled to how big ${w.n}'s role was.`:'His carries and targets are expected to shift to teammates.'}</div>`)});return o.length?`<div class="injBox"><div class="injHd">Injury report${META.injuries&&META.injuries.updated?' \u2022 updated '+META.injuries.updated:''}</div>${o.join('')}</div>`:''}
 function outlook(p,start){
  if(p.opp==='BYE')return {t:'On bye',d:'',c:'g0',r:999};
  if(p.out)return {t:'OUT',d:'',c:'g0',r:998};
