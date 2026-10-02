@@ -15,7 +15,7 @@ function loadSite(players, week, refs = { RB: {}, WR: {}, TE: {} }, meta = {}) {
     .replace('__PAYLOAD__', () => JSON.stringify(players))
     .replace('__META__', () => JSON.stringify({ season: 2026, week, next_week: week + 1, ...meta }))
     .replace('__REFS__', () => JSON.stringify(refs));
-  return new Function('document', 'window', src + ';return {movers,market,marketWhy,defenseVs,schedule,scheduleWeeks,schedHTML}')(dom, dom);
+  return new Function('document', 'window', src + ';return {movers,market,marketWhy,defenseVs,schedule,scheduleWeeks,schedHTML,reportCard}')(dom, dom);
 }
 
 const LOG = { tgt: 0, rec: 0, ry: 0, rtd: 0, air: 0, car: 0, ruy: 0, rutd: 0, ppr: 0, snap: 0, tshare: 0, ashare: 0, touch: 0, rzt: 0, ez: 0, rzc: 0, gl: 0, partial: false, weight: 1 };
@@ -217,6 +217,38 @@ const scorer = (name, pos, team, usual, logs) => player(name, pos, logs, { team,
   assert.ok(panel.includes('Wk 2 DDD') && panel.includes('Wk 3 bye') && panel.includes('Wk 16 EEE'), panel);
   assert.strictEqual(loadSite([scorer('Home Back', 'RB', 'AAA', 10, [{ ppr: 20 }])], 1).schedHTML({ pos: 'RB', team: 'AAA' }), '');
   assert.deepStrictEqual(loadSite([], 1).schedule('RB', 'all'), []);
+}
+
+// ---- Report Card ----
+{
+  // Eight tight ends, so the cut is 6 starts and a hit is a top-12 finish. Week 2 is the week being graded.
+  // rating: what the model said going into Week 2 (null = no rating yet). ppr: his Week 2 score (null = did not play).
+  const te = (name, rating, ppr, opp = 'OPP') => ({
+    ...player(name, 'TE', ppr === null ? [{ w: 1 }] : [{ w: 1 }, { w: 2, ppr }]), rating, opp,
+  });
+  const tes = [
+    te('Best Call', 95, 30), te('Second', 90, 20), te('Third', 85, 2), te('Sat Out', 80, null),
+    te('Fifth', 75, 12), te('Sixth', 70, 11), te('Seventh', 65, 25), te('On Bye', 99, null, 'BYE'),
+    te('New Face', null, 28),
+    // filler so a 2-point game really is a poor finish: eleven unrated tight ends who outscored it
+    ...Array.from({ length: 11 }, (_, i) => te('Filler ' + i, null, 3 + i * 0.1)),
+  ];
+  const prev = Object.fromEntries(tes.filter(t => t.rating !== null).map(t => [t.id, [t.rating, t.opp]]));
+  const card = loadSite(tes, 2, NO_REFS, { prev }).reportCard('TE');
+
+  assert.strictEqual(card.cut, 6);
+  assert.deepStrictEqual(card.rows.map(x => [x.p.name, x.rank, x.finish]), [
+    ['Best Call', 1, 1], ['Second', 2, 4], ['Third', 3, 18], ['Sat Out', 4, null], ['Fifth', 5, 5], ['Sixth', 6, 6], ['Seventh', 7, 3],
+  ], 'ranked by rating with the bye player left out');
+  // Six starts, one did not play, and one of the other five finished outside the top 12.
+  assert.deepStrictEqual([card.starts, card.hits], [5, 4]);
+  // Top-6 finishers the ratings did not have in their top 12: only the unrated newcomer (Seventh was rated 7th).
+  assert.deepStrictEqual(card.missed.map(x => [x.p.name, x.finish, x.rank]), [['New Face', 2, null]]);
+
+  assert.deepStrictEqual(loadSite(tes, 2, NO_REFS, { prev }).reportCard('RB'), { cut: 12, rows: [], starts: 0, hits: 0, missed: [] });
+  // No earlier ratings in the page (Week 1, or the rebuild failed): nothing is rated, so every top finisher is a miss and no hits are claimed.
+  const none = loadSite(tes, 2).reportCard('TE');
+  assert.deepStrictEqual([none.rows.length, none.starts, none.hits, none.missed.length], [0, 0, 0, 6]);
 }
 
 console.log('site tests passed');

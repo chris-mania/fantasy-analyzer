@@ -1,6 +1,8 @@
 import json
 import math
 import os
+import subprocess
+import sys
 import warnings
 from urllib.error import HTTPError
 
@@ -17,6 +19,10 @@ warnings.filterwarnings("ignore")
 
 SEASON = 2026
 BASE = "https://github.com/nflverse/nflverse-data/releases/download"
+
+# Report card: the build re-runs this script with MANIA_AS_OF_WEEK set. That run uses only the games through
+# that week, prints the start ratings it would have published, and stops before writing the site.
+AS_OF_WEEK = int(os.environ.get("MANIA_AS_OF_WEEK", "0"))
 
 # Core tuning
 QUALIFY_SNAP = 0.30
@@ -116,6 +122,10 @@ try:
             print(f"   Schedule says Weeks 1-{_last_done} are complete.")
 except Exception as e:
     print("   Could not check schedule for completed weeks; using all stats:", e)
+
+if AS_OF_WEEK:
+    stats = stats[safe_num(stats["week"]).astype(int) <= AS_OF_WEEK].copy()
+    snaps = snaps[safe_num(snaps["week"]).astype(int) <= AS_OF_WEEK].copy()
 
 name_col = "player_display_name" if "player_display_name" in stats.columns else "player_name"
 team_col = "team" if "team" in stats.columns else "recent_team"
@@ -708,6 +718,10 @@ g[["start_rating", "matchup_adj", "trend_adj", "opponent"]] = pd.DataFrame(start
 g["start_pos_rank"] = g.groupby("position")["start_rating"].rank(ascending=False, method="min").astype(int)
 g["start_overall_rank"] = g["start_rating"].rank(ascending=False, method="min").astype(int)
 
+if AS_OF_WEEK:
+    print("AS_OF " + json.dumps({r["player_id"]: [round(float(r["start_rating"]), 1), str(r["opponent"])] for _, r in g.iterrows()}))
+    sys.exit(0)
+
 # ============================================================
 # BUILD JSON
 # ============================================================
@@ -832,6 +846,24 @@ for pos in ["RB", "WR", "TE"]:
         pct_refs[pos][k] = [round(float(v), 3) for v in np.sort(gp[col].replace([np.inf, -np.inf], np.nan).dropna().values)]
 refs_json = json.dumps(pct_refs, separators=(",", ":"))
 
+# ============================================================
+# REPORT CARD — what the model said about the week just played, before it was played
+# ponytail: one extra full run (and its downloads) per build, and only the latest week is graded.
+# Save each week's ratings to the repo instead if a season-long record is wanted.
+# ============================================================
+prev_calls = {}   # player_id -> [start rating, opponent] as of the week before max_week
+if max_week > 1:
+    print(f"   Rebuilding Week {max_week} ratings as of Week {max_week - 1} for the report card...")
+    try:
+        child = subprocess.run(
+            [sys.executable, os.path.abspath(__file__)],
+            env={**os.environ, "MANIA_AS_OF_WEEK": str(max_week - 1)},
+            capture_output=True, text=True, timeout=1200, check=True,
+        )
+        prev_calls = json.loads(next(l for l in child.stdout.splitlines() if l.startswith("AS_OF "))[6:])
+    except Exception as e:
+        print("   WARNING: report card unavailable; site will still build:", e)
+
 # Every team's opponent by week, past and future, for the browser views. A missing week is a bye.
 opps = {}
 if schedule_ok and {"week", "home_team", "away_team"}.issubset(games.columns):
@@ -849,6 +881,7 @@ meta = json.dumps({
     "schedule": schedule_ok,
     "players": len(players),
     "opps": opps,
+    "prev": prev_calls,
 })
 
 # ============================================================
@@ -1216,6 +1249,8 @@ body.shot .shotExit{display:block;text-align:center;padding:18px}
 .insNav{display:flex;gap:4px;overflow-x:auto;white-space:nowrap;border-bottom:1px solid var(--line);margin:-14px 0 26px;scrollbar-width:none}.insNav::-webkit-scrollbar{display:none}.insNav:has(.insTab:only-child){display:none}
 .insTab{flex:0 0 auto;border:0;background:none;font:inherit;font-size:15px;font-weight:800;color:var(--muted);padding:12px 14px;cursor:pointer;border-bottom:2px solid transparent}.insTab.on,.insTab:hover{color:var(--ink);border-bottom-color:var(--blue)}
 .insPane{display:none}.insPane.on{display:block}
+/* report card */
+.rcGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0 4px}
 /* schedule strength */
 .sch{display:inline-block;margin:0 6px 6px 0;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:13px;font-weight:700}.sch.good,.scTable td.good{background:#e7f7ee}.sch.bad,.scTable td.bad{background:#fde9eb}.sch.muted{font-weight:600}
 .scTable .c{text-align:center}.scWho{margin-left:10px;font-size:13px;font-weight:600;color:var(--muted)}
@@ -1229,11 +1264,12 @@ body.shot .shotExit{display:block;text-align:center;padding:18px}
 <section id="players" class="view"><h1 class="title">Players</h1><p class="sub">Search a player to open the full Mania profile.</p><div class="search"><input id="playerQ" placeholder="Search player"><div class="dd" id="playerDD"></div></div></section>
 <section id="rankings" class="view"><div class="kicker">Through Week <span id="wk"></span></div><h1 class="title" id="rankTitle">Overall Rankings</h1><p class="sub" id="rankSub"></p><div class="toolbar"><button class="pill rankmode on" data-mode="mania">Mania Rating</button><button class="pill rankmode" data-mode="start">Week start rating</button><button class="pill rankmode" data-mode="badges">Badges</button><span style="width:8px"></span><button class="pill posf on" data-pos="ALL">ALL</button><button class="pill posf" data-pos="RB">RB</button><button class="pill posf" data-pos="WR">WR</button><button class="pill posf" data-pos="TE">TE</button></div><div id="badgePick" class="badgePick" hidden></div><select id="sortSel" class="teamSelect sortSel"></select><p class="disclaimer left" id="rankDisc"></p><div class="tablewrap rankDesk"><table><thead id="rankHead"></thead><tbody id="rankBody"></tbody></table></div><div class="rankCards" id="rankCards"></div></section>
 <section id="teamshare" class="view"><div class="kicker">Through Week <span id="shareWeek"></span></div><h1 class="title">Team Share</h1><p class="sub">See who is actually on the field and who is earning the offense each week. Every player name opens the full Fantasy Mania profile.</p><div class="teamControls"><select id="teamPick" class="teamSelect"></select><button class="pill shareMode on" data-share="snap">SNAP SHARE</button><button class="pill shareMode" data-share="target">TARGET SHARE</button></div><div id="teamShareBody"></div></section><section id="profile" class="view"><div id="profileBody"></div></section>
-<section id="insights" class="view"><div class="insNav"><button class="insTab on" data-v="movers">Risers &amp; Fallers</button><button class="insTab" data-v="market">Buy Low / Sell High</button><button class="insTab" data-v="defense">Defense vs. Position</button><button class="insTab" data-v="schedule">Schedule Strength</button></div>
+<section id="insights" class="view"><div class="insNav"><button class="insTab on" data-v="movers">Risers &amp; Fallers</button><button class="insTab" data-v="market">Buy Low / Sell High</button><button class="insTab" data-v="defense">Defense vs. Position</button><button class="insTab" data-v="schedule">Schedule Strength</button><button class="insTab" data-v="report">Report Card</button></div>
 <div class="insPane on" id="ins-movers"><div class="kicker">Week <span class="mvWeek"></span> against earlier games</div><h1 class="title">Risers &amp; Fallers</h1><p class="sub">Whose role changed the most in Week <span class="mvWeek"></span>, compared with his average over his earlier games. A bigger role usually shows up before the points do.</p><div class="toolbar"><button class="pill mvDir on" data-v="1">Risers</button><button class="pill mvDir" data-v="-1">Fallers</button><span style="width:8px"></span><button class="pill mvKey on" data-v="snap">Snap share</button><button class="pill mvKey" data-v="share">Touch / target share</button><span style="width:8px"></span><button class="pill mvPos on" data-v="ALL">ALL</button><button class="pill mvPos" data-v="RB">RB</button><button class="pill mvPos" data-v="WR">WR</button><button class="pill mvPos" data-v="TE">TE</button></div><div class="shareNote" id="moversNote"></div><div class="panel" id="moversBody"></div></div>
 <div class="insPane" id="ins-market"><div class="kicker">Through Week <span id="mkWeek"></span></div><h1 class="title">Buy Low / Sell High</h1><p class="sub">Players whose role and fantasy points disagree. Usage is how much work he gets: volume, team role and red-zone chances. Production is the points and yards he has turned it into. Both are percentiles at his position.</p><div class="toolbar"><button class="pill mkPos on" data-v="ALL">ALL</button><button class="pill mkPos" data-v="RB">RB</button><button class="pill mkPos" data-v="WR">WR</button><button class="pill mkPos" data-v="TE">TE</button></div><div class="mkGrid" id="marketBody"></div><p class="disclaimer left">This compares usage and production so far this season. It flags a player who left his last game early or missed it, but it does not see injury reports, depth-chart changes or a new quarterback, and this early a game or two can swing it. Treat it as a list of names to look into, not a trade verdict.</p></div>
 <div class="insPane" id="ins-defense"><div class="kicker">Through Week <span id="dvWeek"></span></div><h1 class="title">Defense vs. Position</h1><p class="sub">What each defense has given up to running backs, receivers and tight ends. "Vs usual" compares what players scored against this defense with what those same players normally score, so a defense is not punished for a schedule full of great offenses.</p><div class="toolbar"><button class="pill dvPos on" data-v="RB">RB</button><button class="pill dvPos" data-v="WR">WR</button><button class="pill dvPos" data-v="TE">TE</button></div><div class="shareNote">Easiest matchups first. Green defenses have allowed 10%+ more than usual, red ones 10%+ less.</div><div class="panel" id="defenseBody"></div></div>
 <div class="insPane" id="ins-schedule"><div class="kicker">Week <span id="scWeek"></span> onward</div><h1 class="title">Schedule Strength</h1><p class="sub">Every team's remaining opponents, graded by what those defenses have given up to the position so far. It is the "vs usual" number from Defense vs. Position, looked up for each game still to come. Easiest schedules first.</p><div class="toolbar"><button class="pill scPos on" data-v="RB">RB</button><button class="pill scPos" data-v="WR">WR</button><button class="pill scPos" data-v="TE">TE</button><span style="width:8px"></span><button class="pill scWin on" data-v="next4">Next 4 weeks</button><button class="pill scWin" data-v="all">Rest of season</button><button class="pill scWin" data-v="playoffs">Weeks 15-17</button></div><div class="shareNote">Green is a defense allowing 10%+ more than usual to the position, red is 10%+ less. This early most defenses have only a few games behind them, so expect these to move.</div><div class="panel" id="scheduleBody"></div></div>
+<div class="insPane" id="ins-report"><div class="kicker">Week <span class="rcWeek"></span> results</div><h1 class="title">Report Card</h1><p class="sub">How the Week <span class="rcWeek"></span> ratings held up. These are the ratings the model gives using only the games before Week <span class="rcWeek"></span>, set against what each player then scored.</p><div class="rcGrid" id="reportTiles"></div><div class="toolbar"><button class="pill rcPos on" data-v="RB">RB</button><button class="pill rcPos" data-v="WR">WR</button><button class="pill rcPos" data-v="TE">TE</button></div><div id="reportBody"></div></div>
 </section>
 <section id="compare" class="view"><div class="topRow"><h1 class="title">Compare Players</h1><button class="shotBtn" onclick="toggleShot(true)">Screenshot view</button></div><p class="sub">Overall value and Week <span id="cmpWeek"></span> start decision. Change the games used for either player and the model recalculates.</p><div class="grid2"><div class="search"><input id="aQ" placeholder="Player A"><div class="dd" id="aDD"></div></div><div class="search"><input id="bQ" placeholder="Player B"><div class="dd" id="bDD"></div></div></div><div id="compareBody"></div></section>
 <div class="shotMark">FANTASY MANIA &bull; 2026 &bull; Through Week <span id="shotWk"></span></div></main><div class="shotExit"><button class="pill" onclick="toggleShot(false)">Exit screenshot view</button></div><script>
@@ -1431,6 +1467,21 @@ function renderSchedule(){let rows=schedule(scPos,scWin),weeks=scheduleWeeks(scW
  $('scheduleBody').innerHTML=rows.length&&weeks.length?`<div class="tablewrap"><table class="scTable"><thead><tr><th>#</th><th>Team</th><th>Average</th>${weeks.map(w=>`<th class="c">Wk ${w}</th>`).join('')}</tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${i+1}</td><td><b>${x.team}</b><span class="scWho">${who(x.team)}</span></td><td class="${edgeClass(x.avg)}">${sg(x.avg)}%</td>${x.games.map(g=>g.opp?`<td class="c ${edgeClass(g.vs)}" title="${g.opp} has allowed ${sg(g.vs)}% vs usual to ${scPos}s">${g.opp}</td>`:'<td class="c muted">bye</td>').join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="muted">No games left on the schedule for this window.</div>'}
 function schedHTML(p){let row=schedule(p.pos,'all').find(x=>x.team===p.team);return row&&row.games.length?`<div class="panel"><div class="ph">Schedule ahead</div><div class="pctHead">Colored by what each defense has given up to ${p.pos}s so far. Green is an easier matchup, red is a tougher one.</div>${row.games.map(g=>g.opp?`<span class="sch ${edgeClass(g.vs)}" title="${sg(g.vs)}% vs usual">Wk ${g.w} ${g.opp}</span>`:`<span class="sch muted">Wk ${g.w} bye</span>`).join('')}</div>`:''}
 $('scWeek').textContent=META.next_week;pillGroup('scPos',v=>scPos=v,renderSchedule);pillGroup('scWin',v=>scWin=v,renderSchedule);renderSchedule();
+/* Report Card: last week's start ratings (META.prev, rebuilt by the build from the games before that week) against what happened.
+   A "start" is a top-12 rating at RB and WR and top-6 at TE, the same cut as the green "this week" tag. A hit is a finish inside twice that.
+   Players on bye are not ranked, and a start who did not play is left out of the hit count. */
+let rcPos='RB';
+function reportCard(pos){let wk=META.week,prev=META.prev||{},cut=pos==='TE'?6:12,finish={};
+ DB.filter(p=>p.pos===pos&&p.logs.some(l=>l.w===wk)).map(p=>({id:p.id,ppr:p.logs.find(l=>l.w===wk).ppr})).sort((a,b)=>b.ppr-a.ppr).forEach((x,i)=>finish[x.id]={ppr:x.ppr,rank:i+1});
+ let rated=DB.filter(p=>p.pos===pos&&prev[p.id]&&prev[p.id][1]!=='BYE').sort((a,b)=>prev[b.id][0]-prev[a.id][0]).map((p,i)=>({p,rank:i+1,rating:prev[p.id][0],ppr:finish[p.id]?finish[p.id].ppr:null,finish:finish[p.id]?finish[p.id].rank:null})),
+ starts=rated.slice(0,cut).filter(x=>x.finish),
+ missed=DB.filter(p=>p.pos===pos&&finish[p.id]&&finish[p.id].rank<=cut).map(p=>{let r=rated.find(x=>x.p===p);return {p,ppr:finish[p.id].ppr,finish:finish[p.id].rank,rank:r?r.rank:null}}).filter(x=>!x.rank||x.rank>cut*2).sort((a,b)=>a.finish-b.finish);
+ return {cut,rows:rated.slice(0,cut*2),starts:starts.length,hits:starts.filter(x=>x.finish<=cut*2).length,missed}}
+function renderReport(){let wk=META.week,r=reportCard(rcPos),cut=r.cut,fin=x=>x.finish?`<span class="olTag ${x.finish<=cut?'g90':x.finish<=cut*2?'g70':'g0'}">${rcPos}${x.finish}</span>`:'<span class="muted">Did not play</span>',who=x=>`<span class="playerlink" data-open="${x.p.id}">${x.p.name}</span><span class="tag">${x.p.team} ${x.p.pos}</span>`;
+ if(!Object.keys(META.prev||{}).length){$('reportTiles').innerHTML='';$('reportBody').innerHTML='<div class="panel muted">The report card starts once two weeks have been played.</div>';return}
+ $('reportTiles').innerHTML=['RB','WR','TE'].map(pos=>{let c=reportCard(pos),rate=c.starts?c.hits/c.starts:0;return `<div class="usageItem"><div class="uv ${rate>=.75?'g90':rate>=.5?'g70':'g0'}">${c.hits} of ${c.starts}</div><div class="ul">top-${c.cut} ${pos} starts finished top ${c.cut*2}</div></div>`}).join('');
+ $('reportBody').innerHTML=`<div class="panel"><div class="ph">The ${cut*2} highest-rated ${rcPos}s going into Week ${wk}</div><div class="pctHead">Green finished top ${cut}, yellow top ${cut*2}, red lower.</div><div class="tablewrap"><table><thead><tr><th>#</th><th>Player</th><th>Wk ${wk} rating</th><th>PPR</th><th>Finish</th></tr></thead><tbody>${r.rows.map(x=>`<tr><td>${x.rank}</td><td>${who(x)}</td><td class="grade ${grade(x.rating)}">${x.rating}</td><td>${x.ppr===null?'—':fmt(x.ppr)}</td><td>${fin(x)}</td></tr>`).join('')}</tbody></table></div></div><div class="panel"><div class="ph">Top-${cut} finishes the ratings missed</div><div class="pctHead">Finished top ${cut} at ${rcPos} while rated outside the top ${cut*2}, or not rated yet.</div>${r.missed.length?`<div class="tablewrap"><table><thead><tr><th>#</th><th>Player</th><th>Rated</th><th>PPR</th><th>Finish</th></tr></thead><tbody>${r.missed.map((x,i)=>`<tr><td>${i+1}</td><td>${who(x)}</td><td>${x.rank?rcPos+x.rank:'Not rated'}</td><td>${fmt(x.ppr)}</td><td>${fin(x)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">None this week.</div>'}</div>`}
+document.querySelectorAll('.rcWeek').forEach(x=>x.textContent=META.week);pillGroup('rcPos',v=>rcPos=v,renderReport);renderReport();
 </script></body></html>'''
 
 html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("__REFS__", refs_json)
