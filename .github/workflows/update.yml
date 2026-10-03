@@ -2,14 +2,16 @@ name: Autonomous Weekly Fantasy Refresh
 
 on:
   schedule:
-    # Tuesday 9:00 UTC: full weekly refresh after Monday Night Football
-    - cron: '0 9 * * 2'
-    # Wednesday to Saturday, every 6 hours: pick up new injury reports
-    - cron: '0 3,9,15,21 * * 3-6'
-    # Sunday morning, last updates before the 1:00 PM ET kickoffs
-    - cron: '0 9,15 * * 0'
-    - cron: '30 16 * * 0'
+    # All times are UTC. GitHub can start a run a few minutes late.
+    # Tuesday from 9:00 UTC (5 AM ET, after Monday Night Football) through Saturday: every 30 minutes
+    - cron: '*/30 9-23 * * 2'
+    - cron: '*/30 * * * 3-6'
   workflow_dispatch:
+
+# If a run is still going when the next one starts, skip the old one
+concurrency:
+  group: fantasy-refresh
+  cancel-in-progress: true
 
 permissions:
   contents: write
