@@ -1,17 +1,18 @@
 name: Autonomous Weekly Fantasy Refresh
 
+# All cron times are UTC. Window: Tuesday 5 AM ET (after Monday Night Football) through Sunday 1 PM ET (kickoff).
+# GitHub drops or delays scheduled runs, especially at :00 and :30, so this fires every 15 minutes at odd
+# minutes. If a run is skipped, the next one picks up the same data. A run already in progress is never cancelled.
 on:
   schedule:
-    # All times are UTC. GitHub can start a run a few minutes late.
-    # Tuesday from 9:00 UTC (5 AM ET, after Monday Night Football) through Saturday: every 30 minutes
-    - cron: '*/30 9-23 * * 2'
-    - cron: '*/30 * * * 3-6'
+    - cron: '7,22,37,52 9-23 * * 2'
+    - cron: '7,22,37,52 * * * 3-6'
+    - cron: '7,22,37,52 0-17 * * 0'
   workflow_dispatch:
 
-# If a run is still going when the next one starts, skip the old one
 concurrency:
   group: fantasy-refresh
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -21,6 +22,7 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -34,9 +36,16 @@ jobs:
         run: |
           pip install pandas requests
 
-      - name: Run Build Script
+      - name: Run Build Script (retries if the data source hiccups)
         run: |
-          python build.py
+          python build.py || (sleep 45 && python build.py) || (sleep 90 && python build.py)
+
+      - name: Check the page is real before publishing
+        run: |
+          test -s public/index.html
+          size=$(wc -c < public/index.html)
+          echo "index.html is $size bytes"
+          test "$size" -gt 300000
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
