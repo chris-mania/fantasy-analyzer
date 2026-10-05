@@ -1909,10 +1909,9 @@ body.shot .shotExitTop{display:block;text-align:center;padding:10px;background:#
 
 /* ===== elite polish: glow rings, gradients, soft depth ===== */
 .brand span{background:linear-gradient(90deg,#2563eb,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent}
-.portrait:before{background:conic-gradient(from -90deg,color-mix(in srgb,var(--ring) 45%,#ffffff) 0,var(--ring) calc(var(--score)*.55%),var(--ring) calc(var(--score)*1%),rgba(196,206,222,.75) 0)!important;filter:drop-shadow(0 0 9px color-mix(in srgb,var(--ring) 70%,transparent)) drop-shadow(0 0 22px color-mix(in srgb,var(--ring) 35%,transparent))}
-.portrait{box-shadow:0 14px 40px color-mix(in srgb,var(--ring) 22%,transparent)}
-.scorebig.g90{text-shadow:0 0 26px rgba(34,164,93,.38)}.scorebig.g70{text-shadow:0 0 26px rgba(227,162,26,.38)}.scorebig.g0{text-shadow:0 0 26px rgba(226,80,91,.32)}
-.grade.g90,.rs.g90{text-shadow:0 0 14px rgba(34,164,93,.28)}.grade.g70,.rs.g70{text-shadow:0 0 14px rgba(227,162,26,.28)}.grade.g0,.rs.g0{text-shadow:0 0 14px rgba(226,80,91,.22)}
+.portrait:before{background:conic-gradient(from -90deg,var(--ring) 0,var(--ring) calc(var(--score)*1%),rgba(196,206,222,.75) 0)!important;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ring) 35%,transparent))}
+.portrait{box-shadow:0 10px 26px color-mix(in srgb,var(--ring) 12%,transparent)}
+.scorebig,.grade,.rs{text-shadow:none!important}
 .pill.on{background:linear-gradient(135deg,#1d4ed8,#3b82f6);box-shadow:0 4px 14px rgba(37,99,235,.28);border-color:transparent}
 .vbtn.on{background:linear-gradient(135deg,#1d4ed8,#3b82f6)}
 .panel,.hero2,.stats,.miniRank,.how3>div,#rankings .tablewrap{box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 12px 34px rgba(28,43,74,.075);border-color:#dde6f6}
