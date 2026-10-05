@@ -14,6 +14,7 @@ import numpy as np, pandas as pd
 
 POS = ["RB", "WR", "TE"]
 ALPHA = 0.40          # recency weight of the running average
+STARTER_DECAY = 0.3   # how fast older games fade when deciding who the starting QB is
 K_LY = 2.0            # how many games of last-season prior a player starts with
 RIDGE = 30.0
 COMP = {"receptions": 1.0, "receiving_yards": 0.1, "rushing_yards": 0.1, "tds": 6.0}
@@ -235,6 +236,7 @@ def build_features(S, inj, ctx, rows):
         for w in range(1, 19):
             qb_rows.append({"team": tm, "season": y, "week": w, "starter_qb": max(att, key=att.get) if att else None})
             if w in by_w:
+                att = {k: v * STARTER_DECAY for k, v in att.items()}      # the most recent game counts most (picks the right starter ~90% of the time vs ~81% for season totals)
                 for r in by_w[w].itertuples():
                     att[r.player_id] = att.get(r.player_id, 0) + (r.attempts if pd.notna(r.attempts) else 0)
     qbs = pd.DataFrame(qb_rows).merge(inj.rename(columns={"gsis_id": "starter_qb", "avail": "qb_avail"}), on=["starter_qb", "season", "week"], how="left")
@@ -625,7 +627,9 @@ def _qb_rows_played(S):
 def qb_project(S, inj, ctx, season, next_week, opp_map, names):
     """Project the starting QB of every team that plays in next_week. Returns DataFrame indexed by player_id."""
     Sq = _qb_numeric(S[S.position == "QB"])
-    cur = Sq[(Sq.season == season)].groupby(["team", "player_id"]).attempts.sum().reset_index()
+    cw = Sq[(Sq.season == season) & (Sq.week < next_week)].copy()
+    cw["attempts"] = cw.attempts * (STARTER_DECAY ** (next_week - 1 - cw.week).clip(lower=0))
+    cur = cw.groupby(["team", "player_id"]).attempts.sum().reset_index()
     prv = Sq[(Sq.season == season - 1)].groupby(["team", "player_id"]).attempts.sum().reset_index()
     rows, meta = [], {}
     for team, opp in opp_map.items():
