@@ -440,6 +440,22 @@ def project(base, season, next_week, roster, opp_map=None, log=print):
     out = predict(fit, T[is_new])
     out["player_id"] = T.loc[is_new, "player_id"].values
     out["n_prior"] = T.loc[is_new, "n_prior"].values
+    # what the model would have said before each game already played this season (for the game logs)
+    hist = pd.DataFrame(columns=["player_id", "week", "proj"])
+    try:
+        hs = []
+        Tp = T[~is_new]
+        for w in range(1, next_week):
+            tr = Tp[(Tp.season < season) | ((Tp.season == season) & (Tp.week < w))]
+            te = Tp[(Tp.season == season) & (Tp.week == w)]
+            if len(te) == 0 or len(tr) < 500:
+                continue
+            o = predict(fit_models(tr), te)
+            hs.append(pd.DataFrame({"player_id": te.player_id.values, "week": w, "proj": o.proj.values}))
+        if hs:
+            hist = pd.concat(hs, ignore_index=True)
+    except Exception as e:
+        log("   Past projections unavailable:", e)
     qb = pd.DataFrame()
     if opp_map:
         try:
@@ -447,7 +463,7 @@ def project(base, season, next_week, roster, opp_map=None, log=print):
             qb = qb_project(S, inj, ctx, season, next_week, opp_map, nm)
         except Exception as e:
             log("   QB projections unavailable:", e)
-    return out.drop_duplicates("player_id").set_index("player_id"), fit, qb
+    return out.drop_duplicates("player_id").set_index("player_id"), fit, qb, hist
 
 
 # ------------------------------------------------------------------ honest backtest
