@@ -20,19 +20,21 @@ RIDGE = 30.0
 COMP = {"receptions": 1.0, "receiving_yards": 0.1, "rushing_yards": 0.1, "tds": 6.0}
 STAT0 = ["targets", "carries", "receptions", "receiving_yards", "rushing_yards", "tds", "ppr", "offense_pct", "tgt_share"]
 
+R4 = ["m3_opp", "l2_opp", "m3_snap", "l2_snap", "shift_opp", "shift_snap", "shift_x_vac_c", "shift_x_vac_t"]
+R3 = ["r3_targets", "r3_carries", "r3_ppr", "r3_offense_pct", "r3_receptions", "r3_rushing_yards", "r3_receiving_yards"]
 BASE_FEATS = ["b_targets", "b_carries", "b_receptions", "b_receiving_yards", "b_rushing_yards", "b_tds", "b_ppr",
               "b_offense_pct", "b_tgt_share", "n_prior", "ly_n", "pos_rb", "pos_wr", "pos_te", "tm_tgt", "tm_car",
               "spread", "total_line", "implied", "opp_implied", "is_home", "own_avail", "qb_out", "vac_t", "vac_c",
-              "vac_t_WR", "vac_t_TE", "vac_t_RB", "vac_c_RB", "ypt", "cr", "ypc", "opp_def", "exp_tgt_team", "rest"]
+              "vac_t_WR", "vac_t_TE", "vac_t_RB", "vac_c_RB", "ypt", "cr", "ypc", "opp_def", "exp_tgt_team", "rest"] + R3 + R4
 INTER = ["spr_rb", "spr_wr", "spr_te", "imp_rb", "imp_wr", "imp_te", "imp_x_tgt", "imp_x_car", "spr_x_car", "spr_x_tgt"]
 BOOST = ["boost_t", "boost_c", "bt_x_tgt", "bt_x_share", "bc_x_car", "bc_x_ppr", "bt_x_ppr"]
 FEATS = BASE_FEATS + INTER + BOOST
 GROUPS = {   # for "why" explanations
-    "usage": ["b_targets", "b_carries", "b_receptions", "b_receiving_yards", "b_rushing_yards", "b_tds", "b_ppr", "b_offense_pct",
+    "usage": ["m3_opp", "l2_opp", "m3_snap", "l2_snap", "shift_opp", "shift_snap", "r3_targets", "r3_carries", "r3_ppr", "r3_offense_pct", "r3_receptions", "r3_rushing_yards", "r3_receiving_yards", "b_targets", "b_carries", "b_receptions", "b_receiving_yards", "b_rushing_yards", "b_tds", "b_ppr", "b_offense_pct",
               "b_tgt_share", "n_prior", "ly_n", "pos_rb", "pos_wr", "pos_te", "ypt", "cr", "ypc", "exp_tgt_team"],
     "script": ["tm_tgt", "tm_car", "spread", "total_line", "implied", "opp_implied", "is_home", "rest"] + INTER,
     "matchup": ["opp_def"],
-    "injuries": ["own_avail", "qb_out", "vac_t", "vac_c", "vac_t_WR", "vac_t_TE", "vac_t_RB", "vac_c_RB"] + BOOST,
+    "injuries": ["shift_x_vac_c", "shift_x_vac_t", "own_avail", "qb_out", "vac_t", "vac_c", "vac_t_WR", "vac_t_TE", "vac_t_RB", "vac_c_RB"] + BOOST,
 }
 # neutral values used to measure how much each group moves a projection
 NEUTRAL = {"spread": 0.0, "total_line": 45.0, "implied": 22.5, "opp_implied": 22.5, "is_home": 0.5, "rest": 7.0, "opp_def": 0.0,
@@ -159,6 +161,7 @@ def player_states(S, last_week=None, stats=None, positions=None):
         m = {c: np.nan for c in stats}
         sums = {c: 0.0 for c in stats}
         cnt = {c: 0 for c in stats}
+        hist = {c: [] for c in stats}
         n = 0
         lm = last.get(pid)
         for w in range(1, 19):
@@ -167,6 +170,15 @@ def player_states(S, last_week=None, stats=None, positions=None):
                 row["ew_" + c] = m[c]
                 row["sm_" + c] = sums[c] / cnt[c] if cnt[c] else np.nan
                 row["ly_" + c] = lm[0][c] if lm else np.nan
+                row["l3_" + c] = float(np.mean(hist[c][-3:])) if hist[c] else np.nan
+                if c == "targets" and "carries" in hist:
+                    op = [a + b for a, b in zip(hist["targets"], hist["carries"])]
+                    row["m3_opp"] = float(np.median(op[-3:])) if op else np.nan
+                    row["l2_opp"] = float(np.mean(op[-2:])) if op else np.nan
+                    row["sm_opp"] = float(np.mean(op)) if op else np.nan
+                if c == "offense_pct":
+                    row["m3_snap"] = float(np.median(hist[c][-3:])) if hist[c] else np.nan
+                    row["l2_snap"] = float(np.mean(hist[c][-2:])) if hist[c] else np.nan
             row["ly_n"] = lm[1] if lm else 0
             out.append(row)
             if w in d.index:
@@ -180,6 +192,7 @@ def player_states(S, last_week=None, stats=None, positions=None):
                     m[c] = v if np.isnan(m[c]) else ALPHA * v + (1 - ALPHA) * m[c]
                     sums[c] += v
                     cnt[c] += 1
+                    hist[c].append(v)
                 n += 1
         if n:
             last[pid] = ({c: (sums[c] / cnt[c] if cnt[c] else np.nan) for c in stats}, n)
@@ -307,6 +320,22 @@ def prep(T):
     for c in STAT0:
         if c != "ppr":
             T["b_" + c] = T["b_" + c].fillna(0)
+    for c in ("targets", "carries", "ppr", "offense_pct", "receptions", "rushing_yards", "receiving_yards"):
+        T["r3_" + c] = T["l3_" + c].fillna(T["b_" + c]) if "l3_" + c in T else T["b_" + c]
+    if "m3_opp" in T:
+        so = (T.sm_targets.fillna(0) + T.sm_carries.fillna(0)).where(T.n_prior > 0)
+        ly_o = (T.ly_targets.fillna(0) + T.ly_carries.fillna(0))
+        base_o = so.fillna(ly_o)
+        for c in ("m3_opp", "l2_opp"):
+            T[c] = T[c].fillna(base_o)
+        T["shift_opp"] = (T.l2_opp - base_o).where(T.n_prior >= 2, 0.0).fillna(0.0).clip(-12, 12)
+        base_s = T.sm_offense_pct.where(T.n_prior > 0).fillna(T.ly_offense_pct)
+        for c in ("m3_snap", "l2_snap"):
+            T[c] = T[c].fillna(base_s)
+        T["m3_snap"] = T.m3_snap.fillna(50.0); T["l2_snap"] = T.l2_snap.fillna(50.0)
+        T["shift_snap"] = (T.l2_snap - base_s.fillna(50.0)).where(T.n_prior >= 2, 0.0).fillna(0.0).clip(-30, 30)
+        T["shift_x_vac_c"] = T.shift_opp * T.vac_c.fillna(0.0)
+        T["shift_x_vac_t"] = T.shift_opp * T.vac_t.fillna(0.0)
     T["ypt"] = (T.b_receiving_yards + 8) / (T.b_targets + 1.2)
     T["cr"] = (T.b_receptions + 2) / (T.b_targets + 3)
     T["ypc"] = (T.b_rushing_yards + 20) / (T.b_carries + 5)
@@ -403,11 +432,14 @@ def predict(fit, Tnew):
     Xn["bc_x_car"] = Xn.boost_c * Xn.b_carries
     Xn["bc_x_ppr"] = Xn.boost_c * Xn.b_ppr
     Xn["bt_x_ppr"] = Xn.boost_t * Xn.b_ppr
+    if "shift_opp" in Xn.columns:
+        Xn["shift_x_vac_c"] = Xn.shift_opp * Xn.vac_c
+        Xn["shift_x_vac_t"] = Xn.shift_opp * Xn.vac_t
     for gname, cols in GROUPS.items():
         if gname == "usage":
             continue
         Xg = X.copy()
-        Xg[cols] = Xn[cols]
+        Xg[[c for c in cols if c in Xg.columns]] = Xn[[c for c in cols if c in Xg.columns]]
         out["g_" + gname] = out["proj"] - sum(w * fit["models"][c].predict(Xg) for c, w in COMP.items())
     return out
 
