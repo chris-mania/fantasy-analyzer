@@ -1305,6 +1305,18 @@ if not AS_OF_WEEK and schedule_ok and week_has_games:
                 if x_.get("mania") is not None:
                     q_["grade"] = _qgrade(q_["ppr"])
                 QBS.append(x_)
+            # Every other QB with real snaps (bye-week teams, backups) stays searchable and comparable, just without a Week projection.
+            _have = {q_["id"] for q_ in QBS}
+            _nmq = _qs.drop_duplicates("player_id", keep="last").set_index("player_id")
+            _tcq = "team" if "team" in _nmq.columns else "recent_team"
+            _dnq = "player_display_name" if "player_display_name" in _nmq.columns else "player_name"
+            for pid_ in _qg.index:
+                if pid_ in _have:
+                    continue
+                _tm_ = str(_nmq.loc[pid_, _tcq])
+                x_ = _qrow(pid_, str(_nmq.loc[pid_, _dnq]), _tm_)
+                x_.update({"opp": str(dict(opp_map).get(_tm_, "BYE")), "sub": False, "proj": None, "inj": None, "played": PLAYED_QB.get(pid_)})
+                QBS.append(x_)
             _qr = sorted([q_["mania"] for q_ in QBS if q_.get("mania") is not None and q_.get("qual")], reverse=True)
             _qs_start = sorted([q_["start"] for q_ in QBS if q_.get("start") is not None and not q_.get("played")], reverse=True)
             for q_ in QBS:
