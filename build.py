@@ -1618,7 +1618,7 @@ meta = json.dumps({
 # FRONT END — FANTASY MANIA
 # ============================================================
 html = r'''<!doctype html>
-<html lang="en"><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<html lang="en"><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fantasy Mania</title>
 <style>
@@ -2390,6 +2390,7 @@ body.mvLock{overflow:hidden}
 .mvName{display:block;width:100%;color:#d8d8de;font-size:clamp(13px,1.35vw,19px);font-weight:600;line-height:1.4;letter-spacing:.3em;text-transform:uppercase;padding:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mvBig{font-size:clamp(54px,6.8vw,96px);font-weight:700;line-height:.95;margin-top:4px}
 #mvStage.mob .mvBig{font-size:54px}
+#mvStage.fc .mvBig{font-style:italic;font-weight:800}
 .mvLab{font-size:clamp(10px,1.15vw,15px);letter-spacing:.2em;color:#9a9aa2;line-height:1.35}.mvLab b{color:#fff}
 .mvBrand{position:absolute;left:0;right:0;bottom:13.5%;text-align:center;font-size:10px;letter-spacing:.4em;color:#666;z-index:400}
 #mvStage.mob .mvBrand{bottom:10.6%}
@@ -2426,6 +2427,14 @@ body.shot #cmpTeams .tv{font-size:13px;min-width:0}
 .ttag.fl{background:#fff1d6;color:#8a5a00;border-radius:999px;padding:1px 7px;font-style:normal;font-weight:700;cursor:pointer}
 .tgames .rflag{flex:1 1 100%;margin:0 0 6px}
 body.shot .rflag,body.shot .ttag.fl,#mv .rflag{display:none!important}
+.mvRow{position:absolute;background:linear-gradient(180deg,#1b1b20,#0b0b0d);border-bottom:2px solid #d4202c}
+.mvTx{position:absolute;display:flex;flex-direction:column;justify-content:center;line-height:1.1;text-shadow:0 1px 4px #000;overflow:visible}
+.mvTx b{font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.mvTx span{font-size:11.5px;color:#ddd;white-space:nowrap}.mvTx i{font-style:normal;color:#e63946;font-weight:700;letter-spacing:.1em;margin-right:3px}
+.mvTx.c{text-align:center;display:block}.mvTx.c span{display:block}
+.mvTx u,.mvHd u{display:none}
+.mvHd{position:absolute;filter:drop-shadow(0 6px 8px rgba(0,0,0,.9))}
+.mvTile{position:absolute;background:linear-gradient(180deg,#1b1b20,#0b0b0d);border-bottom:2px solid #d4202c;border-radius:6px}
 </style></head><body>
 <div id="mv" hidden><div id="mvTog"></div><button id="mvClose" onclick="toggleMV(false)">Close</button><div id="mvStage"></div></div><div id="bPop" class="bPop" hidden></div><div class="shotExitTop"><button class="pill" onclick="toggleShot(false)">Exit screenshot view</button></div><div class="topbar"><div class="nav"><div class="brand" id="brandHome" title="Home" style="cursor:pointer">Fantasy Mania</div><div class="links"><button class="navb on" data-v="home">Home</button><button class="navb" data-v="rankings">Rankings</button><button class="navb" data-v="players">Players</button><button class="navb" data-v="compare">Compare</button><button class="navb" data-v="insights">Insights</button></div></div></div>
 <main class="wrap">
@@ -2839,7 +2848,7 @@ function mvSil(w,b,id){return `<svg viewBox="0 0 100 130" width="${w}" style="di
 function mvOrder(T,scope){let l=tList(T,scope).filter(x=>x.id&&byId(x.id)),rank={QB:0,RB:1,WR:2,TE:3,FLEX:4,SFLEX:5,BN:6};l.sort((a,b)=>rank[a.k]-rank[b.k]||a.i-b.i);return l.map(x=>{let p=byId(x.id),v=tVal(p,T.sel[x.id]);return {p,k:x.k,v}})}
 function mvLast(p){let a=p.name.split(' ');let l=a[a.length-1];if(/^(Jr\.?|Sr\.?|II|III|IV)$/i.test(l)&&a.length>2)l=a[a.length-2];return l.toUpperCase()}
 function mvVals(e){let m=e.v.mania==null?'—':Number(e.v.mania).toFixed(1),p=Number(e.v.pts).toFixed(1);return showM&&showW?`<span class="v1">${m}</span><span class="v2">${p}<u> pts</u></span>`:showM?`<span class="v1">${m}</span>`:`<span class="v1">${p}<u> pts</u></span>`}
-function mvImg(e,w,hh,b,mob,uid){let sil=mvSil(w,b,uid),op=mob?'center top':'center bottom';
+function mvImg(e,w,hh,b,mob,uid,opx){let sil=mvSil(w,b,uid),op=opx||(mob?'center top':'center bottom');
  if(!e.p.headshot)return sil;
  return `<img src="${e.p.headshot}" alt="" style="width:${w}px;height:${hh?hh+'px':'auto'};object-fit:contain;object-position:${op};display:block;filter:contrast(1.05) saturate(1.08) brightness(${b})" onerror="this.outerHTML=this.dataset.sil" data-sil='${sil.replace(/'/g,"&#39;")}'>`}
 function mvFig(e,i,n,cx,top,w,hh,side,mob,fs,row){let t=n>1?i/(n-1):0,b=(1-.18*t).toFixed(2),lab=e.k==='SFLEX'?'SFX':e.k==='FLEX'?'FLX':e.k==='BN'?'BN':e.p.pos,last=mvLast(e.p),uid=i+(side>0?200:100);
@@ -2847,15 +2856,55 @@ function mvFig(e,i,n,cx,top,w,hh,side,mob,fs,row){let t=n>1?i/(n-1):0,b=(1-.18*t
   return `<div class="mvFig" style="left:${cx-w/2}px;bottom:${top}px;width:${w}px;z-index:${100-i};filter:${sh}"><div class="mvTag" style="left:${w/2-110}px;width:220px;bottom:100%;font-size:${fs}px;padding-bottom:${fs*.35}px"><i>${lab}</i><b>${last}</b>${mvVals(e)}</div><div style="${mask}">${mvImg(e,w,0,b,false,uid)}</div></div>`}
  let boxH=row*(i===n-1?1.45:1.18),sh=`drop-shadow(0 -7px 9px rgba(0,0,0,.85))`;
  return `<div class="mvFig" style="left:${cx-w/2}px;top:${top}px;width:${w}px;height:${boxH}px;z-index:${100+i};filter:${sh}"><div style="height:${boxH}px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 ${i===n-1?70:92}%,transparent 100%);mask-image:linear-gradient(#000 ${i===n-1?70:92}%,transparent 100%)">${mvImg(e,w,boxH,b,true,uid)}</div><div class="mvPlate" style="top:${row-fs*3.1}px;width:${w}px"><b style="font-size:${fs}px">${last}</b><span style="font-size:${fs-2.5}px"><i>${lab}</i>${mvVals(e)}</span></div></div>`}
+let mvStyle='C';
+function mvVal2(e){return mvVals(e)}
+function mvMobileA(A,B,W,H){let n=Math.max(A.length,B.length,1),top0=H*.225,bot=H*.87,wts=Array.from({length:n},(_,i)=>i===0?1.45:1),tw=wts.reduce((a,b)=>a+b,0),unit=(bot-top0)/tw,half=W/2,out=[],y=top0;
+ for(let i=0;i<n;i++){let rh=unit*wts[i],hw=Math.min(half*.55,rh*1.6),y0=y;y+=rh;
+  [[-1,A],[1,B]].forEach(([side,L])=>{let e=L[i];if(!e)return;let lab=e.k==='SFLEX'?'SFX':e.k==='FLEX'?'FLX':e.k==='BN'?'BN':e.p.pos,last=mvLast(e.p),uid=i+(side>0?400:300),
+   tx=half-hw-6,fs=i===0?17:13.5,x0=side<0?4:half+2,wd=half-6,
+   clip=side<0?'polygon(0 0,100% 0,96% 100%,0 100%)':'polygon(4% 0,100% 0,100% 100%,0 100%)';
+   out.push(`<div class="mvRow" style="left:${x0}px;top:${y0+3}px;width:${wd}px;height:${rh-5}px;clip-path:${clip};z-index:${50+i}"></div>`);
+   out.push(`<div class="mvTx" style="${side<0?`left:${x0+8}px;text-align:left`:`left:${x0+wd-8-tx}px;text-align:right`};width:${tx}px;top:${y0+3}px;height:${rh-5}px;z-index:${300+i}"><b style="font-size:${fs}px">${last}</b><span><i>${lab}</i>${mvVals(e)}</span></div>`);
+   let hx=side<0?half-hw-2:half+2;
+   out.push(`<div class="mvHd" style="left:${hx}px;top:${y0+rh-5-hw*.95}px;width:${hw}px;height:${hw*.95}px;z-index:${100+i};"><div style="-webkit-mask-image:linear-gradient(#000 80%,transparent);mask-image:linear-gradient(#000 80%,transparent)">${mvImg(e,hw,hw*.95,1,true,uid)}</div></div>`)})}
+ return out.join('')}
+function mvMobileB(A,B,W,H){let half=W/2,out=[],qw=Math.min(half*.82,150),qh=qw*.85,top0=H*.225;
+ [[-1,A],[1,B]].forEach(([side,L])=>{let rest=L.slice(1),e0=L[0],cx=half+side*(half/2);
+  if(e0){let uid=500+(side>0?50:0),lab=e0.p.pos;
+   out.push(`<div class="mvHd" style="left:${cx-qw/2}px;top:${top0}px;width:${qw}px;height:${qh}px;z-index:100"><div style="-webkit-mask-image:linear-gradient(#000 78%,transparent);mask-image:linear-gradient(#000 78%,transparent)">${mvImg(e0,qw,qh,1,true,uid)}</div></div>`);
+   out.push(`<div class="mvTx c" style="left:${cx-half/2+4}px;width:${half-8}px;top:${top0+qh-4}px;z-index:200"><b style="font-size:19px">${mvLast(e0.p)}</b><span><i>${lab}</i>${mvVals(e0)}</span></div>`)}
+  let tw=(half-14)/2,th=Math.min(tw*.8,64),rowH=th+36,ty0=top0+qh+44;
+  rest.forEach((e,i)=>{let col=i%2,row=Math.floor(i/2),x=(side<0?4:half+6)+col*(tw+4),y=ty0+row*rowH,uid=600+i+(side>0?50:0),lab=e.k==='SFLEX'?'SFX':e.k==='FLEX'?'FLX':e.k==='BN'?'BN':e.p.pos;
+   out.push(`<div class="mvTile" style="left:${x}px;top:${y}px;width:${tw}px;height:${rowH-6}px"></div><div class="mvHd" style="left:${x+tw*.1}px;top:${y+4}px;width:${tw*.8}px;height:${th}px;z-index:100"><div style="-webkit-mask-image:linear-gradient(#000 78%,transparent);mask-image:linear-gradient(#000 78%,transparent)">${mvImg(e,tw*.8,th,1,true,uid)}</div></div><div class="mvTx c" style="left:${x}px;width:${tw}px;top:${y+th+2}px;z-index:200"><b style="font-size:12.5px">${mvLast(e.p)}</b><span style="font-size:10.5px"><i>${lab}</i>${mvVals(e)}</span></div>`)})});
+ return out.join('')}
 function mvGroup(S,k){let v=showM?S.gM[k]:S.gP[k];return v==null||isNaN(v)?'—':Number(v).toFixed(1)}
+function mvMobileC(A,B,W,H){let half=W/2,top0=H*.235,bot=H*.875,rk={QB:0,RB:1,WR:2,TE:3,FLEX:4,SFLEX:5,BN:6},big=e=>e?(showM?(e.v.mania==null?-1:Number(e.v.mania)):Number(e.v.pts)):-9,
+ g=L=>{let m={};L.forEach(e=>{(m[e.k]=m[e.k]||[]).push(e)});Object.values(m).forEach(a=>a.sort((x,y)=>big(y)-big(x)));return m},GA=g(A),GB=g(B),ks=[...new Set([...Object.keys(GA),...Object.keys(GB)])].sort((a,b)=>rk[a]-rk[b]),pairs=[];
+ ks.forEach(k=>{let a=GA[k]||[],b=GB[k]||[];for(let i=0;i<Math.max(a.length,b.length);i++)pairs.push([k,a[i],b[i]])});
+ let n=Math.max(pairs.length,1),rh=(bot-top0)/n,sc=Math.min(1.08,Math.max(.62,rh/78)),fh=Math.min(rh*1.3,half-100),tw=Math.max(70,half-fh-14),out=[],
+ lab=k=>k==='SFLEX'?'SFX':k==='FLEX'?'FLX':k,
+ bolt=(y)=>{let a=20,d=[[20,0],[20+a*.55,rh*.2],[20-a*.3,rh*.36],[20+a,rh*.52],[20-a*.8,rh*.7],[20+a*.35,rh*.84],[20,rh]].map(p=>p[0].toFixed(1)+','+(p[1]).toFixed(1)).join(' ');
+  return `<svg width="40" height="${rh}" viewBox="0 0 40 ${rh}" style="position:absolute;left:${half-20}px;top:${y}px;z-index:600;overflow:visible;filter:drop-shadow(0 0 3px #ff2b3d) drop-shadow(0 0 9px #e63946)"><polyline points="${d}" fill="none" stroke="#ff3b4a" stroke-width="3.4" stroke-miterlimit="10"/><polyline points="${d}" fill="none" stroke="#ffd0d4" stroke-width="1"/></svg>`},
+ vs=(y)=>{let z=24*sc+4;return `<div style="position:absolute;left:${half}px;top:${y+rh*.52}px;transform:translate(-50%,-50%) rotate(45deg);width:${z}px;height:${z}px;background:#000;border:2px solid #ff3b4a;box-shadow:0 0 10px #e63946,inset 0 0 6px rgba(230,57,70,.6);z-index:700"></div><div style="position:absolute;left:${half}px;top:${y+rh*.52}px;transform:translate(-50%,-50%);font-size:${z*.5}px;font-weight:800;font-style:italic;z-index:710;color:#fff;text-shadow:0 0 6px #e63946;line-height:1">VS</div>`};
+ out.push(`<div style="position:absolute;left:0;right:0;top:${top0-14}px;height:${bot-top0+24}px;background:radial-gradient(ellipse 70% 55% at 50% 45%,rgba(150,10,25,.38),transparent 72%)"></div>`);
+ pairs.forEach(([k,a,b],i)=>{let y=top0+i*rh,ba=big(a),bb=big(b),uid=i*2;
+  [[-1,a],[1,b]].forEach(([side,e],j)=>{
+   if(!e){out.push(`<div style="position:absolute;${side<0?'left':'right'}:12px;top:${y}px;height:${rh}px;width:${tw}px;display:flex;align-items:center;justify-content:${side<0?'flex-start':'flex-end'};color:#555;font-weight:800;font-style:italic;font-size:${22*sc}px">—</div>`);return}
+   let mine=side<0?ba:bb,other=side<0?bb:ba,win=mine>=other,last=mvLast(e.p),nsz=(last.length<9?13.5:last.length<11?11:9.5)*sc,al=side<0?'left':'right',
+    v1=showM?(e.v.mania==null?'—':Number(e.v.mania).toFixed(1)):Number(e.v.pts).toFixed(1),v2=showM&&showW?Number(e.v.pts).toFixed(1)+' pts':'',
+    gl=win?'text-shadow:0 0 14px rgba(255,59,74,.95),0 0 4px rgba(255,59,74,.8);':'';
+   out.push(`<div style="position:absolute;${al}:10px;top:${y}px;height:${rh}px;width:${tw}px;display:flex;flex-direction:column;justify-content:center;text-align:${al};z-index:300;line-height:1"><div style="font-size:${nsz}px;font-weight:800;font-style:italic;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last}</div><div style="font-size:${28*sc}px;font-weight:800;font-style:italic;line-height:1.03;${gl}">${v1}</div><div style="font-size:${9*sc}px;letter-spacing:.22em;color:#ff3b4a;font-weight:700;margin-top:2px;white-space:nowrap">${lab(k)}${v2?`<span style="color:#aaa;letter-spacing:.04em;margin-left:4px">${v2}</span>`:''}</div></div>`);
+   out.push(`<div style="position:absolute;${side<0?'right':'left'}:${half}px;bottom:${H-(y+rh-3)}px;width:${fh}px;z-index:200;filter:drop-shadow(0 0 5px rgba(255,59,74,.55))"><div style="-webkit-mask-image:linear-gradient(#000 74%,transparent);mask-image:linear-gradient(#000 74%,transparent)">${mvImg(e,fh,0,1,true,300+uid+j)}</div></div>`)});
+  out.push(`<div style="position:absolute;left:12px;right:12px;top:${y+rh-1}px;height:1px;background:linear-gradient(90deg,transparent,rgba(230,57,70,.7) 50%,transparent);z-index:150"></div>`);
+  out.push(bolt(y)+vs(y))});
+ return out.join('')}
 function renderMV(){let ov=$('mv');if(!ov||!mvOn)return;let st=$('mvStage'),vw=innerWidth,vh=innerHeight,mob=vw<760,W,H;
  if(mob){W=vw;H=vh}else{W=Math.min(vw,vh*16/9);H=W*9/16}
- st.style.width=W+'px';st.style.height=H+'px';W_mv=W;st.classList.toggle('mob',mob);
+ st.style.width=W+'px';st.style.height=H+'px';W_mv=W;st.classList.toggle('mob',mob);st.classList.toggle('fc',mob&&mvStyle==='C');
  let A=mvOrder(TM.A,teamScope),B=mvOrder(TM.B,teamScope),SA=tScore(TM.A,teamScope),SB=tScore(TM.B,teamScope),n=Math.max(A.length,B.length,1),fig=[];
  if(!mob){let w0=W*.215,gap0=W*.012,spread=W*.285,base=H*.86,rise=H*.37,fs=Math.max(13,W*.0128);
   [[-1,A],[1,B]].forEach(([side,L])=>L.forEach((e,i)=>{let t=n>1?i/(n-1):0,w=w0*(1-.34*t),cx=W/2+side*(gap0+w/2+t*spread*(1-.0)),yb=base-t*rise;fig.push(mvFig(e,i,n,cx,H-yb,w,0,side,false,fs))}))}
- else{let top0=H*.225,bot=H*.865,row=(bot-top0)/(n+.35),fs=Math.max(12,Math.min(14,W*.036)),w0=Math.min(W*.31,row*1.7),wl=w0*.8;
-  [[-1,A],[1,B]].forEach(([side,L])=>L.forEach((e,i)=>{let t=n>1?i/(n-1):0,w=w0-(w0-wl)*t,off=t*(W/2-6-wl-3),cx=W/2+side*(w/2+3+off);fig.push(mvFig(e,i,n,cx,top0+i*row,w,0,side,true,fs,row))}))}
+ else{fig.push(mvStyle==='C'?mvMobileC(A,B,W,H):mvStyle==='B'?mvMobileB(A,B,W,H):mvMobileA(A,B,W,H))}
  let bigA=showM?SA.mania:SA.pts,bigB=showM?SB.mania:SB.pts,subA=showM&&showW?SA.pts:null,subB=showM&&showW?SB.pts:null,lab=showM?'MANIA RATING':'THIS WEEK · PROJECTED';
  let nm=(t,al)=>`<div class="mvName" style="text-align:${al}">${(TM[t].name||(t==='A'?'My team':'Their team')).replace(/</g,'&lt;')}</div>`;
  let sc=(t,big,sub,al)=>`<div class="mvSc" style="text-align:${al}">${nm(t,al)}<div class="mvBig">${(big||0).toFixed(1)}</div><div class="mvLab">${lab}${sub!=null?`<br><b>${sub.toFixed(1)}</b> PROJ PTS`:''}</div></div>`;
@@ -2864,7 +2913,7 @@ function renderMV(){let ov=$('mv');if(!ov||!mvOn)return;let st=$('mvStage'),vw=i
  let d=bigA-bigB,edge=showW?Math.round(pr*100)+'%':(d>=0?'+':'')+d.toFixed(1);rows.push([showW?'WIN %':'EDGE',edge,'']);
  let strip=rows.map(r=>`<div><em>${r[0]}</em><b>${r[1]}${r[2]!==''?`<s> / </s>${r[2]}`:''}</b></div>`).join('');
  let scores=`<div class="mvTop${mob?'':' d'}">${sc('A',bigA,subA,mob?'center':'right')}${sc('B',bigB,subB,mob?'center':'left')}</div>`;
- st.innerHTML=`<div class="mvLine"></div>${fig.join('')}${scores}<div class="mvVS">VS</div><div class="mvVig"></div><div class="mvBrand">FANTASY MANIA · MANIAC VIEW · WEEK ${META.next_week}</div><div class="mvStrip">${strip}</div>`;
+ let fcm=mob&&mvStyle==='C';st.innerHTML=`${fcm?'':'<div class="mvLine"></div>'}${fig.join('')}${scores}${fcm?'':'<div class="mvVS">VS</div><div class="mvVig"></div>'}<div class="mvBrand">FANTASY MANIA · MANIAC VIEW · WEEK ${META.next_week}</div><div class="mvStrip">${strip}</div>`;
  $('mvTog').innerHTML=`<button type="button" data-b="M" class="${showM?'on':''}">Mania Rating</button><button type="button" data-b="W" class="${showW?'on':''}">This week</button>`;
  $('mvTog').querySelectorAll('button').forEach(b=>b.onclick=()=>{let k=b.dataset.b;if(k==='M'){if(showM&&!showW)return;showM=!showM}else{if(showW&&!showM)return;showW=!showW}try{localStorage.setItem('fmBasis',JSON.stringify([showM,showW]))}catch(e){}renderMV()});
 }
