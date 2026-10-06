@@ -1526,7 +1526,7 @@ meta = json.dumps({
 # FRONT END — FANTASY MANIA
 # ============================================================
 html = r'''<!doctype html>
-<html lang="en"><head>
+<html lang="en"><head><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fantasy Mania</title>
 <style>
@@ -2213,8 +2213,96 @@ html body{background:var(--bg)!important;font-optical-sizing:auto;-webkit-font-s
 .roomtable td.rmc{line-height:1.2;white-space:nowrap}.roomtable td.rmc b{display:block;font-size:17px;letter-spacing:-.02em}.roomtable td.rmc small{display:block;font-size:11px;color:var(--muted);font-weight:600;margin-top:2px}
 .roomtable td.rmS{background:#f6f8fb}
 @media(max-width:700px){.roomtable th,.roomtable td{padding:8px 8px!important;font-size:13px!important}.roomtable td.rmc b{font-size:15px}.roomtable td.rmc small{font-size:10px}.rmb{padding:8px 10px;font-size:12px}.rmSeg{width:100%}.rmb{flex:1}}
+/* ===== v8 team compare ===== */
+.cmpModes,.tseg{display:inline-flex;background:#fff;border-radius:14px;box-shadow:0 0 0 1px rgba(20,35,70,.1),0 6px 18px -8px rgba(20,35,70,.2);padding:4px;margin:4px 0 14px}
+.cmpMode,.tsb{border:0;background:none;padding:10px 20px;border-radius:10px;font-weight:750;font-size:14px;color:#2a3546;cursor:pointer;white-space:nowrap}
+.cmpMode.on,.tsb.on{background:var(--ink);color:#fff;box-shadow:0 6px 14px -6px rgba(10,20,40,.6)}
+.tctl{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:2px 0 6px}.tctl .tseg{margin:0}
+.tsample{border:0;background:none;color:var(--blue);font-weight:750;font-size:13px;cursor:pointer;padding:8px 6px}
+.tnote{font-size:13.5px;color:var(--muted);margin:6px 0 18px;max-width:860px;line-height:1.5}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:34px;padding:0 6px;position:relative;perspective:1600px;margin-bottom:22px;align-items:start}
+.tcard{background:#fff;border-radius:24px;box-shadow:var(--shadow);padding:24px 20px 18px;position:relative;transition:box-shadow .3s}
+.tgrid .tcard:first-child{transform:rotateY(2.5deg);transform-origin:right center}.tgrid .tcard:last-child{transform:rotateY(-2.5deg);transform-origin:left center}
+.tcard.lead{box-shadow:0 0 0 2px rgba(34,190,100,.55),0 0 28px rgba(34,190,100,.28),var(--shadow)}
+.tlead{position:absolute;top:16px;right:16px;background:#e4f6ec;color:#14803f;font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:4px 10px;border-radius:20px;box-shadow:0 0 12px rgba(34,190,100,.3)}
+.tname{width:100%;border:0;background:none;text-align:center;font:800 24px Inter,sans-serif;letter-spacing:-.04em;color:var(--ink);outline:none;border-bottom:1px dashed transparent;padding:2px 0}.tname:hover,.tname:focus{border-bottom-color:#c4cdda}
+.tscoreW{display:flex;flex-direction:column;align-items:center;margin:10px 0 8px}
+.tring{position:relative;width:128px;height:128px}.tring .rsv{position:absolute;inset:0;width:100%;height:100%}
+.tbig{position:absolute;inset:0;display:grid;place-items:center}.tbig b{font-size:34px;font-weight:800;letter-spacing:-.05em}
+.tcap{text-align:center;font-size:12.5px;color:var(--muted);font-weight:700;margin-top:8px;line-height:1.35}.tcap span{font-weight:600;color:#8a94a3}
+.tsec{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+.tslot{display:grid;grid-template-columns:34px 44px minmax(0,1fr) auto auto auto;gap:9px;align-items:center;padding:9px 8px;border-radius:14px;background:#f6f8fb;margin-bottom:7px;box-shadow:inset 0 0 0 1px rgba(20,35,70,.05);width:100%;text-align:left;border:0}
+.tslot.empty{border:1.5px dashed #c9d2de;background:transparent;box-shadow:none;cursor:pointer;grid-template-columns:34px 1fr;min-height:62px}.tslot.empty:hover{background:#f6f8fb}
+.tslot.open{grid-template-columns:34px minmax(0,1fr) auto;position:relative;z-index:40;background:#fff;box-shadow:0 0 0 2px var(--blue)}
+.tpos{font-size:10.5px;font-weight:800;color:#fff;background:var(--ink);border-radius:8px;padding:4px 0;text-align:center;letter-spacing:.3px}
+.tadd{font-weight:750;color:var(--muted);font-size:14px}
+.tnm{min-width:0}.tnm b{display:block;font-size:15px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}.tnm small{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ttag{font-style:normal;color:#cc3340;font-weight:800}
+.tv{font-size:20px;font-weight:800;letter-spacing:-.04em;min-width:48px;text-align:right}
+.tgm{border:0;background:#fff;border-radius:9px;box-shadow:0 0 0 1px rgba(20,35,70,.12);font-size:11px;font-weight:750;padding:5px 8px;cursor:pointer;color:#2a3546;white-space:nowrap}.tgm.ph0{background:none;box-shadow:none;border:0}.tgm.on{background:#e8f0ff;color:var(--blue);box-shadow:0 0 0 1px #9db8f5}
+.tx{border:0;background:none;color:#97a2b3;font-size:14px;cursor:pointer;padding:4px 6px;border-radius:8px}.tx:hover{background:#fde9eb;color:#cc3340}
+.tsearch{position:relative;min-width:0}.tsearch input{width:100%;height:38px;border:0;background:#f1f4f8;border-radius:10px;padding:0 12px;font-size:14px;outline:none}
+.tsearch .dd{top:42px;z-index:60;max-height:300px;overflow:auto}
+.tgames{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 9px;padding:10px;background:#f6f8fb;border-radius:12px}
+.tfoot{margin-top:10px;text-align:center}.tclr{border:0;background:none;color:#97a2b3;font-weight:700;font-size:12px;cursor:pointer}.tclr:hover{color:#cc3340}
+.tvs{position:absolute;left:50%;top:108px;transform:translateX(-50%);width:54px;height:54px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;z-index:5;box-shadow:0 10px 24px -8px rgba(10,20,40,.6)}
+.tverdict{text-align:center;margin:6px 0 18px;padding:20px}.tverdict strong{display:block;font-size:34px;letter-spacing:-.05em;margin:4px 0}.tprob{margin-top:12px;display:inline-flex;align-items:baseline;gap:10px;background:#fff;border-radius:14px;padding:10px 18px;box-shadow:0 0 0 1px rgba(34,164,93,.25)}.tprob b{font-size:30px;letter-spacing:-.05em;color:var(--green)}.tprob span{font-size:13px;color:#3a4352;font-weight:650}
+.tempty{text-align:center;background:#fff;border-radius:20px;box-shadow:var(--shadow);padding:34px 20px;margin-bottom:18px}.tempty b{display:block;font-size:20px;letter-spacing:-.03em}.tempty span{color:var(--muted);font-size:14px}
+.tbars{padding:22px 24px}.tbh{display:flex;justify-content:space-between;font-weight:800;font-size:15px;margin:2px 0 6px}
+.tnum{flex:0 0 58px;text-align:center;font-size:17px;letter-spacing:-.03em;font-weight:800}.tnum.dim{color:#b3bcc9}
+@media(max-width:800px){
+ .tgrid{grid-template-columns:1fr;gap:0;perspective:none}.tgrid .tcard:first-child,.tgrid .tcard:last-child{transform:none}
+ .tvs{position:relative;left:auto;top:auto;transform:none;margin:-14px auto;width:46px;height:46px;font-size:12px}
+ .tcard{padding:20px 12px 14px}.tring{width:112px;height:112px}.tbig b{font-size:30px}
+ .tslot{grid-template-columns:30px 38px minmax(0,1fr) auto auto 18px;gap:6px;padding:8px 6px}.tslot .thumb{width:38px;height:38px}.tgm span{display:none}.tv{font-size:18px;min-width:42px}.tnm b{font-size:14px}
+ .tslot .tx{padding:2px 2px;font-size:13px}.tgm.ph0{visibility:hidden;padding:5px 0}
+ .tctl{gap:8px}.tseg{width:100%}.tsb,.cmpMode{padding:10px 8px;font-size:13px;flex:1}.cmpModes{width:100%}.tbars{padding:16px 12px}.tverdict strong{font-size:28px}.tnum{flex:0 0 46px;font-size:15px}
+}
+.tmulti .tsb.on{background:var(--ink)}
+.tpill{display:inline-block;margin:6px 0 2px;background:#eef3ff;color:#1d4ed8;font-weight:700;font-size:12px;border-radius:20px;padding:4px 12px}.tpill b{font-size:14px;letter-spacing:-.02em}
+.tv2{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05}.tv2 b{font-size:19px;letter-spacing:-.04em}.tv2 small{font-size:11px;color:var(--muted);font-weight:700;margin-top:2px}
+.tslot:has(.tv2){grid-template-columns:34px 44px minmax(0,1fr) auto auto auto}
+.tset{background:#fff;border-radius:18px;box-shadow:var(--shadow);margin:0 0 14px}.tset>summary{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;cursor:pointer;font-weight:800;font-size:17px;letter-spacing:-.02em;list-style:none}.tset>summary::-webkit-details-marker{display:none}.tset>summary i{font-style:normal;color:var(--blue);font-size:13px;font-weight:700}
+.tsetB{padding:0 22px 18px}.tpre{display:inline-flex;background:#f1f4f8;border-radius:12px;padding:3px;margin-bottom:14px}.tpre .tsb{padding:8px 16px;font-size:13px}
+.tsteps{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}.tst{display:flex;justify-content:space-between;align-items:center;background:#f6f8fb;border-radius:12px;padding:8px 10px 8px 14px;font-size:13.5px;font-weight:700}.tst div{display:flex;align-items:center;gap:10px}.tst b{min-width:16px;text-align:center;font-size:17px}
+.tstb{width:30px;height:30px;border-radius:9px;border:0;background:#fff;box-shadow:0 0 0 1px rgba(20,35,70,.14);font-size:18px;font-weight:700;cursor:pointer;color:var(--ink)}.tstb:active{background:var(--ink);color:#fff}
+.tverdict.split strong{font-size:26px}.tsplit{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px auto 0;max-width:560px}.tsplit>div{background:#fff;border-radius:14px;padding:12px;box-shadow:0 0 0 1px rgba(20,35,70,.08)}.tsplit span{display:block;font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}.tsplit b{display:block;font-size:20px;letter-spacing:-.04em;margin-top:4px}.tsplit small{color:var(--muted);font-weight:700;font-size:12px}
+.tbt{margin:14px 0 2px!important;font-size:15px!important}
+@media(max-width:800px){.tsteps{grid-template-columns:1fr 1fr}.tset>summary{padding:14px 14px}.tsetB{padding:0 14px 14px}.tst{font-size:12.5px;padding:7px 8px 7px 10px}.tst div{gap:6px}.tsplit{grid-template-columns:1fr}.tslot:has(.tv2){grid-template-columns:30px 38px minmax(0,1fr) auto auto 18px}.tv2 b{font-size:16px}}
+.tmania{background:#0b0b0d;color:#fff;border:1px solid #0b0b0d;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.tmania:hover{background:#d4202c;border-color:#d4202c}
+body.mvLock{overflow:hidden}
+#mv{position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed','DejaVu Sans Condensed','Arial Narrow',sans-serif;color:#fff;text-transform:uppercase}
+#mv[hidden]{display:none}
+#mvClose{position:absolute;right:8px;top:8px;z-index:600;background:#1a1a1d;color:#fff;border:1px solid #555;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:700;line-height:1;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;font-family:inherit}
+#mvHint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:10px;letter-spacing:.2em;color:#555;z-index:50;pointer-events:none}
+#mvStage{position:relative;overflow:hidden;background:#000}
+.mvFig{position:absolute}
+.mvTag{position:absolute;z-index:300;white-space:nowrap;line-height:1.2;text-shadow:0 2px 6px #000;letter-spacing:.04em}
+.mvTag i{font-style:normal;color:#d4202c;letter-spacing:.12em;font-size:.88em;margin-right:3px}
+.mvTag span{opacity:.6;margin-left:4px}.mvTag b{font-weight:700}
+.mvTag.m{white-space:nowrap;font-size:10px;overflow:visible}
+.mvLine{position:absolute;left:50%;top:18%;height:64%;width:2px;background:linear-gradient(#d4202c,transparent);z-index:350;transform:translateX(-50%) skewX(-14deg)}
+#mvStage.mob .mvLine{transform:translateX(-50%);top:20%;height:64%}
+.mvVig{position:absolute;inset:0;z-index:250;pointer-events:none;background:radial-gradient(ellipse at 50% 55%,transparent 38%,#000 100%),linear-gradient(transparent 70%,#000 96%)}
+.mvVS{position:absolute;left:50%;top:45%;transform:translate(-50%,0);z-index:500;font-size:clamp(20px,2.7vw,34px);font-weight:700;letter-spacing:.1em;background:#000;padding:4px 14px;border:2px solid #d4202c}
+#mvStage.mob .mvVS{top:20.5%;font-size:20px;padding:2px 10px;transform:translate(-50%,-50%)}
+.mvTop{position:absolute;top:3%;left:0;right:0;z-index:400;display:flex;justify-content:center;gap:8%}
+.mvTop.d .mvSc{width:30%}
+.mvTop:not(.d){gap:0;padding:0 2%;top:7%}
+.mvTop:not(.d) .mvSc{width:50%}
+.mvName{display:block;width:100%;background:transparent;border:0;border-bottom:1px dashed #3a3a3e;color:#9a9aa2;font-size:clamp(11px,1.15vw,15px);font-weight:600;line-height:1.4;font-family:inherit;letter-spacing:.35em;text-transform:uppercase;padding:0 0 3px;outline:none}
+.mvName:focus{border-bottom-color:#d4202c;color:#fff}
+.mvBig{font-size:clamp(54px,6.8vw,92px);font-weight:700;line-height:.95;margin-top:4px}
+#mvStage.mob .mvBig{font-size:56px}
+.mvLab{font-size:clamp(10px,1.2vw,16px);letter-spacing:.2em;color:#9a9aa2}.mvLab b{color:#fff}
+.mvBrand{position:absolute;left:0;right:0;bottom:13.5%;text-align:center;font-size:10px;letter-spacing:.4em;color:#666;z-index:400}
+#mvStage.mob .mvBrand{bottom:10.6%}
+.mvStrip{position:absolute;left:0;right:0;bottom:0;height:13%;z-index:400;display:flex;align-items:center;justify-content:space-evenly;border-top:1px solid #2a2a2e;background:#000}
+#mvStage.mob .mvStrip{height:10%}
+.mvStrip div{text-align:center}.mvStrip em{display:block;font-style:normal;font-size:clamp(9px,1.05vw,13px);letter-spacing:.25em;color:#d4202c}
+.mvStrip b{font-size:clamp(12px,1.9vw,24px);font-weight:700}.mvStrip s{text-decoration:none;color:#555;margin:0 2px}
 </style></head><body>
-<div id="bPop" class="bPop" hidden></div><div class="shotExitTop"><button class="pill" onclick="toggleShot(false)">Exit screenshot view</button></div><div class="topbar"><div class="nav"><div class="brand" id="brandHome" title="Home" style="cursor:pointer">Fantasy Mania</div><div class="links"><button class="navb on" data-v="home">Home</button><button class="navb" data-v="rankings">Rankings</button><button class="navb" data-v="players">Players</button><button class="navb" data-v="compare">Compare</button><button class="navb" data-v="insights">Insights</button></div></div></div>
+<div id="mv" hidden><button id="mvClose" onclick="toggleMV(false)">Close</button><div id="mvStage"></div><div id="mvHint">Edit team names above · screenshot this screen to share</div></div><div id="bPop" class="bPop" hidden></div><div class="shotExitTop"><button class="pill" onclick="toggleShot(false)">Exit screenshot view</button></div><div class="topbar"><div class="nav"><div class="brand" id="brandHome" title="Home" style="cursor:pointer">Fantasy Mania</div><div class="links"><button class="navb on" data-v="home">Home</button><button class="navb" data-v="rankings">Rankings</button><button class="navb" data-v="players">Players</button><button class="navb" data-v="compare">Compare</button><button class="navb" data-v="insights">Insights</button></div></div></div>
 <main class="wrap">
 <section id="home" class="view on"><div class="homeHero"><div class="hhL"><div class="kicker">2026 season • Through Week <span id="homeWeek"></span><span id="homeWkPlus"></span></div><h1>The best NFL fantasy rating systems in the world.</h1><p class="sub">Every player gets a 0–100 rating from how they actually play, then a projection for this week. Free.</p><div class="search homeSearch"><input id="homeQ" placeholder="Search any QB, RB, WR or TE"><div class="dd" id="homeDD"></div></div><div class="homeActions"><button class="cta primary" id="homeRanks">See the rankings</button><button class="cta" id="homeCompare">Compare players</button><button class="cta" id="homeShare">Team share</button><button class="cta" id="homeInsights">Insights</button></div></div><div class="hhR"><div class="stage" id="heroStage"><div class="stack" id="heroStack"></div><div class="stackFoot"><div class="sdots" id="heroDots"></div><span class="stap">Tap to shuffle</span></div></div></div></div><div class="homeGrid"><div class="homeBlock"><div class="sectionTitle">Best at every position</div><p class="homeCap">The top-rated player at each position by Mania Rating. Each one wears the Diamond badge.</p><div class="posBest" id="posBest"></div></div><div class="homeBlock"><div class="sectionTitle">How Mania works</div><div class="how3"><div><b>Mania Rating</b>How strong his role and production have been this season, compared with other players at his position. It blends production, volume, team role, red-zone work and efficiency.</div><div><b>Week <span class="nextWeekText"></span> Rating</b>His Mania Rating adjusted for this week: the opponent, how players with a similar role have done against that defense, and his recent usage.</div><div><b>Percentiles and colors</b>Every bar shows where he ranks among players at his position. Green is the top 30%, yellow is the middle, red is the bottom 40%.</div></div><p class="disclaimer left" id="homeDisc"></p></div></div><p class="tinyDisc">Calling Fantasy Mania the best rating system in the world is our own opinion, not an official ranking or an independent audit. Accuracy numbers come from our own tests on past seasons.</p></section>
 <section id="players" class="view"><h1 class="title">Players</h1><p class="sub">Search a player to open the full Mania profile.</p><div class="search"><input id="playerQ" placeholder="Search player"><div class="dd" id="playerDD"></div></div></section>
@@ -2228,7 +2316,7 @@ html body{background:var(--bg)!important;font-optical-sizing:auto;-webkit-font-s
 <div class="insPane" id="ins-schedule"><div class="kicker">Week <span id="scWeek"></span> onward</div><h1 class="title">Schedule Strength</h1><p class="sub">Every team's remaining opponents, graded by what those defenses have given up to the position so far. It is the "vs usual" number from Defense vs. Position, looked up for each game still to come. Easiest schedules first.</p><div class="toolbar"><button class="pill scPos on" data-v="RB">RB</button><button class="pill scPos" data-v="WR">WR</button><button class="pill scPos" data-v="TE">TE</button><span style="width:8px"></span><button class="pill scWin on" data-v="next4">Next 4 weeks</button><button class="pill scWin" data-v="all">Rest of season</button><button class="pill scWin" data-v="playoffs">Weeks 15-17</button></div><div class="shareNote">Green is a defense allowing 10%+ more than usual to the position, red is 10%+ less. This early most defenses have only a few games behind them, so expect these to move.</div><div class="panel" id="scheduleBody"></div></div>
 <div class="insPane" id="ins-report"><div class="kicker">Week <span class="rcWeek"></span> results</div><h1 class="title">Report Card</h1><p class="sub">How the Week <span class="rcWeek"></span> ratings held up. These are the ratings the model gives using only the games before Week <span class="rcWeek"></span>, set against what each player then scored.</p><div class="rcGrid" id="reportTiles"></div><div class="toolbar"><button class="pill rcPos on" data-v="RB">RB</button><button class="pill rcPos" data-v="WR">WR</button><button class="pill rcPos" data-v="TE">TE</button></div><div id="reportBody"></div></div>
 </section>
-<section id="compare" class="view"><div class="topRow"><h1 class="title">Compare Players</h1><button class="shotBtn" onclick="toggleShot(true)">Screenshot view</button></div><p class="sub">Overall value and Week <span id="cmpWeek"></span> start decision. Change the games used for either player and the model recalculates.</p><div class="grid2"><div class="search"><input id="aQ" placeholder="Player A"><div class="dd" id="aDD"></div></div><div class="search"><input id="bQ" placeholder="Player B"><div class="dd" id="bDD"></div></div></div><div id="compareBody"></div></section>
+<section id="compare" class="view"><div class="topRow"><h1 class="title">Compare</h1><button class="shotBtn" onclick="toggleShot(true)">Screenshot view</button></div><div class="cmpModes"><button class="cmpMode on" data-cm="players">Players</button><button class="cmpMode" data-cm="teams">Teams</button></div><div id="cmpPlayers"><p class="sub">Overall value and Week <span id="cmpWeek"></span> start decision. Change the games used for either player and the model recalculates.</p><div class="grid2"><div class="search"><input id="aQ" placeholder="Player A"><div class="dd" id="aDD"></div></div><div class="search"><input id="bQ" placeholder="Player B"><div class="dd" id="bDD"></div></div></div><div id="compareBody"></div></div><div id="cmpTeams" hidden><p class="sub">Build two fantasy teams and see who is stronger. Compare just the starters, just the bench, or everyone together.</p><div id="teamBody"></div></div></section>
 <div class="shotMark">FANTASY MANIA &bull; 2026 &bull; Through Week <span id="shotWk"></span></div></main><div class="shotExit"><button class="pill" onclick="toggleShot(false)">Exit screenshot view</button></div><script>
 const DB=__PAYLOAD__, META=__META__, REFS=__REFS__; const $=id=>document.getElementById(id),byId=id=>DB.find(p=>p.id===id)||(META.qbs||[]).find(p=>p.id===id),fmt=n=>Math.round(Number(n)*10)/10;$('wk').textContent=META.week;$('shotWk').textContent=META.week;$('cmpWeek').textContent=META.next_week;
 const DISC=`Week ${META.next_week} Rating = recent role + opponent + the latest injury report${META.injuries&&META.injuries.updated?' (updated '+META.injuries.updated+')':''}. Check final inactives before you set your lineup.`;
@@ -2536,7 +2624,131 @@ function renderCompare(){if(!A||!B)return;if(!selA)selA=dfl(A);if(!selB)selB=dfl
  $('compareBody').innerHTML=`<div class="compareHero"><div class="comparePlayer"><div class="cmpPortrait" style="--score:${ca.mania};--ring:${ring(ca.mania)}">${ringSvg(ca.mania)}${pic(A)}</div><h2 class="playerlink cmpOpen" data-id="${A.id}">${A.name}</h2><div class="meta">${A.team} • ${A.pos} • vs ${A.opp}</div><div class="scorebig ${grade(ca.mania)}">${ca.mania.toFixed(1)}</div><div class="scorelab">Mania Rating</div>${bdgPills(A,selA)}${chips(A,'A',selA)}</div><div class="vs">VS</div><div class="comparePlayer"><div class="cmpPortrait" style="--score:${cb.mania};--ring:${ring(cb.mania)}">${ringSvg(cb.mania)}${pic(B)}</div><h2 class="playerlink cmpOpen" data-id="${B.id}">${B.name}</h2><div class="meta">${B.team} • ${B.pos} • vs ${B.opp}</div><div class="scorebig ${grade(cb.mania)}">${cb.mania.toFixed(1)}</div><div class="scorelab">Mania Rating</div>${bdgPills(B,selB)}${chips(B,'B',selB)}</div></div>${startHTML}${brkHTML}<div class="cmpStats tablewrap"><table><thead><tr><th>${A.name}</th><th style="text-align:center">Metric</th><th>${B.name}</th></tr></thead><tbody>${rows.map(([k,a,b])=>`<tr><td class="${a>b?'good':''}">${/Rating/.test(k)?Number(a).toFixed(1):fmt(a)}</td><td style="text-align:center">${k}</td><td class="${b>a?'good':''}">${/Rating/.test(k)?Number(b).toFixed(1):fmt(b)}</td></tr>`).join('')}</tbody></table></div>`;
  document.querySelectorAll('.cdet').forEach(d=>d.ontoggle=()=>{cmpOpen[d.dataset.k]=d.open});
  document.querySelectorAll('.gdet').forEach(d=>d.ontoggle=()=>{chipsOpen[d.dataset.side]=d.open});document.querySelectorAll('.cmpOpen').forEach(x=>x.onclick=()=>openPlayer(byId(x.dataset.id)));document.querySelectorAll('.cmpGame').forEach(x=>x.onchange=()=>{let side=x.dataset.side,i=Number(x.dataset.i),arr=side==='A'?selA:selB;if(x.checked){if(!arr.includes(i))arr.push(i)}else if(arr.length>1)arr.splice(arr.indexOf(i),1);arr.sort((a,b)=>a-b);renderCompare()});document.querySelectorAll('.cmpAll').forEach(x=>x.onchange=()=>{let p=x.dataset.side==='A'?A:B,arr=p.logs.map((_,i)=>i);if(x.dataset.side==='A')selA=x.checked?arr:[arr[arr.length-1]];else selB=x.checked?arr:[arr[arr.length-1]];renderCompare()})}
+/* ===== Team compare ===== */
+const TTYPES=['QB','RB','WR','TE','FLEX','SFLEX','BN'];
+const TLIM={QB:[0,3],RB:[0,5],WR:[0,5],TE:[0,3],FLEX:[0,4],SFLEX:[0,2],BN:[0,10]};
+const TPRE={standard:{QB:1,RB:2,WR:2,TE:1,FLEX:1,SFLEX:0,BN:6},superflex:{QB:1,RB:2,WR:2,TE:1,FLEX:1,SFLEX:1,BN:6},deep:{QB:1,RB:3,WR:3,TE:1,FLEX:2,SFLEX:0,BN:7}};
+var LU=Object.assign({},TPRE.standard),teamScope='starters',showM=false,showW=true,tOpen=null,tGames={};
+try{let l=JSON.parse(localStorage.getItem('fmLineup3')||'null');if(l&&TTYPES.every(k=>typeof l[k]==='number'))LU=l}catch(e){}
+function newTeam(n){return {name:n,s:{},sel:{}}}
+function tEnsure(T){TTYPES.forEach(k=>{let a=T.s[k]||(T.s[k]=[]);while(a.length<LU[k])a.push(null);if(a.length>LU[k])a.length=LU[k]})}
+var TM={A:newTeam('My team'),B:newTeam('Their team')};
+try{let sv=JSON.parse(localStorage.getItem('fmTeams3')||'null');if(sv&&sv.A&&sv.B&&sv.A.s)TM=sv}catch(e){}
+function saveTeams(){try{localStorage.setItem('fmTeams3',JSON.stringify(TM));localStorage.setItem('fmLineup3',JSON.stringify(LU))}catch(e){}}
+function tElig(k,p){return k==='QB'?p.pos==='QB':k==='FLEX'?p.pos!=='QB':(k==='RB'||k==='WR'||k==='TE')?p.pos===k:true}
+function tLab(k,p){return k==='BN'?(p?p.pos:'BN'):k==='FLEX'?'FLX':k==='SFLEX'?'SFX':k}
+function tVal(p,idxs){let q=p.pos==='QB',c=null;if(!q){try{c=calc(p,idxs&&idxs.length?idxs:dfl(p))}catch(e){c=null}}
+ let mania=c?c.mania:(p.mania==null?null:p.mania),tag='',pts=0,sd=0;
+ if(p.opp==='BYE'){tag='BYE'}else if(p.out){tag='OUT'}
+ if(p.played){pts=p.played.ppr;tag='✓ Final'}else if(!tag&&p.proj){pts=p.proj.pts;sd=Math.max(0,(p.proj.hi-p.proj.lo)/2.56)}
+ return {mania,pts,sd,tag}}
+function tList(T,scope){tEnsure(T);let o=[];TTYPES.forEach(k=>{if(scope==='starters'&&k==='BN')return;if(scope==='bench'&&k!=='BN')return;T.s[k].forEach((id,i)=>o.push({id,k,i}))});return o}
+function tScore(T,scope){let it=tList(T,scope).filter(x=>x.id&&byId(x.id)).map(x=>{let p=byId(x.id);return {x,p,v:tVal(p,T.sel[x.id])}});
+ let sum=a=>a.reduce((s,v)=>s+v,0),avg=a=>a.length?sum(a)/a.length:0,mv=it.filter(e=>e.v.mania!=null).map(e=>e.v.mania);
+ let r={it,n:it.length,slots:tList(T,scope).length,pts:sum(it.map(e=>e.v.pts)),mania:avg(mv),sd:Math.sqrt(sum(it.map(e=>e.v.sd*e.v.sd))),gP:{},gM:{},subP:{},subM:{}};
+ ['QB','RB','WR','TE'].forEach(pos=>{let a=it.filter(e=>e.p.pos===pos);if(a.length){r.gP[pos]=sum(a.map(e=>e.v.pts));r.gM[pos]=avg(a.filter(e=>e.v.mania!=null).map(e=>e.v.mania))}});
+ [['st',e=>e.x.k!=='BN'],['bn',e=>e.x.k==='BN']].forEach(([n,f])=>{let a=it.filter(f);if(a.length){r.subP[n]=sum(a.map(e=>e.v.pts));r.subM[n]=avg(a.filter(e=>e.v.mania!=null).map(e=>e.v.mania))}});
+ return r}
+function erf(x){let s=x<0?-1:1;x=Math.abs(x);let t=1/(1+.3275911*x),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-x*x);return s*y}
+function tSlotHTML(T,t,x){let p=x.id&&byId(x.id),lab=tLab(x.k,p);
+ if(tOpen&&tOpen.t===t&&tOpen.k===x.k&&tOpen.i===x.i)return `<div class="tslot open"><span class="tpos">${tLab(x.k)}</span><div class="tsearch"><input class="tq" placeholder="Search ${x.k==='FLEX'?'RB / WR / TE':x.k==='SFLEX'?'any position':x.k==='BN'?'any player':x.k}" autocomplete="off"><div class="dd tdd"></div></div><button type="button" class="tx tcancel" title="Cancel">✕</button></div>`;
+ if(!p)return `<button type="button" class="tslot empty" data-t="${t}" data-k="${x.k}" data-i="${x.i}"><span class="tpos">${tLab(x.k)}</span><span class="tadd">+ Add ${x.k==='BN'?'player':x.k==='FLEX'?'flex':x.k==='SFLEX'?'superflex':x.k}</span></button>`;
+ let v=tVal(p,T.sel[x.id]),isQ=p.pos==='QB',cnt=T.sel[x.id]?T.sel[x.id].length:dfl(p).length,opp=p.opp==='BYE'?'Bye':p.opp==='TBD'?'TBD':'vs '+p.opp;
+ let mTxt=v.mania==null?'—':Number(v.mania).toFixed(1),pTxt=v.pts.toFixed(1),val=showM&&showW?`<div class="tv tv2"><b class="${grade(v.mania||0)}">${mTxt}</b><small>${pTxt} pts</small></div>`:showM?`<div class="tv ${grade(v.mania||0)}">${mTxt}</div>`:`<div class="tv">${pTxt}</div>`;
+ return `<div class="tslot" data-t="${t}" data-k="${x.k}" data-i="${x.i}" data-id="${p.id}"><span class="tpos">${lab}</span>${thumb(p)}<div class="tnm"><b class="tlink" data-open="${p.id}">${p.name}</b><small>${p.team} • ${p.pos} • ${opp}${v.tag?' • <i class="ttag">'+v.tag+'</i>':''}</small></div>${val}${isQ?'<span class="tgm ph0"></span>':`<button type="button" class="tgm${T.sel[x.id]&&T.sel[x.id].length!==dfl(p).length?' on':''}" title="Choose games counted">${cnt}/${p.logs.length}<span> games</span></button>`}<button type="button" class="tx tdel" title="Remove">✕</button></div>${(tGames[t+x.id])?`<div class="tgames" data-t="${t}" data-id="${p.id}">${p.logs.map((l,i)=>`<label class="gamechip"><input type="checkbox" class="tgc" data-i="${i}" ${(T.sel[x.id]||dfl(p)).includes(i)?'checked':''}>W${l.w} • ${l.ppr} PPR</label>`).join('')}<button type="button" class="reset tgreset">RESET</button></div>`:''}`}
+function tCardHTML(t,S,O,lead){let T=TM[t],both=showM&&showW,main=showM?'M':'P',
+ big=main==='M'?S.mania:S.pts,rv=main==='M'?S.mania:Math.min(99.4,S.pts/Math.max(S.pts,O.pts,1)*96),
+ cap=both?'Mania Rating (average)':main==='M'?'average Mania Rating':'projected points this week',
+ sec=(label,f)=>{let l=tList(T,teamScope).filter(f);return l.length?`<div class="tsec">${label}</div>`+l.map(x=>tSlotHTML(T,t,x)).join(''):''};
+ return `<div class="tcard${lead?' lead':''}" data-t="${t}"><input class="tname" value="${T.name.replace(/"/g,'&quot;')}" maxlength="22" aria-label="Team name"><div class="tscoreW"><div class="tring">${ringSvg(rv)}<div class="tbig"><b class="${main==='M'?grade(S.mania):''}">${big.toFixed(1)}</b></div></div><div class="tcap">${cap}${both?`<div class="tpill"><b>${S.pts.toFixed(1)}</b> projected pts</div>`:''}<br><span>${S.n} of ${S.slots} spots filled</span></div>${lead?'<span class="tlead">Leads</span>':''}</div>${sec('Starters',x=>x.k!=='BN')}${sec('Bench',x=>x.k==='BN')}<div class="tfoot"><button type="button" class="tclr" data-t="${t}">Clear team</button></div></div>`}
+function tBarsFor(A,B,which){let g=which==='P'?['gP','subP']:['gM','subM'],pts=which==='P',pos=['QB','RB','WR','TE'].filter(k=>A[g[0]][k]!=null||B[g[0]][k]!=null).map(k=>[{QB:'Quarterback',RB:'Running backs',WR:'Wide receivers',TE:'Tight ends'}[k],A[g[0]][k],B[g[0]][k]]);
+ if(teamScope==='all'){pos.push(['Starters',A[g[1]].st,B[g[1]].st]);pos.push(['Bench',A[g[1]].bn,B[g[1]].bn])}
+ let mx=pts?Math.max(1,...pos.map(r=>Math.max(r[1]||0,r[2]||0))):100,col=(v,o)=>pts?(v>=o?'#22a45d':v>=o*.85?'#e3a21a':'#e2505b'):barColor(v),nm=v=>pts?v.toFixed(1):v.toFixed(0);
+ return pos.map(([lab,a,b])=>{let ha=a!=null,hb=b!=null,wa=Math.max(3,(a||0)/mx*100),wb=Math.max(3,(b||0)/mx*100);return `<div class="cbrow"><div class="cbl">${lab}</div><div class="cbbars"><b class="tnum ${ha?'':'dim'}">${ha?nm(a):'—'}</b><div class="cbt l"><div style="width:${ha?wa:0}%;background:${col(a||0,b||0)}"></div></div><div class="cbt r"><div style="width:${hb?wb:0}%;background:${col(b||0,a||0)}"></div></div><b class="tnum ${hb?'':'dim'}">${hb?nm(b):'—'}</b></div></div>`}).join('')}
+function tVerdict(A,B,nA,nB){let any=A.n+B.n>0;if(!any)return `<div class="tempty"><b>Build two teams to compare.</b><span>Add players to the slots, or start from a sample.</span></div>`;
+ let dM=A.mania-B.mania,dP=A.pts-B.pts,tieM=Math.abs(dM)<.3,tieP=Math.abs(dP)<.5,wM=tieM?null:dM>0?'A':'B',wP=tieP?null:dP>0?'A':'B',nm=w=>w==='A'?nA:nB;
+ let prob=()=>{if(!(A.sd+B.sd>0&&A.n&&B.n)||tieP)return '';let z=dP/Math.sqrt(A.sd*A.sd+B.sd*B.sd),pa=.5*(1+erf(z/Math.SQRT2)),pw=wP==='B'?1-pa:pa;return `<div class="tprob"><b>${Math.round(pw*100)}%</b><span>chance ${nm(wP)} outscores ${nm(wP==='A'?'B':'A')} this week</span></div>`};
+ if(showM&&showW){if(wM&&wM===wP)return `<div class="cwin tverdict"><div class="cwk">Our pick • both agree</div><strong>${nm(wM)}</strong><div class="sub">Ahead by ${Math.abs(dM).toFixed(1)} Mania points and ${Math.abs(dP).toFixed(1)} projected points</div>${prob()}</div>`;
+  return `<div class="cwin tverdict split"><div class="cwk">${wM&&wP?'Split decision':'Too close to call'}</div><strong>${wM&&wP?'Season vs this week':nA+' vs '+nB}</strong><div class="tsplit"><div><span>Mania Rating</span><b>${wM?nm(wM):'Even'}</b><small>${wM?'by '+Math.abs(dM).toFixed(1):''}</small></div><div><span>Week ${META.next_week} projection</span><b>${wP?nm(wP):'Even'}</b><small>${wP?'by '+Math.abs(dP).toFixed(1)+' pts':''}</small></div></div>${prob()}</div>`}
+ let w=showM?wM:wP,d=showM?dM:dP;if(!w)return `<div class="cwin tverdict"><div class="cwk">Too close to call</div><strong>${nA} vs ${nB}</strong><div class="sub">Within ${Math.abs(d).toFixed(1)} ${showM?'rating points':'projected points'}</div></div>`;
+ return `<div class="cwin tverdict"><div class="cwk">Our pick</div><strong>${nm(w)}</strong><div class="sub">Ahead by ${Math.abs(d).toFixed(1)} ${showM?'rating points':'projected points'}</div>${showW?prob():''}</div>`}
+function tSettings(){let names={QB:'Quarterback',RB:'Running back',WR:'Wide receiver',TE:'Tight end',FLEX:'Flex (RB/WR/TE)',SFLEX:'Superflex (any, incl. QB)',BN:'Bench'},n=TTYPES.slice(0,6).reduce((s,k)=>s+LU[k],0);
+ let cur=Object.keys(TPRE).find(k=>TTYPES.every(t=>TPRE[k][t]===LU[t]));
+ return `<details class="tset" ${tOpen==='set'?'open':''}><summary><span>Lineup</span><i>${n} starters • ${LU.BN} bench${LU.SFLEX?' • superflex':''}</i></summary><div class="tsetB"><div class="tpre">${[['standard','Standard'],['superflex','Superflex'],['deep','Deep']].map(([k,l])=>`<button type="button" class="tsb tpb${cur===k?' on':''}" data-pre="${k}">${l}</button>`).join('')}</div><div class="tsteps">${TTYPES.map(k=>`<div class="tst"><span>${names[k]}</span><div><button type="button" class="tstb" data-k="${k}" data-d="-1">−</button><b>${LU[k]}</b><button type="button" class="tstb" data-k="${k}" data-d="1">+</button></div></div>`).join('')}</div><p class="tnote" style="margin:8px 0 0">Both teams use the same lineup so the comparison is fair. Shrinking a position removes the last slot of that type.</p></div></details>`}
+function renderTeams(){let box=$('teamBody');if(!box)return;let SA=tScore(TM.A,teamScope),SB=tScore(TM.B,teamScope),nA=TM.A.name||'Team A',nB=TM.B.name||'Team B',any=SA.n+SB.n>0;
+ let main=showM?'M':'P',d=main==='M'?SA.mania-SB.mania:SA.pts-SB.pts,tie=Math.abs(d)<(main==='M'?.3:.5),lead=!any||tie?null:d>0?'A':'B';
+ let note=[showW?'Projected points add up each player’s PPR projection for the week (finished players show what they scored). Turning games off changes Mania, not projected points.':'',showM?'Mania Rating is the average season rating (0–100). Turn games off on any player and it recalculates.':''].filter(Boolean).join(' ');
+ box.innerHTML=`${tSettings()}<div class="tctl"><div class="tseg" data-g="scope">${[['starters','Starters'],['bench','Bench'],['all','All together']].map(([k,l])=>`<button type="button" class="tsb${teamScope===k?' on':''}" data-v="${k}">${l}</button>`).join('')}</div><div class="tseg tmulti" data-g="basis"><button type="button" class="tsb${showM?' on':''}" data-b="M">Mania Rating</button><button type="button" class="tsb${showW?' on':''}" data-b="W">Week ${META.next_week} projection</button></div><button type="button" class="tsample">Try a sample</button><button type="button" class="tmania">Maniac View</button></div><p class="tnote">${note} Tap both to compare on both. ${teamScope==='starters'?'Bench is hidden, switch to Bench or All together to add one.':''}</p>
+ <div class="tgrid">${tCardHTML('A',SA,SB,lead==='A')}<div class="tvs">VS</div>${tCardHTML('B',SB,SA,lead==='B')}</div>${tVerdict(SA,SB,nA,nB)}${any?`<div class="panel tbars"><div class="tbh"><span>${nA}</span><span>${nB}</span></div>${showM?`<div class="ph tbt">Mania Rating by position</div>${tBarsFor(SA,SB,'M')}`:''}${showW?`<div class="ph tbt">Week ${META.next_week} projected points by position</div>${tBarsFor(SA,SB,'P')}`:''}</div>`:''}`;
+ wireTeams()}
+function wireTeams(){let box=$('teamBody');
+ box.querySelector('.tset').ontoggle=e=>{tOpen=e.target.open?'set':null};
+ box.querySelectorAll('.tpb').forEach(b=>b.onclick=()=>{LU=Object.assign({},TPRE[b.dataset.pre]);tOpen='set';saveTeams();renderTeams()});
+ box.querySelectorAll('.tstb').forEach(b=>b.onclick=()=>{let k=b.dataset.k,v=Math.max(TLIM[k][0],Math.min(TLIM[k][1],LU[k]+(+b.dataset.d)));if(v===LU[k])return;LU[k]=v;tOpen='set';saveTeams();renderTeams()});
+ box.querySelectorAll('.tseg[data-g=scope] .tsb').forEach(b=>b.onclick=()=>{teamScope=b.dataset.v;tOpen=null;renderTeams()});
+ box.querySelectorAll('.tseg[data-g=basis] .tsb').forEach(b=>b.onclick=()=>{let k=b.dataset.b;if(k==='M'){if(showM&&!showW)return;showM=!showM}else{if(showW&&!showM)return;showW=!showW}tOpen=null;renderTeams()});
+ box.querySelector('.tsample').onclick=fillSample;
+ box.querySelectorAll('.tname').forEach(i=>{i.oninput=()=>{TM[i.closest('.tcard').dataset.t].name=i.value;saveTeams()};i.onchange=()=>renderTeams()});
+ box.querySelectorAll('.tslot.empty').forEach(b=>b.onclick=()=>{tOpen={t:b.dataset.t,k:b.dataset.k,i:+b.dataset.i};renderTeams();let q=box.querySelector('.tq');if(q)q.focus()});
+ box.querySelectorAll('.tcancel').forEach(b=>b.onclick=()=>{tOpen=null;renderTeams()});
+ let q=box.querySelector('.tq');if(q&&tOpen&&tOpen!=='set'){let k=tOpen.k,T=TM[tOpen.t],used=new Set(TTYPES.flatMap(z=>T.s[z]||[]).filter(Boolean)),dd=box.querySelector('.tdd');
+  q.oninput=()=>{let s=q.value.toLowerCase().trim();if(!s){dd.style.display='none';return}let m=allPlayers().filter(p=>(p.pos!=='QB'||p.mania!=null)&&tElig(k,p)&&!used.has(p.id)&&p.name.toLowerCase().includes(s)).sort((a,b)=>(b.mania||0)-(a.mania||0)).slice(0,8);dd.innerHTML=m.map(p=>`<div class="ddi" data-id="${p.id}"><div><span class="ddiName">${p.name}</span><span class="ddiMeta">${p.team} • ${p.pos}</span></div><span class="ddiRate">${p.mania==null?'—':p.mania}</span></div>`).join('')||'<div class="ddi muted">No match</div>';dd.style.display='block';dd.querySelectorAll('.ddi[data-id]').forEach(x=>x.onclick=()=>{T.s[tOpen.k][tOpen.i]=x.dataset.id;tOpen=null;saveTeams();renderTeams()})}}
+ box.querySelectorAll('.tdel').forEach(b=>{b.onclick=()=>{let s=b.closest('.tslot'),T=TM[s.dataset.t];T.s[s.dataset.k][+s.dataset.i]=null;delete T.sel[s.dataset.id];delete tGames[s.dataset.t+s.dataset.id];saveTeams();renderTeams()}});
+ box.querySelectorAll('.tgm:not(.ph0)').forEach(b=>b.onclick=()=>{let s=b.closest('.tslot'),key=s.dataset.t+s.dataset.id;tGames[key]=!tGames[key];renderTeams()});
+ box.querySelectorAll('.tgames').forEach(g=>{let T=TM[g.dataset.t],p=byId(g.dataset.id);g.querySelectorAll('.tgc').forEach(c=>c.onchange=()=>{let cur=(T.sel[p.id]||dfl(p)).slice(),i=+c.dataset.i;if(c.checked){if(!cur.includes(i))cur.push(i)}else if(cur.length>1)cur.splice(cur.indexOf(i),1);cur.sort((a,b)=>a-b);if(sameSet(cur,dfl(p)))delete T.sel[p.id];else T.sel[p.id]=cur;saveTeams();renderTeams()});g.querySelector('.tgreset').onclick=()=>{delete T.sel[p.id];saveTeams();renderTeams()}});
+ box.querySelectorAll('.tclr').forEach(b=>b.onclick=()=>{let t=b.dataset.t,nm=TM[t].name;TM[t]=newTeam(nm);tOpen=null;saveTeams();renderTeams()});
+ box.querySelectorAll('.tlink').forEach(a=>a.onclick=()=>openPlayer(byId(a.dataset.open)))}
+function fillSample(){let by=pos=>allPlayers().filter(p=>p.pos===pos&&p.mania!=null&&p.qual!==false&&p.opp!=='BYE'&&!p.out).sort((a,b)=>b.mania-a.mania),pool={QB:by('QB'),RB:by('RB'),WR:by('WR'),TE:by('TE')};
+ let mk=(n,o)=>{let T=newTeam(n),used=new Set(),take=(pos,off)=>{let l=pool[pos],c=0;for(let i=0;i<l.length;i++){if(used.has(l[i].id))continue;if(c===off){used.add(l[i].id);return l[i].id}c++}return null};
+  tEnsure(T);let next=pos=>take(pos,o);['QB','RB','WR','TE'].forEach(pos=>{for(let i=0;i<LU[pos];i++)T.s[pos][i]=next(pos)});
+  ['FLEX','SFLEX'].forEach(k=>{for(let i=0;i<LU[k];i++){let pos=k==='SFLEX'?(i===0?'QB':'WR'):(i%2?'RB':'WR');T.s[k][i]=take(pos,o)}});
+  let order=['RB','WR','RB','TE','WR','QB','WR','RB','TE','WR'];for(let i=0;i<LU.BN;i++)T.s.BN[i]=take(order[i%order.length],o);return T};
+ TM={A:mk('My team',0),B:mk('Their team',1)};tGames={};tOpen=null;saveTeams();renderTeams()}
+document.querySelectorAll('.cmpMode').forEach(b=>b.onclick=()=>{let m=b.dataset.cm;document.querySelectorAll('.cmpMode').forEach(x=>x.classList.toggle('on',x===b));$('cmpPlayers').hidden=m!=='players';$('cmpTeams').hidden=m!=='teams';if(m==='teams')renderTeams()});
+
 function shotMove(on){let m=document.querySelector('#profileBody .maniaPanel'),h=document.querySelector('#profileBody .hero2'),L=document.querySelector('#profileBody .colL');if(!m||!h||!L)return;if(on){h.after(m);m.classList.add('shotTop')}else{L.prepend(m);m.classList.remove('shotTop')}}
+/* ===== Maniac View ===== */
+let mvOn=false;
+function mvSil(w,b,id){return `<svg viewBox="0 0 100 130" width="${w}" style="display:block;filter:brightness(${b})"><defs><linearGradient id="mvs${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6a6a72"/><stop offset=".55" stop-color="#2a2a2f"/><stop offset="1" stop-color="#0a0a0c"/></linearGradient></defs><path d="M6 130C6 98 26 86 50 84C74 86 94 98 94 130Z" fill="url(#mvs${id})"/><ellipse cx="50" cy="48" rx="21" ry="26" fill="url(#mvs${id})"/></svg>`}
+function mvOrder(T,scope){let l=tList(T,scope).filter(x=>x.id&&byId(x.id)),rank={QB:0,RB:1,WR:2,TE:3,FLEX:4,SFLEX:5,BN:6};l.sort((a,b)=>rank[a.k]-rank[b.k]||a.i-b.i);return l.map(x=>{let p=byId(x.id),v=tVal(p,T.sel[x.id]);return {p,k:x.k,v}})}
+function mvFig(e,i,n,cx,top,w,h,side,mob,fs){let t=n>1?i/(n-1):0,b=(1-.35*t).toFixed(2),lab=e.k==='SFLEX'?'SFX':e.k==='FLEX'?'FLX':e.k==='BN'?'BN':e.p.pos,main=showM?e.v.mania:e.v.pts,val=main==null?'—':Number(main).toFixed(1),last=e.p.name.split(' ').slice(-1)[0].toUpperCase();
+ if(/^(JR|SR|II|III|IV)\.?$/.test(last)){last=e.p.name.split(' ').slice(-2,-1)[0].toUpperCase()}
+ let img=e.p.headshot?`<img src="${e.p.headshot}" alt="" style="width:${w}px;height:${h}px;object-fit:contain;object-position:center bottom;display:block;filter:grayscale(1) contrast(1.08) brightness(${b})" onerror="this.outerHTML=this.dataset.sil" data-sil='${mvSil(w,b,i+side*50+60).replace(/'/g,"&#39;")}'>`:mvSil(w,b,i+side*50+60);
+ let sh=`drop-shadow(${-side*16}px 10px 16px rgba(0,0,0,.95))`,mask=mob?'-webkit-mask-image:linear-gradient(#000 72%,transparent 100%);mask-image:linear-gradient(#000 72%,transparent 100%);':'-webkit-mask-image:linear-gradient(#000 78%,transparent 100%);mask-image:linear-gradient(#000 78%,transparent 100%);';
+ let boxH=mob?h*.84:h;
+ let fig=`<div class="mvFig" style="left:${cx-w/2}px;top:${top}px;width:${w}px;height:${boxH}px;z-index:${100-i};filter:${sh}"><div style="height:${boxH}px;overflow:hidden;${mask}">${mob?`<div style="height:${h}px">${img}</div>`:img}</div></div>`,tg;
+ if(!mob){tg=`<div class="mvTag" style="left:${cx-80}px;width:160px;text-align:center;top:${top-fs*2}px;font-size:${fs}px"><i>${lab}</i> <b>${last}</b> <span>${val}</span></div>`}
+ else{let half=W_mv/2,outer=side<0?cx-w/2-6:W_mv-(cx+w/2)-6,inner=side<0?half-6-(cx+w/2):(cx-w/2)-half-6,useOuter=outer>=inner,pos;
+  if(side<0)pos=useOuter?`left:6px;text-align:left`:`right:${W_mv-(half-6)}px;text-align:right`;
+  else pos=useOuter?`left:${cx+w/2+6}px;text-align:left`:`left:${half+6}px;text-align:left`;
+  tg=`<div class="mvTag m" style="${pos};top:${top+boxH*.30}px;font-size:${fs}px"><b>${last}</b><br><i>${lab}</i> <span>${val}</span></div>`}
+ return fig+tg}
+let W_mv=390;
+function mvGroup(S,k){let v=showM?S.gM[k]:S.gP[k];return v==null||isNaN(v)?'—':Number(v).toFixed(showM?1:1)}
+function renderMV(){let ov=$('mv');if(!ov||!mvOn)return;let st=$('mvStage'),vw=innerWidth,vh=innerHeight,mob=vw<760,W,H;
+ if(mob){W=vw;H=vh}else{W=Math.min(vw,vh*16/9);H=W*9/16}
+ st.style.width=W+'px';st.style.height=H+'px';W_mv=W;st.classList.toggle('mob',mob);
+ let A=mvOrder(TM.A,teamScope),B=mvOrder(TM.B,teamScope),SA=tScore(TM.A,teamScope),SB=tScore(TM.B,teamScope),n=Math.max(A.length,B.length,1),fig=[];
+ if(!mob){let w0=W*.17,gap0=W*.035,spread=W*.235,base=H*.845,rise=H*.27,fs=Math.max(11,W*.0105);
+  [[-1,A],[1,B]].forEach(([side,L])=>L.forEach((e,i)=>{let t=n>1?i/(n-1):0,w=w0*(1-.36*t),cx=W/2+side*(gap0+w0/2+t*spread),yb=base-t*rise,h=w*1.3;fig.push(mvFig(e,i,n,cx,yb-h,w,h,side,false,fs))}))}
+ else{let top0=H*.215,avail=H*.62,row=avail/n,fs=Math.max(10,Math.min(12,W*.03)),w0=Math.min(W*.30,row*1.45/.95),firstOff=w0/2+3;
+  [[-1,A],[1,B]].forEach(([side,L])=>L.forEach((e,i)=>{let t=n>1?i/(n-1):0,w=w0*(1-.28*t),lastC=W/2-(w0*.72)/2-8,cx0=firstOff,cxN=lastC,cx=W/2+side*(cx0+(cxN-cx0)*t),h=w*.95/.84,top=top0+i*row;fig.push(mvFig(e,i,n,cx,top,w,h,side,true,fs))}))}
+ let main=showM?'M':'P',bigA=showM?SA.mania:SA.pts,bigB=showM?SB.mania:SB.pts,subA=showM&&showW?SA.pts:null,subB=showM&&showW?SB.pts:null,lab=showM?'MANIA RATING':'PROJECTED POINTS';
+ let nm=(t,al)=>`<input class="mvName" data-t="${t}" value="${(TM[t].name||'').replace(/"/g,'&quot;')}" maxlength="22" placeholder="TEAM NAME" style="text-align:${al}">`;
+ let sc=(t,big,sub,al)=>`<div class="mvSc" style="text-align:${al}">${nm(t,al)}<div class="mvBig">${(big||0).toFixed(1)}</div><div class="mvLab">${lab}${sub!=null?` · <b>${sub.toFixed(1)}</b> PROJ`:''}</div></div>`;
+ let rows=['QB','RB','WR','TE'].map(k=>[k,mvGroup(SA,k),mvGroup(SB,k)]).filter(r=>r[1]!=='—'||r[2]!=='—');
+ let pr=0.5;if(showW){let sd=Math.sqrt(SA.sd*SA.sd+SB.sd*SB.sd)||1;pr=.5*(1+erf((SA.pts-SB.pts)/(Math.SQRT2*sd)))}
+ let d=bigA-bigB,edge=showW?Math.round(pr*100)+'%':(d>=0?'+':'')+d.toFixed(1);
+ rows.push([showW?'WIN %':'EDGE',edge,'']);
+ let strip=rows.map(r=>`<div><em>${r[0]}</em><b>${r[1]}${r[2]!==''?`<s> / </s>${r[2]}`:''}</b></div>`).join('');
+ let scores=mob?`<div class="mvTop">${sc('A',bigA,subA,'center')}${sc('B',bigB,subB,'center')}</div>`:`<div class="mvTop d">${sc('A',bigA,subA,'right')}${sc('B',bigB,subB,'left')}</div>`;
+ st.innerHTML=`<div class="mvLine"></div>${fig.join('')}${scores}<div class="mvVS">VS</div><div class="mvVig"></div><div class="mvBrand">FANTASY MANIA · MANIAC VIEW · WEEK ${META.next_week}</div><div class="mvStrip">${strip}</div>`;
+ st.querySelectorAll('.mvName').forEach(i=>{i.oninput=()=>{TM[i.dataset.t].name=i.value;saveTeams()}})}
+function toggleMV(on){mvOn=on;let ov=$('mv');ov.hidden=!on;document.body.classList.toggle('mvLock',on);if(on)renderMV();else{$('mvStage').innerHTML='';renderTeams()}}
+addEventListener('resize',()=>{if(mvOn)renderMV()});
+document.addEventListener('click',e=>{let b=e.target.closest&&e.target.closest('.tmania');if(b)toggleMV(true)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mvOn)toggleMV(false)});
+
 function toggleShot(on){document.body.classList.toggle('shot',on);shotMove(on);window.scrollTo(0,0)}
 $('teamPick').onchange=renderTeamShare;document.querySelectorAll('.shareMode').forEach(b=>b.onclick=()=>{shareMode=b.dataset.share;document.querySelectorAll('.shareMode').forEach(x=>x.classList.toggle('on',x===b));renderTeamShare()});renderTeamShare();renderHome();showView('home');
 /* Insights: one nav tab holding the extra views. Each sub-tab shows its own pane. */
