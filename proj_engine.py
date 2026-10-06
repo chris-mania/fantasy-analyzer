@@ -148,6 +148,10 @@ def load_all(L, seasons):
 
 
 # ------------------------------------------------------------------ running states
+CUTSHORT = True      # skip games where a regular starter left early injured
+CUT_SNAP = 0.40
+CUT_PRIOR = 0.65
+
 def player_states(S, last_week=None, stats=None, positions=None):
     stats = stats or STAT0
     positions = positions or POS
@@ -183,6 +187,10 @@ def player_states(S, last_week=None, stats=None, positions=None):
             out.append(row)
             if w in d.index:
                 x = d.loc[w]
+                if CUTSHORT and n >= 1 and "offense_pct" in stats and hist["offense_pct"]:
+                    sp = x["offense_pct"]
+                    if (not pd.isna(sp)) and sp < CUT_SNAP and float(np.mean(hist["offense_pct"])) >= CUT_PRIOR:
+                        continue
                 for c in stats:
                     v = x[c]
                     if pd.isna(v):
