@@ -3335,6 +3335,8 @@ function trBye(team){let o=(META.opps||{})[team]||{};for(let w=1;w<=18;w++)if(!o
 function trPlan(p){let i=p.inj,lab=((i&&i.label)||''),l=lab.toLowerCase(),out=!!p.out||(i&&i.avail!=null&&i.avail<=.1),R=0,gone=false;
  if(out){R=/injured/.test(l)?5:/doubtful/.test(l)?1:2;if(/released|retired|inactive|exempt/.test(l)){gone=true;R=99}}
  return {out,R,gone,label:lab}}
+function trScale(x){let P=[[0,0],[2,5],[5,20],[10,45],[14,65],[17,77],[20,88],[25,100]];if(x<=0)return 0;for(let i=1;i<P.length;i++)if(x<=P[i][0]){let a=P[i-1],b=P[i];return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])}return 100}
+var TROUT=false;
 function trCtx(){let key=[TR.n,TR.sf?1:0,JSON.stringify(TR.st),META.next_week].join('|');if(TRC&&TRC.key===key)return TRC;
  let st=TR.st,F=st.FLEX,sf=TR.sf?1:0,V={};
  allPlayers().filter(p=>TRPRI[p.pos]!=null&&(p.pos!=='QB'||p.mania!=null)).forEach(p=>{let m=p.m||{},n=p.games||0,sh=(n*(+m.ppr||0)+3*TRPRI[p.pos])/(n+3),pr=p.proj,fx=(pr&&pr.fx)||{},ok=!!pr&&!p.out&&pr.pts!=null,
@@ -3344,19 +3346,20 @@ function trCtx(){let key=[TR.n,TR.sf?1:0,JSON.stringify(TR.st),META.next_week].j
  TRPOS.forEach(pos=>{let L=vs.filter(v=>v.p.pos===pos&&v.p.mania!=null&&(v.p.games||0)>=2),pp=L.map(v=>v.sh).sort((a,b)=>b-a),mm=L.map(v=>v.p.mania).sort((a,b)=>b-a);
   vs.forEach(v=>{if(v.p.pos!==pos)return;if(!pp.length||v.p.mania==null||(v.p.games||0)<2){v.mp=null;return}let q=mm.filter(x=>x>v.p.mania).length/mm.length;v.mp=pp[Math.min(pp.length-1,Math.floor(q*pp.length))]})});
  vs.forEach(v=>{let parts=[[v.pnNo,.35],[v.mp,.30],[v.sh,.35]].filter(x=>x[0]!=null),ws=parts.reduce((s,x)=>s+x[1],0);v.base=Math.max(0,parts.reduce((s,x)=>s+x[0]*x[1],0)/ws)});
- let S={QB:st.QB+sf*.85,RB:st.RB+F*.45+sf*.07,WR:st.WR+F*.45+sf*.07,TE:st.TE+F*.10+sf*.01},repl={},avg={},start={};
+ let S={QB:st.QB+sf*.85,RB:st.RB+F*.45+sf*.07,WR:st.WR+F*.45+sf*.07,TE:st.TE+F*.10+sf*.01},repl={},avg={},start={},waiv={};
  TRPOS.forEach(pos=>{let a=vs.filter(v=>v.p.pos===pos&&!v.pl.gone).map(v=>v.base).sort((x,y)=>y-x),r=Math.max(1,Math.round(TR.n*S[pos]+TR.n*(pos==='QB'?.6:.25))),k=Math.max(1,Math.round(TR.n*S[pos]));
-  repl[pos]=a.length?a[Math.min(r,a.length)-1]:0;avg[pos]=a.slice(0,k).reduce((s,x)=>s+x,0)/Math.max(1,Math.min(k,a.length));start[pos]=repl[pos]+.45*(avg[pos]-repl[pos])});
+  repl[pos]=a.length?a[Math.min(r,a.length)-1]:0;waiv[pos]=a.length?a[Math.min(a.length,trRosterCut(pos,16))-1]:0;avg[pos]=a.slice(0,k).reduce((s,x)=>s+x,0)/Math.max(1,Math.min(k,a.length));start[pos]=repl[pos]+.45*(avg[pos]-repl[pos])});
  vs.forEach(v=>{v.cause=null;let p=v.p;if(v.boost>0&&p.inj_why){let best=null;p.inj_why.forEach(e=>{if(e.pts>0&&e.kind==='role'){let t=vs.find(x=>x.p.team===p.team&&x.p.name===e.n);if(t&&t.pl.R>0&&!t.pl.gone&&(!best||e.pts>best.pts))best={t,pts:e.pts}}});
   if(best){let t=best.t,ret=.5;if(t.p.pos===p.pos&&p.depth&&p.depth.rank>=2)ret=.25;if(v.base>=t.base*.95)ret=.8;v.cause={n:t.p.name,R:t.pl.R,retain:ret,retW:t.gw[t.pl.R]||99}}}});
- vs.forEach(v=>{let G=v.gw.length,R=Math.min(v.pl.R,G),arr=[],rp=repl[v.p.pos],av=v.p.inj&&v.p.inj.avail!=null?v.p.inj.avail:1;
+ vs.forEach(v=>{let G=v.gw.length,R=Math.min(v.pl.R,G),arr=[],rp=repl[v.p.pos],wv=waiv[v.p.pos],qbb=(v.p.pos==='QB'&&!TR.sf)?1.3:1,pt=x=>x==null?0:trSoft(x-rp)+.35*trSoft(x-wv),av=v.p.inj&&v.p.inj.avail!=null?v.p.inj.avail:1;
   v.later=v.base+(v.boost>0?(v.cause?v.boost*v.cause.retain:v.boost*.6):0);
   for(let c=0;c<G;c++){let x=null;if(c>=R&&!v.pl.gone){x=v.base+(v.boost>0?(v.cause?(c<v.cause.R?v.boost:v.boost*v.cause.retain):v.boost*.6):0);if(R>0&&c===R)x*=.85;else if(R>0&&c===R+1)x*=.93;if(R===0&&c===0&&av<1)x*=av}arr.push(x)}
-  v.arr=arr;v.G=G;v.retW=v.gw[R]||99;v.raw=arr.reduce((s,x)=>s+(x==null?0:trSoft(x-rp)),0);if(v.pl.R>=4&&G<=6)v.raw*=.65;v.raw4=arr.slice(0,4).reduce((s,x)=>s+(x==null?0:trSoft(x-rp)),0);
+  v.arr=arr;v.G=G;v.retW=v.gw[R]||99;v.raw=qbb*arr.reduce((s,x)=>s+pt(x),0);if(v.pl.R>=4&&G<=6)v.raw*=.65;v.raw4=qbb*arr.slice(0,4).reduce((s,x)=>s+pt(x),0);
   let pl=arr.filter(x=>x!=null);v.avgRest=pl.length?pl.reduce((s,x)=>s+x,0)/pl.length:0;let f4=arr.slice(0,4).filter(x=>x!=null);v.nowAvg=f4.length?f4.reduce((s,x)=>s+x,0)/f4.length:null;
-  v.nowP=(v.pl.R>0||v.gw[0]!==META.next_week||v.pl.gone)?null:(v.wk!=null?v.wk:(arr[0]!=null?arr[0]:null))});
- vs.forEach(v=>{v.tv=Math.pow(v.raw,1.3);v.tv4=Math.pow(v.raw4,1.3)});let mx=Math.max(1,...vs.map(v=>v.tv));vs.forEach(v=>{v.val=100*v.tv/mx;v.val4=100*v.tv4/mx});
- return TRC={key,V,repl,avg,start,S,mx,vs}}
+  v.nowP=(v.pl.R>0||v.gw[0]!==META.next_week||v.pl.gone)?null:(v.wk!=null?v.wk:(arr[0]!=null?arr[0]:null));
+  let a0=arr.length?arr.map(x=>x==null?0:x):[],ros=a0.length?a0.reduce((s,x)=>s+x,0)/a0.length:0,thisW=v.pl.gone?0:(v.pl.R>0?0:(v.wk!=null?v.wk:(arr[0]!=null?arr[0]:v.later))),lvl=v.mp!=null?v.mp:v.base,eff=v.pl.gone?0:.35*lvl+.25*thisW+.40*ros;if(v.p.pos==='QB')eff-=TR.sf?1:2.5;v.eff=eff;v.outlook=trScale(eff)});
+ vs.forEach(v=>{v.tv=Math.pow(v.raw,1.3);v.tv4=Math.pow(v.raw4,1.3)});let mx=Math.max(1,...vs.map(v=>v.tv));vs.forEach(v=>{v.val=trDisp(100*v.tv/mx);v.val4=trDisp(100*v.tv4/mx)});
+ return TRC={key,V,repl,waiv,avg,start,S,mx,vs}}
 function trWeekPpg(v,w){let i=v.gw.indexOf(w);return i<0?null:v.arr[i]}
 function trPick(ent){let c=trCtx(),s=TR.st,pool=ent.slice().sort((a,b)=>b.ppg-a.ppg),used=new Set(),st=[];
  const take=(slot,ok,fill)=>{let e=pool.find(x=>!used.has(x.v.p.id)&&ok(x.v.p.pos));if(e){used.add(e.v.p.id);st.push({slot,v:e.v,ppg:e.ppg,empty:false})}else st.push({slot,v:null,ppg:fill,empty:true})};
@@ -3392,7 +3395,7 @@ function trIdeas(ids,needPos){let c=trCtx(),own=new Set(ids),V=ids.map(i=>c.V[i]
  subs.forEach(A=>{let ga=trSide(A.map(x=>x.p.id)).tot,send=new Set(A.map(x=>x.p.id));cand.forEach(T=>{let gt=T.tv,mx=Math.max(ga,gt);if(mx<=0||Math.abs(ga-gt)/mx>.12)return;
   let after=ids.filter(i=>!send.has(i)).concat([T.p.id]),L1=trLineup(after,'later'),d=L1.tot-L0.tot;if(d>=.4){let n1=trLineup(after,'now').tot-trLineup(ids,'now').tot;if(n1>=-.5)res.push({A,T,d,n1,gap:(gt-ga)/mx})}})});
  res=res.sort((a,b)=>b.d-a.d).slice(0,10).map(x=>{let snd=new Set(x.A.map(y=>y.p.id)),aft=ids.filter(i=>!snd.has(i)).concat([x.T.p.id]);x.d=trTVd(ids,aft,'ros');x.n1=trTVd(ids,aft,'now');return x}).filter(x=>x.d>=.3&&x.n1>=-.4);
- let seen=new Set();return res.sort((a,b)=>b.d-a.d).filter(r=>{let k=r.T.p.id;if(seen.has(k))return false;seen.add(k);return true}).slice(0,3)}
+ let seen=new Set(),seenA=new Set();return res.sort((a,b)=>b.d-a.d).filter(r=>{let k=r.T.p.id,ka=r.A.map(x=>x.p.id).sort().join();if(seen.has(k)||seenA.has(ka)||r.A.some(x=>seenA.has(x.p.id)))return false;seen.add(k);seenA.add(ka);r.A.forEach(x=>seenA.add(x.p.id));return true}).slice(0,3)}
 function trDeals(my,their,relax){let c=trCtx(),pool=ids=>ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone).sort((a,b)=>b.raw-a.raw).slice(0,10),subs=P=>{let o=[];P.forEach((a,i)=>{o.push([a]);P.slice(i+1).forEach(b=>o.push([a,b]))});return o},PA=subs(pool(my)),PB=subs(pool(their)),
   A0=trLineup(my,'later').tot,B0=trLineup(their,'later').tot,An=trLineup(my,'now').tot,Bn=trLineup(their,'now').tot,res=[];
  PA.forEach(A=>{let ia=A.map(x=>x.p.id),ga=trSide(ia).tot,sa=new Set(ia);PB.forEach(B=>{let ib=B.map(x=>x.p.id),gb=trSide(ib).tot,mx=Math.max(ga,gb);if(mx<=0||Math.abs(ga-gb)/mx>.14)return;let sb=new Set(ib),
@@ -3414,8 +3417,9 @@ function trTV(ids,kind){let key=kind+'|'+ids.slice().sort().join(','),h=TRTV[key
  W.forEach(w=>{tot+=trPick(V.map(v=>({v,ppg:trWeekPpg(v,w)})).filter(e=>e.ppg!=null)).tot});tot+=trIns(ids,W.length/Math.max(1,trWeeks('ros').length));return TRTV[key]=tot}
 function trTVd(before,after,kind){return (trTV(after,kind)-trTV(before,kind))/Math.max(1,trWeeks(kind).length)}
 function trMarg(ids,id,kind){let k=kind||TR.hz,w=trWeeks('ros').length/Math.max(1,trWeeks(k).length),m=ids.includes(id)?trTV(ids,k)-trTV(ids.filter(x=>x!==id),k):trTV(ids.concat(id),k)-trTV(ids,k);return m*w}
-function trCV(m){return 100*Math.pow(Math.max(m,0),1.3)/trCtx().mx}
-function trVals(ids,extra,who){let o={};ids.concat(extra||[]).forEach(i=>{if(trCtx().V[i]&&!trCtx().V[i].pl.gone)o[i]={val:trCV(trMarg(ids,i)),who}});return o}
+function trDisp(x){return 100*Math.pow(Math.max(x,0)/100,.45)}
+function trCV(m,id){let v=trCtx().V[id],g=v?v.raw:0;return trDisp(100*Math.pow(.45*g+.55*Math.max(m,0),1.3)/trCtx().mx)}
+function trVals(ids,extra,who){let o={};ids.concat(extra||[]).forEach(i=>{if(trCtx().V[i]&&!trCtx().V[i].pl.gone)o[i]={val:trCV(trMarg(ids,i),i),who}});return o}
 function trNeedStart(){return TR.st.QB+TR.st.RB+TR.st.WR+TR.st.TE+TR.st.FLEX+(TR.sf?1:0)}
 function trRecNote(ids,side){let r=TR.rec[side]||[0,0],w=r[0],l=r[1],g=w+l;if(g<2)return '';let c=trCtx(),lg=TRPOS.reduce((s,k)=>s+c.avg[k]*c.S[k],0),d=trLineup(ids,'now').tot-lg,p=.5*(1+erf(d/31.1/Math.SQRT2)),rw=w/g,pct=Math.round(p*100);
  return rw-p>=.3?`Record ${w}-${l} looks better than this roster. On points alone it is a ${pct}% team each week, so some of the wins were luck. Fix the weak spots now instead of trusting the record.`:p-rw>=.3?`Record ${w}-${l} is worse than this roster deserves (about ${pct}% a week). It has been unlucky, so hold your best players and do not panic sell.`:`Record ${w}-${l} fits the roster (about ${pct}% a week).`}
@@ -3427,8 +3431,8 @@ function trWarn(v){let o=[],p=v.p;
  if(!v.pl.gone&&v.pl.R===0&&v.bye>=META.next_week&&v.bye<=META.next_week+1)o.push(`Bye in Week ${v.bye}.`);
  return o.map(t=>`<small class="trWarn">${t}</small>`).join('')}
 function trPpgTxt(v){if(v.pl.gone)return 'not rostered';if(v.pl.R>0)return `${trN(v.later)} ppg when healthy`;let n=v.nowAvg;return n!=null&&Math.abs(n-v.later)>=1.2?`${trN(n)} ppg now → ${trN(v.later)} later`:`${trN(v.later)} ppg`}
-function trRow(id,btns,note,tag){let v=trCtx().V[id];if(!v)return '';let cv=TRCVmap&&TRCVmap[id];let p=v.p,t=v.pl.label&&v.pl.R>0?` <i class="trTag bad">${v.pl.label}</i>`:p.inj&&p.inj.label&&p.inj.avail<1?` <i class="trTag bad">${p.inj.label}</i>`:'';
- return `<div class="trRow"><span class="trTh">${thumb(p)}</span><div class="trNm"><b class="tlink" data-open="${p.id}">${p.name}</b><small>${p.team} • ${p.pos} • ${trPpgTxt(v)}${t}${note?' • '+note:''}</small>${tag||''}${trWarn(v)}</div><div class="trVal" title="${cv?'What he is worth to this team, 0 to 100':'Trade value in a typical team, 0 to 100'}"><b>${trN(cv?cv.val:v.val)}</b><small>${cv?cv.who:'value'}</small></div>${btns||''}</div>`}
+function trRow(id,btns,note,tag){let v=trCtx().V[id];if(!v)return '';let cv=TROUT?null:(TRCVmap&&TRCVmap[id]);let p=v.p,t=v.pl.label&&v.pl.R>0?` <i class="trTag bad">${v.pl.label}</i>`:p.inj&&p.inj.label&&p.inj.avail<1?` <i class="trTag bad">${p.inj.label}</i>`:'';
+ return `<div class="trRow"><span class="trTh">${thumb(p)}</span><div class="trNm"><b class="tlink" data-open="${p.id}">${p.name}</b><small>${p.team} • ${p.pos} • ${trPpgTxt(v)}${t}${note?' • '+note:''}</small>${tag||''}${trWarn(v)}</div><div class="trVal" title="${cv?'What he is worth to this team, 0 to 100':TROUT?'Outlook rating: Mania Rating, this week and the rest of the season combined':'Trade value in a typical team, 0 to 100'}"><b>${trN(cv?cv.val:(TROUT?v.outlook:v.val))}</b><small>${cv?cv.who:(TROUT?'outlook':'value')}</small></div>${btns||''}</div>`}
 function trAttach(root,sel,pick){let inp=root.querySelector(sel+' input'),dd=root.querySelector(sel+' .dd');if(!inp)return;inp.oninput=()=>{let s=inp.value.toLowerCase().trim();if(!s){dd.style.display='none';return}let c=trCtx().V,m=Object.values(c).map(v=>v.p).filter(p=>p.name.toLowerCase().includes(s)).sort((a,b)=>c[b.id].raw-c[a.id].raw).slice(0,8);
  dd.innerHTML=m.map(p=>`<div class="ddi" data-id="${p.id}"><div><span class="ddiName">${p.name}</span><span class="ddiMeta">${p.team} • ${p.pos}</span></div><span class="ddiRate">${trN(c[p.id].val)}</span></div>`).join('')||'<div class="ddi muted">No match</div>';dd.style.display='block';dd.querySelectorAll('.ddi[data-id]').forEach(x=>x.onclick=()=>{dd.style.display='none';inp.value='';pick(x.dataset.id)})}}
 function trAdd(list,id){if(!list.includes(id))list.push(id)}
@@ -3452,7 +3456,7 @@ function trQuickRaw(){TRCVmap=(TR.my.length>=trNeedStart()&&TR.give.length&&TR.g
   hints.push(R.it[0].v.tv>G.it[0].v.tv?'You are getting the best player in the deal, which usually matters most.':'You are giving up the best player in the deal.');
   R.it.concat(G.it).forEach(x=>{let w=trWarn(x.v);if(w&&(x.v.pl.R>0||x.v.cause))hints.push(`<b>${x.v.p.name}</b>: ${x.v.pl.R>0?`${x.v.pl.label||'out'}, back ~Week ${x.v.retW}.`:`extra work now, ${trN(x.v.later)} a game after ${x.v.cause.n} returns (~Week ${x.v.cause.retW}).`}`)});
   let fix='';if(ag>=.12){let need=Math.abs(b-a)/.7,used=new Set(TR.give.concat(TR.get)),cs=trCtx().vs.filter(v=>!used.has(v.p.id)&&!v.pl.gone&&v.pl.R<=1&&v.tv>=need*.6&&v.tv<=need*1.4).sort((x,y)=>Math.abs(x.tv-need)-Math.abs(y.tv-need)).slice(0,4);
-   if(cs.length)fix=`<div class="trFix"><b>${gap<0?'To even it out, ask for':'They would likely want'} about one more player around value ${trN(100*need/trCtx().mx)}:</b> ${cs.map(v=>`<span>${v.p.name} <i>${v.p.pos} ${trN(v.val)}</i></span>`).join('')}</div>`}
+   if(cs.length)fix=`<div class="trFix"><b>${gap<0?'To even it out, ask for':'They would likely want'} about one more player around value ${trN(trDisp(100*need/trCtx().mx))}:</b> ${cs.map(v=>`<span>${v.p.name} <i>${v.p.pos} ${trN(v.val)}</i></span>`).join('')}</div>`}
   let onT='';if(TR.my.length>=6&&TR.give.every(i=>TR.my.includes(i))){let aft=TR.my.filter(i=>!TR.give.includes(i)).concat(TR.get),la=trTVd(TR.my,aft,'ros'),na=trTVd(TR.my,aft,'now'),pa=trTVd(TR.my,aft,'play'),u=trUpgrades(TR.my,aft),nt=[],s0=new Set(trStacks(TR.my).map(x=>x.pos+x.w));
    nt.push(`You upgrade <b>${u.up}</b> starting spot${u.up===1?'':'s'}${u.dn?` and downgrade ${u.dn}`:''}. For your team, in points a week (byes, injuries and bench cover included): <b class="${na>=0?'up':'dn'}">${trSgn(na)}</b> over the next 4 weeks, <b class="${la>=0?'up':'dn'}">${trSgn(la)}</b> over the season${trWeeks('play').length?`, <b class="${pa>=0?'up':'dn'}">${trSgn(pa)}</b> in the playoffs`:''}.${na-la>.6?' It helps more now than later.':la-na>.6?' It helps more later than now.':''}`);
    trStacks(aft).filter(x=>!s0.has(x.pos+x.w)).forEach(x=>nt.push(`${x.names.join(' and ')} (${x.pos}) would start on the same Week ${x.w} bye.`));['RB','WR'].forEach(pos=>{let c0=trCount(TR.my,pos),c1=trCount(aft,pos),k=Math.round(trCtx().S[pos]);if(c1<=k&&c1<c0)nt.push(`You would have only ${c1} ${pos}${c1>1?'s':''} rostered, so one injury puts a free agent in the lineup.`)});
@@ -3509,7 +3513,7 @@ function trCuffHTML(ids){let c=trCtx(),cf=trCuffs(ids),L=trLineup(ids,'later'),s
   if(v.later>=c.start[v.p.pos])return;spare.push([v,k.ahead&&!k.hasAhead?`Backup to ${k.ahead.p.name}, who is not on your team.`:'Not likely to start for you.'])});
  let sec=(t,a,e)=>a.length?`<div class="tsec">${t}</div>`+a.map(([v,n])=>trRow(v.p.id,'',n)).join(''):'';
  return (sec('Insurance you already hold',ins)+sec('Starters without a backup',noBk)+sec('Spare parts you could move or cut',spare))||'<p class="tnote">Nothing to flag.</p>'}
-function trMine(){let h=trMineRaw();TRCVmap=null;return h}
+function trMine(){TROUT=true;let h;try{h=trMineRaw()}finally{TROUT=false}TRCVmap=null;return h}
 function trMineRaw(){let ids=TR.my,out=trRoster('my','Your roster',false);TRCVmap=ids.length>=trNeedStart()?trVals(ids,[],'to you'):null;
  if(!ids.length)return `<div class="trCols one">${out}</div><div class="trFoot"><button type="button" class="reset" id="trSamp">Try a sample roster</button></div>`;
  let c=trCtx(),Ln=trLineup(ids,'now'),Ll=trLineup(ids,'later'),nd=trNeeds(ids),ndN=trNeeds(ids,'now'),byes=trByes(ids),wv=trWaiver(ids),V=ids.map(i=>c.V[i]).filter(Boolean),inj=V.filter(v=>v.pl.R>0&&!v.pl.gone),gone=V.filter(v=>v.pl.gone),
@@ -3518,7 +3522,7 @@ function trMineRaw(){let ids=TR.my,out=trRoster('my','Your roster',false);TRCVma
  if(thin.length)bul.push(`Depth: ${thin.map(n=>`${n.pos} ${n.startable} of ${n.ideal} startable`).join(', ')}. Strong teams carry about 4 startable RBs and 4 startable WRs, so injuries and byes do not sink the week.`);
  if(inj.length)bul.push(`Injured: ${inj.map(v=>`${v.p.name} (back ~Week ${v.retW<=TRLAST?v.retW:'—'})`).join(', ')}. They are on your IR for now.`);
  if(byes.length)bul.push(`Bye-week watch: ${byes.map(b=>`Week ${b.w}`).join(', ')}.`);if(rn)bul.push(rn);
- let flagged=Ln.off.length?`<p class="tnote" style="margin:6px 0 0">Not playing this week: ${Ln.off.map(v=>`${v.p.name} (${v.pl.R>0?v.pl.label||'out':'bye'})`).join(', ')}.</p>`:'';
+ let offAll=V.filter(v=>!v.pl.gone&&v.nowP==null),flagged=offAll.length?`<div class="tsec">Not playing this week</div>${offAll.map(v=>trRow(v.p.id,'',v.pl.R>0?'':'Bye week')).join('')}`:'';
  let analysis=`<div class="trVerdict even left"><div class="trvK">Your team at a glance</div><div class="trChips">${nd.map(n=>`<span class="trChip ${n.grade==='Strength'?'up':n.grade==='Need'?'dn':'ok'}"><b>${n.pos}</b> ${n.grade}</span>`).join('')}</div><ul class="trHints">${bul.map(h=>`<li>${h}</li>`).join('')}</ul></div>`
  +trD('mnow','Best lineup this week',`${trN(Ln.tot)} projected points`,trLineHTML(Ln)+flagged+(Ln.bench.length?`<div class="tsec">Bench</div>${Ln.bench.map(x=>trRow(x.v.p.id,'')).join('')}`:''),true)
  +trD('mlater','Best lineup overall (everyone healthy)',`${trN(Ll.tot)} points a week`,trLineHTML(Ll),false)
