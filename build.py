@@ -4,7 +4,9 @@ import os
 import subprocess
 import sys
 import warnings
+from datetime import datetime, timedelta, timezone
 from urllib.error import HTTPError
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import re
@@ -1186,6 +1188,250 @@ if AS_OF_WEEK:
     print("AS_OF " + json.dumps({r["player_id"]: [round(float(r["start_rating"]), 1), str(r["opponent"])] for _, r in g.iterrows()}))
     sys.exit(0)
 
+
+# ============================================================
+# VEGAS PLAYER PROPS (free SportsGameOdds key in the SGO_KEY secret).
+# Every failure is silent: no key, no lines, an error or a spent quota just leaves the model's own numbers.
+# Free plan = 2,500 "objects" a month, one object per game pulled. This build runs every 15 minutes, so it NEVER calls the service
+# on every run: it pulls ONCE a morning (first run after 5 AM ET, Tue-Sat; a second try ten hours later only if Tue-Thu came back empty), one request of ~16 games,
+# keeps a running monthly count in the cache and stops at PROPS_CAP_MONTH.
+# ============================================================
+SGO_KEY = os.environ.get("SGO_KEY", "").strip()
+SGO_TEST = os.environ.get("SGO_TEST_JSON", "").strip()
+SITE_URL = "https://chris-mania.github.io/fantasy-analyzer"
+PROPS_CAP_MONTH = 1500
+PROPS_MIN_HOURS = 20
+PROPS_MAX_AGE_H = 72
+PROPS_W = {"rec": .65, "ryd": .65, "ruy": .65, "td": .55, "pyd": .65, "ptd": .55}
+PROPS_PTS = {"rec": 1.0, "ryd": .1, "ruy": .1, "td": 6.0, "pyd": .04, "ptd": 4.0}
+PROPS_STAT = {"receiving_yards": "ryd", "rushing_yards": "ruy", "receptions": "rec", "passing_yards": "pyd", "passing_touchdowns": "ptd"}
+
+def _pn(s):
+    t = re.sub(r"[^a-z0-9 ]", "", str(s).lower().replace("-", " ").replace(".", ""))
+    return " ".join(w for w in t.split() if w not in ("jr", "sr", "ii", "iii", "iv", "v"))
+
+def _pid_name(pid):
+    t = [w for w in str(pid).split("_") if w and not w.isdigit() and w.upper() != "NFL"]
+    return " ".join(w.title() for w in t)
+
+def _am_prob(x):
+    try:
+        v = float(str(x).replace("+", ""))
+    except Exception:
+        return None
+    return 100.0 / (v + 100.0) if v > 0 else (-v) / (-v + 100.0)
+
+def _fnum(o, *ks):
+    for k in ks:
+        try:
+            v = o.get(k)
+            if v is not None and str(v) != "":
+                return float(v)
+        except Exception:
+            pass
+    return None
+
+def props_parse(events):
+    out = {}
+    for ev in events or []:
+        for oid, o in (ev.get("odds") or {}).items():
+            if not isinstance(o, dict):
+                continue
+            ent = o.get("playerID") or (o.get("statEntityID") if o.get("statEntityID") not in (None, "home", "away", "all") else None)
+            if not ent or o.get("periodID", "game") != "game":
+                continue
+            stat, bt, side = str(o.get("statID", "")), str(o.get("betTypeID", "")), str(o.get("sideID", ""))
+            d = out.setdefault(_pn(_pid_name(ent)), {"name": _pid_name(ent)})
+            if bt == "ou" and side == "over":
+                line = _fnum(o, "fairOverUnder", "bookOverUnder")
+                if line is None:
+                    continue
+                if stat in PROPS_STAT:
+                    d[PROPS_STAT[stat]] = round(line, 2)
+                elif stat in ("touchdowns", "anytime_touchdowns") and abs(line - 0.5) < 0.01:
+                    p = _am_prob(o.get("fairOdds") or o.get("bookOdds"))
+                    if p:
+                        d["tdp"] = round(min(p / (1.0 if o.get("fairOdds") else 1.08), 0.92), 3)
+            elif bt == "yn" and side == "yes" and stat in ("touchdowns", "anytime_touchdowns"):
+                p = _am_prob(o.get("fairOdds") or o.get("bookOdds"))
+                if p:
+                    d["tdp"] = round(min(p / (1.0 if o.get("fairOdds") else 1.08), 0.92), 3)
+    for d in out.values():
+        if "tdp" in d:
+            d["td"] = round(-math.log(1 - d["tdp"]), 3)
+    return {k: v for k, v in out.items() if len(v) > 1}
+
+def props_cache_load():
+    """Returns (cache, readable). The saved record of past pulls lives on the live site, because each build starts empty.
+    If that record cannot be read (network hiccup, anything but a clean 'file does not exist yet'), readable is False and
+    no pull is made: not knowing how many pulls were already used is the one way credits could leak."""
+    for loc in ("props_cache.json", os.path.join("public", "props_cache.json")):
+        try:
+            return json.load(open(loc)), True
+        except Exception:
+            pass
+    try:
+        import requests
+        r = requests.get(SITE_URL + "/props_cache.json", timeout=20)
+        if r.status_code == 200:
+            return r.json(), True
+        if r.status_code == 404:
+            return {}, True
+    except Exception:
+        pass
+    return {}, False
+
+def props_get(next_week):
+    """Returns {normalized name: {rec, ryd, ruy, td, pyd, ptd}} for this week, or {}."""
+    cache, readable = props_cache_load()
+    now = datetime.now(timezone.utc)
+    et = now.astimezone(ZoneInfo("America/New_York"))
+    mon = et.strftime("%Y-%m")
+    if cache.get("month") != mon:
+        cache["month"], cache["used"] = mon, 0
+    if cache.get("season") != SEASON or cache.get("week") != next_week:
+        cache.update({"season": SEASON, "week": next_week, "players": {}, "fetched": None})
+    age_h = None
+    try:
+        age_h = (now - datetime.fromisoformat(cache["fetched"])).total_seconds() / 3600 if cache.get("fetched") else None
+    except Exception:
+        age_h = None
+    try:
+        tried_h = (now - datetime.fromisoformat(cache["last_try"])).total_seconds() / 3600 if cache.get("last_try") else None
+    except Exception:
+        tried_h = None
+    wd, hr = et.weekday(), et.hour
+    window = wd in (1, 2, 3, 4, 5) and hr >= 5          # Tue-Sat, first run after 5 AM ET
+    try:
+        tried_today = bool(cache.get("last_try")) and datetime.fromisoformat(cache["last_try"]).astimezone(ZoneInfo("America/New_York")).date() == et.date()
+    except Exception:
+        tried_today = False
+    cool = cache.get("cool")
+    cooling = False
+    try:
+        cooling = bool(cool) and datetime.fromisoformat(cool) > now
+    except Exception:
+        pass
+    events, status = None, ""
+    if SGO_TEST:
+        events = json.load(open(SGO_TEST)).get("data", [])
+        status = "test file"
+    elif not SGO_KEY:
+        status = "no SGO_KEY secret set"
+    elif not readable:
+        status = "could not read the saved pull record, skipping to protect credits"
+    elif not window:
+        status = "outside the Tue-Sat morning pull window"
+    elif cooling:
+        status = "cooling down after an error"
+    elif tried_today and not (not cache.get("players") and wd <= 3 and tried_h is not None and tried_h >= 10):
+        status = "already pulled today (one pull per morning, Tue-Sat)"
+    elif cache.get("used", 0) + 18 > PROPS_CAP_MONTH:
+        status = f"monthly cap reached ({cache.get('used', 0)} of {PROPS_CAP_MONTH})"
+    else:
+        cache["last_try"] = now.isoformat()
+        try:
+            import requests
+            start = (now - timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            end = (now + timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            r = requests.get("https://api.sportsgameodds.com/v2/events",
+                             params={"apiKey": SGO_KEY, "leagueID": "NFL", "oddsAvailable": "true", "startsAfter": start, "startsBefore": end, "limit": 18},
+                             timeout=40)
+            if r.status_code != 200:
+                raise RuntimeError(f"HTTP {r.status_code} {r.text[:160]}")
+            js = r.json()
+            events = js.get("data", [])
+            cache["used"] = cache.get("used", 0) + max(len(events), 1)
+            status = f"pulled {len(events)} games"
+            try:
+                os.makedirs("public", exist_ok=True)
+                ev0 = events[0] if events else {}
+                json.dump({"games": len(events), "first_keys": list(ev0.keys())[:30],
+                           "odd_sample": {k: {kk: vv for kk, vv in v.items() if kk in ("statID", "betTypeID", "sideID", "periodID", "playerID", "bookOverUnder", "fairOverUnder", "bookOdds", "fairOdds")}
+                                          for k, v in list((ev0.get("odds") or {}).items())[:400:20]}},
+                          open(os.path.join("public", "props_debug.json"), "w"))
+            except Exception:
+                pass
+        except Exception as e:
+            cache["cool"] = (now + timedelta(hours=24)).isoformat()
+            status = f"pull failed, pausing 24h ({str(e)[:120]})"
+            events = None
+    if events is not None:
+        parsed = props_parse(events)
+        if parsed:
+            cache["players"], cache["fetched"] = parsed, now.isoformat()
+            cache["cool"] = None
+            cache["inj0"] = {}
+        status += f"; {len(parsed)} players with lines"
+    try:
+        if cache.get("fetched") and (now - datetime.fromisoformat(cache["fetched"])).total_seconds() / 3600 > PROPS_MAX_AGE_H and not SGO_TEST:
+            cache["players"] = {}
+    except Exception:
+        pass
+    if readable:
+        try:
+            json.dump(cache, open("props_cache.json", "w"))
+            os.makedirs("public", exist_ok=True)
+            json.dump(cache, open(os.path.join("public", "props_cache.json"), "w"))
+        except Exception:
+            pass
+    print(f"   Vegas props: {status}.")
+    return cache
+
+def props_blend(frame, names, cols, thin, hist, tag):
+    """frame: DataFrame indexed by player_id (modified in place). names: {pid: display name}. cols: {key: column of our projection}.
+    Vegas leads, our model adjusts it: blended = vegas + (1-w)*(ours - vegas), per stat.
+    w starts at .65 (.55 for touchdowns), +.15 for players with few games, +.05 when the two are far apart (the line probably knows
+    something we don't), -.10 when only one stat has a line. Missing stats keep our own number. Returns {pid: details}."""
+    PL = hist.get("players") or {}
+    det = {}
+    if not PL or frame is None or not len(frame):
+        return det
+    log = {}
+    for pid in frame.index:
+        v = PL.get(_pn(names.get(pid, "")))
+        if not v:
+            continue
+        got = [k for k in cols if k in v and cols[k] in frame.columns]
+        if not got:
+            continue
+        add, vadd, comps = 0.0, 0.0, []
+        for k in got:
+            m, vv = float(frame.at[pid, cols[k]]), float(v[k])
+            gap = abs(vv - m) / max(abs(vv), abs(m), 1.0)
+            w = PROPS_W[k] + (0.15 if thin.get(pid) else 0.0) + (0.05 if gap > 0.35 else 0.0) - (0.10 if len(got) < 2 else 0.0)
+            w = min(max(w, 0.35), 0.88)
+            bl = vv + (1 - w) * (m - vv)
+            add += PROPS_PTS[k] * (bl - m)
+            vadd += PROPS_PTS[k] * (vv - m)
+            comps.append([k, round(m, 2), round(vv, 2), round(w, 2)])
+            frame.at[pid, cols[k]] = bl
+        pre = float(frame.at[pid, "proj"])
+        # The lines are a snapshot from the morning pull. Injury news since then (a teammate ruled out, a QB change) is kept:
+        # whatever the model's injury effect has moved since the pull is added on top of the blend.
+        if "g_injuries" in frame.columns:
+            inj0 = hist.setdefault("inj0", {})
+            gi, key = float(frame.at[pid, "g_injuries"]), _pn(names.get(pid, ""))
+            inj0.setdefault(key, round(gi, 3))
+            dl = gi - float(inj0[key])
+            if abs(dl) >= 0.05:
+                add += dl
+        for c in ("proj", "floor", "ceil"):
+            frame.at[pid, c] = max(float(frame.at[pid, c]) + add, 0.3 if c == "proj" else 0.0)
+        det[pid] = {"pre": round(pre, 1), "v": round(max(pre + vadd, 0), 1), "c": comps}
+        log[_pn(names.get(pid, ""))] = {"m": round(pre, 1), "v": round(max(pre + vadd, 0), 1), "b": round(float(frame.at[pid, "proj"]), 1)}
+    if log:
+        h = hist.setdefault("hist", {})
+        h[f"{SEASON}-{hist.get('week')}-{tag}"] = log
+        for k in sorted(h)[:-24]:
+            h.pop(k, None)
+        try:
+            json.dump(hist, open("props_cache.json", "w"))
+            json.dump(hist, open(os.path.join("public", "props_cache.json"), "w"))
+        except Exception:
+            pass
+    return det
+
 # ============================================================
 # PROJECTED POINTS (separate engine file; the site still builds if it fails)
 # ============================================================
@@ -1201,6 +1447,19 @@ if not AS_OF_WEEK and schedule_ok and week_has_games:
         _ros = _ros[_ros["opponent_team"].str.len().between(2, 3) & ~_ros["opponent_team"].isin(["TBD", "BYE", "nan"])]
         _pj, _fit, _qbp, _hist = proj_engine.project(BASE, SEASON, next_week, _ros.drop_duplicates("player_id"), opp_map=dict(opp_map))
         HIST = {(a_, int(b_)): c_ for a_, b_, c_ in zip(_hist["player_id"], _hist["week"], _hist["proj"])}
+        VG, VGQ = {}, {}
+        try:
+            _pc = props_get(next_week)
+            _nmap = dict(zip(g["player_id"], g["player_name"]))
+            _thin = {}
+            if "games" in g.columns:
+                _thin = {a_: (b_ is not None and b_ < 3) for a_, b_ in zip(g["player_id"], g["games"])}
+            VG = props_blend(_pj, _nmap, {"rec": "p_receptions", "ryd": "p_receiving_yards", "ruy": "p_rushing_yards", "td": "p_tds"}, _thin, _pc, "skill")
+            _qn = dict(zip(_qbp.index, _qbp["name"])) if "name" in _qbp.columns else {}
+            VGQ = props_blend(_qbp, _qn, {"pyd": "p_passing_yards", "ptd": "p_passing_tds", "ruy": "p_rushing_yards"}, {}, _pc, "qb")
+            print(f"   Vegas lines blended into {len(VG)} skill players and {len(VGQ)} QBs.")
+        except Exception as e_:
+            print("   Vegas props skipped (model numbers unchanged):", e_)
         for _pid, _r in _pj.iterrows():
             PROJ[_pid] = {
                 "pts": round(float(_r["proj"]), 1), "lo": round(float(_r["floor"]), 1), "hi": round(float(_r["ceil"]), 1),
@@ -1209,6 +1468,8 @@ if not AS_OF_WEEK and schedule_ok and week_has_games:
                 "tgt": round(float(_r["p_targets"]), 1), "car": round(float(_r["p_carries"]), 1),
                 "fx": {"script": round(float(_r["g_script"]), 1), "matchup": round(float(_r["g_matchup"]), 1), "inj": round(float(_r["g_injuries"]), 1)},
             }
+            if _pid in VG:
+                PROJ[_pid]["vg"] = VG[_pid]
         for _pid_, _row_ in PLAYED_ROWS.items():
             _row_["proj"] = PROJ[_pid_]["pts"] if _pid_ in PROJ else None
         print(f"   Projected points for {len(PROJ)} players (Week {next_week}).")
@@ -1286,6 +1547,8 @@ if not AS_OF_WEEK and schedule_ok and week_has_games:
                 x_["proj"] = {"pts": round(float(r_["proj"]), 1), "lo": round(float(r_["floor"]), 1), "hi": round(float(r_["ceil"]), 1),
                               "pyd": round(float(r_["p_passing_yards"])), "ptd": round(float(r_["p_passing_tds"]), 2), "int": round(float(r_["p_passing_interceptions"]), 2),
                               "ruy": round(float(r_["p_rushing_yards"])), "fx": {"script": round(float(r_["g_script"]), 1), "matchup": round(float(r_["g_matchup"]), 1), "inj": round(float(r_["g_injuries"]), 1)}}
+                if pid_ in VGQ:
+                    x_["proj"]["vg"] = VGQ[pid_]
                 qa_ = _qa.get(r_["team"])
                 x_["inj"] = {"label": qa_[1], "avail": qa_[0], "who": qa_[2]} if qa_ and qa_[0] < 1.0 else None
                 x_["played"] = PLAYED_QB.get(pid_)
@@ -2460,7 +2723,11 @@ function sval(p){return p.played&&p.played.grade!=null?p.played.grade:p.start==n
 function sv(p){return p.played&&p.played.grade!=null?`<span class="${grade(p.played.grade)}">${Number(p.played.grade).toFixed(1)}</span><span class="pdone">\u2713</span>`:p.out?'OUT':p.start==null?'\u2014':p.start}
 function injChip(p){if(!p.inj||p.inj.avail>0.6)return '';let t=p.out?'OUT':p.inj.label==='Missed practice'?'DNP':'Q';return `<span class="injc ${p.out?'o':'q'}" title="${p.inj.label}${p.inj.note?' ('+p.inj.note+')':''}">${t}</span>`}
 function pjT(p){return p.out?'OUT':p.played?'PLAYED':p.proj?p.proj.pts.toFixed(1):'\u2014'}
-function projBox(p,q,line,title){let top=Math.max(q.hi*1.06,20),L=q.lo/top*100,W=(q.hi-q.lo)/top*100,M=q.pts/top*100,av=p.inj?p.inj.avail:1,risk=av<1&&p.pos!=='QB'?`<div class="projNote">${p.inj.label}: about ${Math.round(av*100)}% to play. Weighed for injury risk: <b>${(q.pts*av).toFixed(1)}</b>.</div>`:'',fx=(k,l)=>{let v=q.fx[k];return `<div class="pfx"><b class="${v>0.4?'good':v<-0.4?'bad':'muted'}">${Math.abs(v)<0.05?'0.0':sg(v)}</b><span>${l}</span></div>`};return `<div class="panel projBox"><div class="ph">${title} <span class="muted">vs ${p.opp} \u2022 PPR</span></div><div class="projTop"><div class="projNum">${q.pts.toFixed(1)}</div><div class="projTxt"><b>projected points</b><span>${line}</span></div></div><div class="projBar"><i style="left:${L}%;width:${W}%"></i><u style="left:${M}%"></u></div><div class="projRng"><span>Floor ${q.lo.toFixed(1)}</span><span>4 of 5 games land here</span><span>Ceiling ${q.hi.toFixed(1)}</span></div>${risk}<div class="projFx">${fx('script','Game script')}${fx('matchup','Matchup')}${fx('inj','Injuries')}</div><details class="how"><summary>How this is built</summary><div class="explain">Recent and last-season usage, the Vegas spread and total, how this defense treats his position, and the injury report (teammates out${p.pos==='QB'?', receivers out':', QB out'}). The three boxes show how many points each moved it. PPR scoring only${p.pos==='QB'?'; QBs get 4 per passing TD, 1 per 25 yards, -2 per INT':''}. Tested on past seasons it is about ${p.pos==='QB'?'10':'5'}% closer than a plain season average.</div></details></div>`}
+function vgNote(p,q){let v=q.vg;if(!v||!v.c)return '';let L={rec:['catches',1,.7],ryd:['receiving yards',.1,8],ruy:['rushing yards',.1,8],td:['touchdowns',6,.08],pyd:['passing yards',.04,15],ptd:['passing TDs',4,.15]},
+ d=v.c.map(c=>{let l=L[c[0]];return l?{t:l[0],m:c[1],v:c[2],pts:Math.abs((c[2]-c[1])*l[1]),big:Math.abs(c[2]-c[1])>=l[2],f:c[0]==='td'||c[0]==='ptd'?2:0}:null}).filter(x=>x&&x.big).sort((a,b)=>b.pts-a.pts).slice(0,2),
+ why=d.length?d.map(x=>`${x.t} ${x.v.toFixed(x.f)} on the sportsbooks vs ${x.m.toFixed(x.f)} from usage`).join('; '):'in line with the sportsbooks';
+ return `<div class="projNote vgn"><b>Vegas lines included.</b> From usage alone: ${v.pre.toFixed(1)}. Sportsbook lines imply ${v.v.toFixed(1)}. Blended: <b>${q.pts.toFixed(1)}</b>. ${d.length?'Biggest gaps: ':'Right now he is '}${why}.</div>`}
+function projBox(p,q,line,title){let top=Math.max(q.hi*1.06,20),L=q.lo/top*100,W=(q.hi-q.lo)/top*100,M=q.pts/top*100,av=p.inj?p.inj.avail:1,risk=av<1&&p.pos!=='QB'?`<div class="projNote">${p.inj.label}: about ${Math.round(av*100)}% to play. Weighed for injury risk: <b>${(q.pts*av).toFixed(1)}</b>.</div>`:'',fx=(k,l)=>{let v=q.fx[k];return `<div class="pfx"><b class="${v>0.4?'good':v<-0.4?'bad':'muted'}">${Math.abs(v)<0.05?'0.0':sg(v)}</b><span>${l}</span></div>`};return `<div class="panel projBox"><div class="ph">${title} <span class="muted">vs ${p.opp} \u2022 PPR</span></div><div class="projTop"><div class="projNum">${q.pts.toFixed(1)}</div><div class="projTxt"><b>projected points</b><span>${line}</span></div></div><div class="projBar"><i style="left:${L}%;width:${W}%"></i><u style="left:${M}%"></u></div><div class="projRng"><span>Floor ${q.lo.toFixed(1)}</span><span>4 of 5 games land here</span><span>Ceiling ${q.hi.toFixed(1)}</span></div>${risk}${vgNote(p,q)}<div class="projFx">${fx('script','Game script')}${fx('matchup','Matchup')}${fx('inj','Injuries')}</div><details class="how"><summary>How this is built</summary><div class="explain">Recent and last-season usage, the Vegas spread and total, how this defense treats his position, and the injury report (teammates out${p.pos==='QB'?', receivers out':', QB out'}). The three boxes show how many points each moved it. When sportsbook player lines are posted (Wednesday to Sunday) they are blended in, leaning on them most for new starters and players with few games. PPR scoring only${p.pos==='QB'?'; QBs get 4 per passing TD, 1 per 25 yards, -2 per INT':''}. Tested on past seasons it is about ${p.pos==='QB'?'10':'5'}% closer than a plain season average.</div></details></div>`}
 function projHTML(p){let q=p.proj;if(!q||p.out||p.played||p.opp==='BYE')return '';return projBox(p,q,`${q.rec.toFixed(1)} catches, ${q.ryd+q.ruy} yards, ${q.td.toFixed(2)} TD • ${p.pos==='RB'||q.car>=1?q.car+' carries, ':''}${q.tgt} targets`,'Week '+META.next_week+' projection')}
 function qbHTML(p){let out='';if(p.played){let q=p.played,d=p.proj?q.ppr-p.proj.pts:null;out+=`<div class="injBox playedBox qbCard"><div class="injHd">\u2713 Final \u2022 Week ${q.wk}</div><div class="injRow ${d==null||d>=0?'up':'o'}"><b>${resTxt(q)}</b> vs ${q.opp} \u2022 scored <b>${q.ppr}</b> PPR${d!=null?` (projected ${p.proj.pts.toFixed(1)}, ${d>=0?'+':''}${d.toFixed(1)})`:''}</div><div class="injRow q">${q.comp}/${q.att}, ${q.pyd} yds, ${q.ptd} TD, ${q.int} INT${q.ruy?', '+q.ruy+' rush yds':''}${q.rtd?', '+q.rtd+' rush TD':''}</div></div>`}let q=p.proj;if(!q)return out;if(!p.played)out+=projBox(p,q,`${q.pyd} pass yds, ${q.ptd.toFixed(1)} pass TD, ${q.int.toFixed(1)} INT \u2022 ${q.ruy} rush yds`,'Week '+META.next_week+' projection');return out+(p.sub?'<div class="projNote">Starter is out, so this is the backup (starter\'s volume, a little lower).</div>':'')+(p.inj?'<div class="projNote">'+p.inj.who+': '+p.inj.label+'.</div>':'')}
 function pv(p){return p.out?-1:p.played?p.played.ppr:p.proj?p.proj.pts:-2}
@@ -2826,19 +3093,21 @@ function wireTeams(){let box=$('teamBody');
  box.querySelectorAll('.tslot.empty').forEach(b=>b.onclick=()=>{tOpen={t:b.dataset.t,k:b.dataset.k,i:+b.dataset.i};renderTeams();let q=box.querySelector('.tq');if(q)q.focus()});
  box.querySelectorAll('.tcancel').forEach(b=>b.onclick=()=>{tOpen=null;renderTeams()});
  let q=box.querySelector('.tq');if(q&&tOpen&&tOpen!=='set'){let k=tOpen.k,T=TM[tOpen.t],used=new Set(TTYPES.flatMap(z=>T.s[z]||[]).filter(Boolean)),dd=box.querySelector('.tdd');
-  q.oninput=()=>{let s=q.value.toLowerCase().trim();if(!s){dd.style.display='none';return}let m=allPlayers().filter(p=>(p.pos!=='QB'||p.mania!=null)&&tElig(k,p)&&!used.has(p.id)&&p.name.toLowerCase().includes(s)).sort((a,b)=>(b.mania||0)-(a.mania||0)).slice(0,8);dd.innerHTML=m.map(p=>`<div class="ddi" data-id="${p.id}"><div><span class="ddiName">${p.name}</span><span class="ddiMeta">${p.team} • ${p.pos}</span></div><span class="ddiRate">${p.mania==null?'—':p.mania}</span></div>`).join('')||'<div class="ddi muted">No match</div>';dd.style.display='block';dd.querySelectorAll('.ddi[data-id]').forEach(x=>x.onclick=()=>{T.s[tOpen.k][tOpen.i]=x.dataset.id;tOpen=null;saveTeams();renderTeams()})}}
+  q.oninput=()=>{let s=q.value.toLowerCase().trim();if(!s){dd.style.display='none';return}let m=allPlayers().filter(p=>(p.pos!=='QB'||p.mania!=null)&&tElig(k,p)&&p.name.toLowerCase().includes(s)).sort((a,b)=>(b.mania||0)-(a.mania||0)).slice(0,8);dd.innerHTML=m.map(p=>`<div class="ddi" data-id="${p.id}"><div><span class="ddiName">${p.name}</span><span class="ddiMeta">${p.team} • ${p.pos}${used.has(p.id)?' • on this team (tap to move here)':''}</span></div><span class="ddiRate">${p.mania==null?'—':p.mania}</span></div>`).join('')||'<div class="ddi muted">No match</div>';dd.style.display='block';dd.querySelectorAll('.ddi[data-id]').forEach(x=>x.onclick=()=>{let id=x.dataset.id,occ=T.s[tOpen.k][tOpen.i];if(used.has(id)){TTYPES.forEach(z=>(T.s[z]||[]).forEach((v,j)=>{if(v===id&&!(z===tOpen.k&&j===tOpen.i))T.s[z][j]=(occ&&tElig(z,byId(occ)))?occ:null}))}T.s[tOpen.k][tOpen.i]=id;tOpen=null;saveTeams();renderTeams()})}}
  box.querySelectorAll('.tdel').forEach(b=>{b.onclick=()=>{let s=b.closest('.tslot'),T=TM[s.dataset.t];T.s[s.dataset.k][+s.dataset.i]=null;delete T.sel[s.dataset.id];delete tGames[s.dataset.t+s.dataset.id];saveTeams();renderTeams()}});
  box.querySelectorAll('.ttag.fl').forEach(b=>b.onclick=()=>{let s=b.closest('.tslot'),key=s.dataset.t+s.dataset.id;tGames[key]=!tGames[key];renderTeams()});
  box.querySelectorAll('.tgm:not(.ph0)').forEach(b=>b.onclick=()=>{let s=b.closest('.tslot'),key=s.dataset.t+s.dataset.id;tGames[key]=!tGames[key];renderTeams()});
  box.querySelectorAll('.tgames').forEach(g=>{let T=TM[g.dataset.t],p=byId(g.dataset.id);g.querySelectorAll('.tgc').forEach(c=>c.onchange=()=>{let cur=(T.sel[p.id]||dfl(p)).slice(),i=+c.dataset.i;if(c.checked){if(!cur.includes(i))cur.push(i)}else if(cur.length>1)cur.splice(cur.indexOf(i),1);cur.sort((a,b)=>a-b);if(sameSet(cur,dfl(p)))delete T.sel[p.id];else T.sel[p.id]=cur;saveTeams();renderTeams()});g.querySelector('.tgreset').onclick=()=>{delete T.sel[p.id];saveTeams();renderTeams()}});
  box.querySelectorAll('.tclr').forEach(b=>b.onclick=()=>{let t=b.dataset.t,nm=TM[t].name;TM[t]=newTeam(nm);tOpen=null;saveTeams();renderTeams()});
  box.querySelectorAll('.tlink').forEach(a=>a.onclick=()=>openPlayer(byId(a.dataset.open)))}
-function fillSample(){let by=pos=>allPlayers().filter(p=>p.pos===pos&&p.mania!=null&&p.qual!==false&&p.opp!=='BYE'&&!p.out).sort((a,b)=>b.mania-a.mania),pool={QB:by('QB'),RB:by('RB'),WR:by('WR'),TE:by('TE')};
- let mk=(n,o)=>{let T=newTeam(n),used=new Set(),take=(pos,off)=>{let l=pool[pos],c=0;for(let i=0;i<l.length;i++){if(used.has(l[i].id))continue;if(c===off){used.add(l[i].id);return l[i].id}c++}return null};
-  tEnsure(T);let next=pos=>take(pos,o);['QB','RB','WR','TE'].forEach(pos=>{for(let i=0;i<LU[pos];i++)T.s[pos][i]=next(pos)});
-  ['FLEX','SFLEX'].forEach(k=>{for(let i=0;i<LU[k];i++){let pos=k==='SFLEX'?(i===0?'QB':'WR'):(i%2?'RB':'WR');T.s[k][i]=take(pos,o)}});
-  let order=['RB','WR','RB','TE','WR','QB','WR','RB','TE','WR'];for(let i=0;i<LU.BN;i++)T.s.BN[i]=take(order[i%order.length],o);return T};
- TM={A:mk('My team',0),B:mk('Their team',1)};tGames={};tOpen=null;saveTeams();renderTeams()}
+function fillSample(){let by=pos=>allPlayers().filter(p=>p.pos===pos&&p.mania!=null&&p.qual!==false&&p.opp!=='BYE'&&!p.out).sort((a,b)=>b.mania-a.mania),pool={QB:by('QB'),RB:by('RB'),WR:by('WR'),TE:by('TE')},used=new Set(),
+ take=pos=>{let l=pool[pos];for(let i=0;i<l.length;i++){if(!used.has(l[i].id)){used.add(l[i].id);return l[i].id}}return null},TA=newTeam('My team'),TB=newTeam('Their team'),steps=[];
+ tEnsure(TA);tEnsure(TB);
+ ['QB','RB','WR','TE'].forEach(pos=>{for(let i=0;i<LU[pos];i++)steps.push([pos,i,pos])});
+ ['FLEX','SFLEX'].forEach(k=>{for(let i=0;i<LU[k];i++)steps.push([k,i,k==='SFLEX'?(i===0?'QB':'WR'):(i%2?'RB':'WR')])});
+ let order=['RB','WR','RB','TE','WR','QB','WR','RB','TE','WR'];for(let i=0;i<LU.BN;i++)steps.push(['BN',i,order[i%order.length]]);
+ steps.forEach(([k,i,pos],n)=>{let f=n%2?[TB,TA]:[TA,TB];f[0].s[k][i]=take(pos);f[1].s[k][i]=take(pos)});
+ TM={A:TA,B:TB};tGames={};tOpen=null;saveTeams();renderTeams()}
 document.querySelectorAll('.cmpMode').forEach(b=>b.onclick=()=>{let m=b.dataset.cm;document.querySelectorAll('.cmpMode').forEach(x=>x.classList.toggle('on',x===b));$('cmpPlayers').hidden=m!=='players';$('cmpTeams').hidden=m!=='teams';if(m==='teams')renderTeams()});
 
 function shotMove(on){let m=document.querySelector('#profileBody .maniaPanel'),h=document.querySelector('#profileBody .hero2'),L=document.querySelector('#profileBody .colL');if(!m||!h||!L)return;if(on){h.after(m);m.classList.add('shotTop')}else{L.prepend(m);m.classList.remove('shotTop')}}
@@ -2881,7 +3150,7 @@ function mvGroup(S,k){let v=showM?S.gM[k]:S.gP[k];return v==null||isNaN(v)?'—'
 function mvMobileC(A,B,W,H){let half=W/2,top0=H*.235,bot=H*.875,rk={QB:0,RB:1,WR:2,TE:3,FLEX:4,SFLEX:5,BN:6},big=e=>e?(showM?(e.v.mania==null?-1:Number(e.v.mania)):Number(e.v.pts)):-9,
  g=L=>{let m={};L.forEach(e=>{(m[e.k]=m[e.k]||[]).push(e)});Object.values(m).forEach(a=>a.sort((x,y)=>big(y)-big(x)));return m},GA=g(A),GB=g(B),ks=[...new Set([...Object.keys(GA),...Object.keys(GB)])].sort((a,b)=>rk[a]-rk[b]),pairs=[];
  ks.forEach(k=>{let a=GA[k]||[],b=GB[k]||[];for(let i=0;i<Math.max(a.length,b.length);i++)pairs.push([k,a[i],b[i]])});
- let n=Math.max(pairs.length,1),rh=(bot-top0)/n,sc=Math.min(1.08,Math.max(.62,rh/78)),fh=Math.min(rh*1.3,half-100),tw=Math.max(70,half-fh-14),out=[],
+ let n=Math.max(pairs.length,1),rh=(bot-top0)/n,sc=Math.min(1.08,Math.max(.62,rh/78)),fh=Math.min(rh*1.7,half-72),tw=Math.max(82,half-fh-14),out=[],
  lab=k=>k==='SFLEX'?'SFX':k==='FLEX'?'FLX':k,
  bolt=(y)=>{let a=20,d=[[20,0],[20+a*.55,rh*.2],[20-a*.3,rh*.36],[20+a,rh*.52],[20-a*.8,rh*.7],[20+a*.35,rh*.84],[20,rh]].map(p=>p[0].toFixed(1)+','+(p[1]).toFixed(1)).join(' ');
   return `<svg width="40" height="${rh}" viewBox="0 0 40 ${rh}" style="position:absolute;left:${half-20}px;top:${y}px;z-index:600;overflow:visible;filter:drop-shadow(0 0 3px #ff2b3d) drop-shadow(0 0 9px #e63946)"><polyline points="${d}" fill="none" stroke="#ff3b4a" stroke-width="3.4" stroke-miterlimit="10"/><polyline points="${d}" fill="none" stroke="#ffd0d4" stroke-width="1"/></svg>`},
@@ -2895,7 +3164,6 @@ function mvMobileC(A,B,W,H){let half=W/2,top0=H*.235,bot=H*.875,rk={QB:0,RB:1,WR
     gl=win?'text-shadow:0 0 14px rgba(255,59,74,.95),0 0 4px rgba(255,59,74,.8);':'';
    out.push(`<div style="position:absolute;${al}:10px;top:${y}px;height:${rh}px;width:${tw}px;display:flex;flex-direction:column;justify-content:center;text-align:${al};z-index:300;line-height:1"><div style="font-size:${nsz}px;font-weight:800;font-style:italic;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last}</div><div style="font-size:${28*sc}px;font-weight:800;font-style:italic;line-height:1.03;${gl}">${v1}</div><div style="font-size:${9*sc}px;letter-spacing:.22em;color:#ff3b4a;font-weight:700;margin-top:2px;white-space:nowrap">${lab(k)}${v2?`<span style="color:#aaa;letter-spacing:.04em;margin-left:4px">${v2}</span>`:''}</div></div>`);
    out.push(`<div style="position:absolute;${side<0?'right':'left'}:${half}px;bottom:${H-(y+rh-3)}px;width:${fh}px;z-index:200;filter:drop-shadow(0 0 5px rgba(255,59,74,.55))"><div style="-webkit-mask-image:linear-gradient(#000 74%,transparent);mask-image:linear-gradient(#000 74%,transparent)">${mvImg(e,fh,0,1,true,300+uid+j)}</div></div>`)});
-  out.push(`<div style="position:absolute;left:12px;right:12px;top:${y+rh-1}px;height:1px;background:linear-gradient(90deg,transparent,rgba(230,57,70,.7) 50%,transparent);z-index:150"></div>`);
   out.push(bolt(y)+vs(y))});
  return out.join('')}
 function renderMV(){let ov=$('mv');if(!ov||!mvOn)return;let st=$('mvStage'),vw=innerWidth,vh=innerHeight,mob=vw<760,W,H;
