@@ -1204,7 +1204,7 @@ PROPS_MIN_HOURS = 20
 PROPS_MAX_AGE_H = 72
 PROPS_W = {"rec": .65, "ryd": .65, "ruy": .65, "td": .55, "pyd": .65, "ptd": .55}
 PROPS_PTS = {"rec": 1.0, "ryd": .1, "ruy": .1, "td": 6.0, "pyd": .04, "ptd": 4.0}
-PROPS_STAT = {"receiving_yards": "ryd", "rushing_yards": "ruy", "receptions": "rec", "passing_yards": "pyd", "passing_touchdowns": "ptd"}
+PROPS_STAT = {"receiving_receptions": "rec", "receiving_yards": "ryd", "rushing_yards": "ruy", "receptions": "rec", "passing_yards": "pyd", "passing_touchdowns": "ptd"}
 
 def _pn(s):
     t = re.sub(r"[^a-z0-9 ]", "", str(s).lower().replace("-", " ").replace(".", ""))
