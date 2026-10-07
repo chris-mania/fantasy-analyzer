@@ -37,6 +37,8 @@ jobs:
           pip install pandas requests
 
       - name: Run Build Script (retries if the data source hiccups)
+        env:
+          SGO_KEY: ${{ secrets.SGO_KEY }}
         run: |
           python build.py || (sleep 45 && python build.py) || (sleep 90 && python build.py)
 
