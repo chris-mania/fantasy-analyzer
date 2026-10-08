@@ -2893,7 +2893,8 @@ body.shotOpen{overflow:hidden}
 .tmine{background:#0b1020;color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:800;font-size:13px;cursor:pointer}
 body.shot #cmpTeams .tsub{display:none}
 @media(max-width:800px){.trSubB b{display:none}.trSubB{padding:8px 10px;font-size:14px}#cmpTeams .tslot[data-id]{grid-template-columns:30px 38px minmax(0,1fr) auto auto auto 18px;gap:5px}.tsub b{display:none}.tsub{padding:7px 8px}}
-@media(max-width:800px){.tslot.trTs{grid-template-columns:30px 38px minmax(0,1fr) auto;gap:6px}.trMine .tctl .tseg{width:100%}.trPCs{grid-template-columns:1fr}.trMine>div:first-child{order:2}.trJump{top:56px}
+@media(max-width:800px){.trJump{overflow:visible;gap:4px;padding:2px 0 6px}.trJump button{flex:1 1 0;min-width:0;padding:8px 2px;font-size:11.5px;text-align:center;justify-content:center}.trJump .jx{display:none}.trJump .trShotB{flex:0 0 40px}.trJump .trShotB svg{margin:0}}
+@media(max-width:800px){.tslot.trTs{grid-template-columns:30px 38px minmax(0,1fr) auto;gap:6px}.trMine .tctl .tseg{width:100%}.trPCs{grid-template-columns:1fr}.trMine>div:first-child{order:2}.trJump{top:86px}
  .trTbl .trPc{position:sticky;left:0;z-index:2;background:#fff;box-shadow:6px 0 8px -6px rgba(20,35,70,.25)}.trTbl td.trPc .trPn{min-width:150px}.trWkB{height:70px}.trWkAvg{}
  .trWkP{font-size:9.5px}.trWkS{gap:2px;padding:6px 3px}}
 @media(max-width:800px){.trDB{padding:0 12px 14px}.trD>summary{padding:14px 14px;font-size:15px}.trDealT{grid-template-columns:1fr}.trRoster .trRow{grid-template-columns:34px minmax(0,1fr) auto auto auto}}
@@ -3921,7 +3922,7 @@ function trMineRaw(){let ids=TR.my,out=trRoster('my','Your roster',false);TRCVma
  if(!ids.length)return `${trNameBox()}<div class="trCols one">${out}</div><div class="trFoot"><button type="button" class="reset" id="trSamp">Try a sample roster</button></div>`;
  let c=trCtx(),Ln=trLineup(ids,'now'),Ll=trLineup(ids,'later'),nd=trNeeds(ids),byes=trByes(ids),V=ids.map(i=>c.V[i]).filter(Boolean),inj=V.filter(v=>v.pl.R>0&&!v.pl.gone),starters=Ll.st.filter(x=>x.v).map(x=>x.v);
  let report=trReport(ids,Ln,nd,byes,inj,starters),
-  nav=`<div class="trJump"><button type="button" data-j="trSecLineup">Lineup</button><button type="button" data-j="trSecPos">Positions</button><button type="button" data-j="trSecPlayers">Players</button><button type="button" data-j="trSecImprove">Improve</button><button type="button" data-j="trRosterBox">Edit roster</button><button type="button" class="trShotB">${ICO.cam} Screenshot view</button></div>`,
+  nav=`<div class="trJump"><button type="button" data-j="trSecLineup">Lineup</button><button type="button" data-j="trSecPos">Positions</button><button type="button" data-j="trSecPlayers">Players</button><button type="button" data-j="trSecImprove">Improve</button><button type="button" data-j="trRosterBox">Edit<span class="jx"> roster</span></button><button type="button" class="trShotB" aria-label="Screenshot view">${ICO.cam}<span class="jx"> Screenshot view</span></button></div>`,
   sec=(id,k,t,s,b,o)=>`<div class="trSec" id="${id}">${trD(k,t,s,b,o!==false)}</div>`,
   analysis=report+nav+sec('trSecLineup','plan','Lineup planner','week by week, byes and injuries',trPlanHTML(ids))+sec('trSecPos','mpos','Positions and depth','grades vs the league',trPosTable(ids,nd,Ll))+sec('trSecPlayers','mtbl','Players and report cards','grades, form, trend',trTblHTML())+sec('trSecImprove','mimp','Make your team better','trade ideas and pickups',trImpHTML(ids,nd));
  return `${trNameBox()}<div class="trCols trMine"><div id="trRosterBox">${out}</div><div>${analysis}</div></div>`}
