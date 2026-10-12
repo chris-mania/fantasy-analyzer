@@ -3778,7 +3778,7 @@ tr.pjFlash td,.rcard.pjFlash{animation:pjF 2.6s ease-out}@keyframes pjF{0%,55%{b
 #profile .bdgBtn:nth-child(2) i:after{animation-delay:.35s}#profile .bdgBtn:nth-child(3) i:after{animation-delay:.7s}#profile .bdgBtn:nth-child(4) i:after{animation-delay:1.05s}#profile .bdgBtn:nth-child(5) i:after{animation-delay:1.4s}
 @keyframes bdShine{0%,60%{background-position:-120% 0}85%,100%{background-position:220% 0}}
 .qgg{display:flex;justify-content:center;margin:2px 0 0}.qgg svg{width:220px;max-width:100%;height:auto;overflow:visible}
-.qgg .qn{transform-origin:60px 60px;transform:rotate(var(--a));animation:qNeedle 1.6s cubic-bezier(.3,1.4,.5,1) both}
+.qgg .qn{transform-origin:60px 60px;transform:rotate(var(--a))}
 @keyframes qNeedle{from{transform:rotate(-85deg)}}
 .qgl{display:flex;justify-content:space-between;max-width:220px;margin:0 auto 4px;font-size:11px;font-weight:700;color:#6b7891}
 .wv .sch,.wv td[class]:not(.r){animation:wvIn .55s cubic-bezier(.2,.8,.3,1) both;animation-delay:var(--d,0s)}
@@ -3833,6 +3833,12 @@ tr.pjFlash td,.rcard.pjFlash{animation:pjF 2.6s ease-out}@keyframes pjF{0%,55%{b
 .hc .htag{padding:3px 10px;border-radius:99px;background:#eef2f8;color:#4a5872;font-size:12px;font-weight:700}
 .hc[data-front="1"]{box-shadow:0 40px 70px -24px rgba(20,35,70,.45),0 0 0 1px rgba(20,35,70,.06),0 1px 0 #fff inset}
 @media(max-width:900px){.stHd{top:30px!important;left:2px}#heroStage.stage{margin-top:14px!important}}
+
+.qcast{margin-top:14px;padding-top:12px;border-top:1px solid #e6eaef}
+.qcH{font-weight:800;font-size:14px;letter-spacing:-.01em;margin-bottom:6px}
+.qcT{margin:10px 0 2px;padding:10px 12px;border-radius:12px;font-size:13.5px;font-weight:700;line-height:1.35;background:#eef2f8;color:#34425c}
+.qcT.g{background:#e4f6ec;color:#146b3a}.qcT.u{background:#fdecee;color:#a2283a}
+.qcN{margin-top:8px;font-size:12px;color:#7b8caa;line-height:1.4}
 #compare.foRun{overflow-x:clip}
 .trSwap{display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:18px;padding:14px 22px;margin:0 0 12px;box-shadow:0 0 0 1px rgba(20,35,70,.07),0 12px 24px -14px rgba(20,35,70,.4);overflow:hidden}
 .tsP{display:flex;flex-direction:column;align-items:center;gap:5px;width:84px;text-align:center;font-size:12px;font-weight:800;color:#12151a}.tsP small{font-weight:600;color:#6b7891;font-size:11px;margin-top:-3px}
@@ -4078,7 +4084,7 @@ document.addEventListener('click',e=>{let t=e.target.closest('[data-board]');if(
 function showView(v){document.body.classList.remove('shot','shotT');if(v!=='players')TRTO={};document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id===v));document.querySelectorAll('.navb').forEach(x=>x.classList.toggle('on',x.dataset.v===v));window.scrollTo(0,0);if(v==='compare')cmpInit();if(v==='players'&&typeof TR!=='undefined'&&TR.tool==='mine'&&typeof trRenderAll==='function')trRenderAll();if(v==='insights'&&!window._insKeep)document.getElementById('insights').classList.add('hubOn')}document.querySelectorAll('.navb').forEach(b=>b.onclick=()=>showView(b.dataset.v));$('brandHome').onclick=()=>showView('home');document.addEventListener('click',e=>{let t=e.target.closest('[data-open]');if(t&&t.dataset.open){let q=DB.find(x=>x.id===t.dataset.open);if(q)openPlayer(q)}});
 function initials(p){return p.name.split(' ').slice(0,2).map(x=>x[0]).join('')} function pic(p){return p.headshot?`<img loading="lazy" src="${p.headshot}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="initials" style="display:none">${initials(p)}</span>`:`<span class="initials">${initials(p)}</span>`}
 function searchBox(inp,dd,cb,qbs){$(inp).oninput=e=>{let q=e.target.value.toLowerCase().trim(),d=$(dd);if(!q){d.style.display='none';return}let m=(qbs?allPlayers():DB).filter(p=>p.name.toLowerCase().includes(q)).slice(0,9);d.innerHTML=m.map(p=>`<div class="ddi" data-id="${p.id}"><div><span class="ddiName">${p.name}</span><span class="ddiMeta">${p.team} • ${p.pos}</span></div><span class="ddiRate">${p.mania==null?'—':p.mania}</span></div>`).join('');d.style.display=m.length?'block':'none';d.querySelectorAll('.ddi').forEach(x=>x.onclick=()=>{let p=byId(x.dataset.id);d.style.display='none';$(inp).value=p.name;cb(p)})}}
-searchBox('homeQ','homeDD',openPlayer,1);searchBox('playerQ','playerDD',openPlayer,1);searchBox('aQ','aDD',p=>{A=p;selA=dfl(p);renderCompare()});searchBox('bQ','bDD',p=>{B=p;selB=dfl(p);renderCompare()});
+searchBox('homeQ','homeDD',function(p){openPlayer(p)},1);searchBox('playerQ','playerDD',function(p){openPlayer(p)},1);searchBox('aQ','aDD',p=>{A=p;selA=dfl(p);renderCompare()});searchBox('bQ','bDD',p=>{B=p;selB=dfl(p);renderCompare()});
 const COLS_M=[['rank','#'],['name','Player'],['mania','Mania'],['start','Wk'],['m.ppr','PPR/G'],['m.tgt','TGT/G'],['m.rec','REC/G'],['m.recy','REC YD/G'],['m.car','CAR/G'],['m.rushy','RUSH YD/G'],['m.snap','SNAP%'],['share','SHARE'],['rz','RZ']];
 const COLS_S=[['rank','#'],['name','Player'],['start','Wk'],['proj','Proj pts'],['opp','Opp'],['matchup_adj','Matchup boost'],['trend_adj','Role trend'],['outlook','Pos rank'],['mania','Mania'],['m.ppr','PPR/G'],['m.snap','SNAP%']];
 const COLS_P=[['rank','#'],['name','Player'],['opp','Opp'],['projv','Proj pts'],['range','Range'],['line','Stat line']];
@@ -5195,7 +5201,7 @@ var cmpShow=false,_cmA=null,_cmB=null;
  var KEY='fmRecent',rec=[];try{rec=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}
  var op=window.openPlayer;window.openPlayer=function(p){try{if(p&&p.id){rec=[p.id].concat(rec.filter(function(x){return x!==p.id})).slice(0,8);localStorage.setItem(KEY,JSON.stringify(rec))}}catch(e){}return op.apply(this,arguments)};
  function render(){var el=document.getElementById('plExtra');if(!el)return;
-  var top=allPlayers().filter(function(p){return !p.out&&p.opp!=='BYE'&&!p.played&&(p.start!=null||p.mania!=null)}).sort(function(a,b){return (b.start!=null?b.start:b.mania)-(a.start!=null?a.start:a.mania)}).slice(0,8);
+  var pd=allPlayers().filter(function(p){return p.played&&p.start!=null&&!p.out&&p.mania!=null&&p.qual!==false}),top=(pd.length>=8?pd:allPlayers().filter(function(p){return !p.out&&p.opp!=='BYE'&&!p.played&&p.inj==null&&p.qual!==false&&p.start!=null})).sort(function(a,b){return (b.start!=null?b.start:b.mania)-(a.start!=null?a.start:a.mania)}).slice(0,8);
   var h='';
   var rp=rec.map(function(id){return byId(id)}).filter(Boolean).slice(0,6);
   if(rp.length)h+='<h3>Recently viewed</h3><div class="plRec">'+rp.map(function(p){return '<div class="chipP" data-open="'+p.id+'">'+p.name+'</div>'}).join('')+'</div>';
@@ -5400,7 +5406,19 @@ var QBSHORT={ppr:'PPR / game',pyd:'Pass yards',att:'Attempts',ruy:'Rush yards',r
 function qbSubM(k){return QBX[k]||QBMET.concat(QBADV).filter(function(x){return x.k===k})[0]}
 function qbSubChips(p,key){var o=(QBSUB[key]||[]).map(function(k){var M=qbSubM(k),s=M&&qbStat(p,M);if(!s)return '';return '<span class="qsb"><i style="background:'+barColor(s.pc)+'"></i>'+(QBSHORT[k]||M.l)+' <b>'+ordN(s.rk)+'</b></span>'}).join('');return o?'<div class="qsbW">'+o+'</div>':''}
 
-function qbMetric(k){var m=k.indexOf('bk')===0?(function(){var i=+k.slice(2),nm=Object.keys((META.qbs.find(function(x){return x.buckets})||{buckets:{}}).buckets)[i];return {k:k,l:nm,g:function(q){return q.buckets?Object.values(q.buckets)[i]:NaN},d:0,hi:1,pct:1}})():null;return m||QBMET.concat(QBADV).filter(function(x){return x.k===k})[0]}
+var _TW=null;
+function teamWeap(t){if(!_TW){_TW={};var by={};allPlayers().forEach(function(p){if(p.pos==='QB'||p.mania==null||p.qual===false||p.out)return;(by[p.team]=by[p.team]||{WR:[],RB:[],TE:[]});if(by[p.team][p.pos])by[p.team][p.pos].push(p)});
+ Object.keys(by).forEach(function(tm){var g=by[tm],srt=function(a){return a.sort(function(x,y){return y.mania-x.mania})},W=srt(g.WR),R=srt(g.RB),T=srt(g.TE),slots=[[W[0],.28],[W[1],.18],[W[2],.10],[T[0],.18],[R[0],.26]],sw=0,sv=0,names=[];
+  slots.forEach(function(x){if(x[0]){sw+=x[1];sv+=x[1]*x[0].mania}else{sw+=x[1];sv+=x[1]*40}});
+  [W[0],T[0],R[0]].forEach(function(x){if(x)names.push(x.name+' ('+x.mania.toFixed(0)+')')});
+  _TW[tm]={v:sv/sw,names:names,wr:W.slice(0,3),te:T[0],rb:R[0]}})}
+ return _TW[t]||null}
+var QCAST={cast_wpn:{k:'cast_wpn',l:'Weapons around him',g:function(q){var w=teamWeap(q.team);return w?w.v:NaN},d:1,hi:1},cast_line:{k:'cast_line',l:'Pressure rate',g:function(q){return q.qa&&q.qa.pres},d:1,hi:0,sf:'%'},
+ cast_yac:{k:'cast_yac',l:'Yards after catch',g:function(q){return q.qa&&q.qa.yacc},d:1,hi:1},
+ cast_drp:{k:'cast_drp',l:'Drop rate',g:function(q){return q.qa&&q.qa.drp!=null?100*q.qa.drp/Math.max(1,q.qa.db-q.qa.sk):NaN},d:1,hi:0,sf:'%'},
+ cast_rec:{k:'cast_rec',l:'Receivers help',pct:1,hi:1,d:0,g:function(q){var a=[qbStat(q,QCAST.cast_yac),qbStat(q,QCAST.cast_drp)].filter(Boolean);return a.length?a.reduce(function(x,y){return x+y.pc},0)/a.length:NaN}},
+ cast_all:{k:'cast_all',l:'Help from teammates',pct:1,hi:1,d:0,g:function(q){var v=qbSup(q);return v==null?NaN:v}}};
+function qbMetric(k){if(QCAST[k])return QCAST[k];var m=k.indexOf('bk')===0?(function(){var i=+k.slice(2),nm=Object.keys((META.qbs.find(function(x){return x.buckets})||{buckets:{}}).buckets)[i];return {k:k,l:nm,g:function(q){return q.buckets?Object.values(q.buckets)[i]:NaN},d:0,hi:1,pct:1}})():null;return m||QBMET.concat(QBADV).filter(function(x){return x.k===k})[0]}
 function qbStat(q,M){var v=Number(M.g(q));if(!Number.isFinite(v))return null;var pool=qbQ().filter(function(x){return Number.isFinite(Number(M.g(x)))});if(!pool.length)return null;var better=pool.filter(function(x){var u=Number(M.g(x));return M.hi?u>v+1e-9:u<v-1e-9}).length,n=pool.length,avg=pool.reduce(function(a,x){return a+Number(M.g(x))},0)/n;return {v:v,rk:better+1,n:n,pc:Math.round(100*(n-better-1)/Math.max(1,n-1)),avg:avg}}
 function qbFmt(M,v){var t=(M.sg&&v>0?'+':'')+Number(v).toFixed(M.d)+(M.sf||'');return t}
 function qbBars(p){return Object.entries(p.buckets||{}).map(function(e,i){var k=e[0],pc=Math.round(e[1]);return '<div class="barrow"><span><button class="infoBtn lblBtn" data-help="qh'+i+'" title="What does this mean?">'+k+'<span class="chev">ⓘ</span></button><em class="qw">'+(QBW[k]||'')+'%</em></span><div class="track"><div class="fill" style="width:'+Math.max(3,pc)+'%;background:'+barColor(pc)+'"></div></div><b class="pctNum lnk '+barGrade(pc)+'" data-board="qb" data-key="bk'+i+'" data-title="'+k+'" data-pos="QB" style="--s:'+pc+'" title="See everyone ranked">'+pc+'</b></div><div class="bucketHelp" id="qh'+i+'">'+(QHELP[k]||'')+' <b>Ranks better than '+pc+'% of quarterbacks.</b>'+qbSubChips(p,k)+'</div>'}).join('')}
@@ -5428,7 +5446,7 @@ function qbAdvHTML(p){var qa=p.qa;if(!qa)return '';var ranked=p.qual!==false&&p.
  if(qa.drp!=null)rows+='<div class="qaR"><div class="qaT"><b>Dropped passes</b><span class="advChip n">Context</span></div><div class="qaV"><b>'+qa.drp+'</b> passes his receivers dropped</div><div class="qaH" style="display:block">Not his fault, but every drop costs him fantasy points.</div></div>';
  if(!rows)return '';
  return '<div class="ph">Advanced passing</div><p class="advSub">'+(ranked?'The same stats the pros use, in plain words. Green means better than most of the '+qbQ().length+' QBs. The small mark on each bar is the QB average.':'Not ranked yet. He needs more games.')+'</p>'+rows}
-function qbSup(p){var a=[{g:function(q){return q.qa&&q.qa.pres},hi:0},{g:function(q){return q.qa&&q.qa.yacc},hi:1},{g:function(q){return q.qa&&q.qa.drp!=null?100*q.qa.drp/Math.max(1,q.qa.db-q.qa.sk):NaN},hi:0}].map(function(M){var s=qbStat(p,M);return s?s.pc:null}).filter(function(x){return x!=null});return a.length?Math.round(a.reduce(function(x,y){return x+y},0)/a.length):null}
+function qbSup(p){var a=[{g:function(q){return q.qa&&q.qa.pres},hi:0},{g:function(q){return QCAST.cast_wpn.g(q)},hi:1},{g:function(q){var y=q.qa&&q.qa.yacc,d=q.qa&&q.qa.drp!=null?100*q.qa.drp/Math.max(1,q.qa.db-q.qa.sk):NaN;return Number.isFinite(y)&&Number.isFinite(d)?y-d*0.5:NaN},hi:1}].map(function(M){var s=qbStat(p,M);return s?s.pc:null}).filter(function(x){return x!=null});return a.length?Math.round(a.reduce(function(x,y){return x+y},0)/a.length):null}
 function qbLuck(p){var Q=qbQ(),sp=0,sy=0,sr=0,sy2=0;Q.forEach(function(x){var g=x.games||1;sp+=x.m.ptd*g;sy+=x.m.pyd*g;sr+=x.m.rtd*g;sy2+=x.m.ruy*g});if(!sy||!sy2)return 0;return 4*(p.m.ptd-p.m.pyd*sp/sy)+6*(p.m.rtd-p.m.ruy*sr/sy2)}
 function qbStory(p){if(p.mania==null||p.qual===false||!p.buckets||!p.m)return null;if(p._st)return p._st;var b=p.buckets,prod=Math.round(b.Production),real=Math.round(b.Efficiency),help=qbSup(p),luck=qbLuck(p),lk=Math.abs(luck).toFixed(1),t,c,sh,s;
  if(prod>=60&&real>=60&&help!=null&&help<=40){t='Carrying his offense';sh='Carrying his team';c='g';s='He scores a lot and plays well, even though he gets less help than most QBs (more pressure, fewer yards from his receivers). This one is real.'}
@@ -5443,11 +5461,18 @@ function qbStory(p){if(p.mania==null||p.qual===false||!p.buckets||!p.m)return nu
  if(c==='g'&&luck>=3)s+=' His touchdown total is running hot, so a small dip is possible.';if(c==='u'&&luck<=-3)s+=' His touchdown total is running cold, so he is due.';
  var lt=luck>=1?'Touchdowns are landing <b>+'+lk+'</b> fantasy points a game more than his yardage normally gives. That tends to cool off.':luck<=-1?'Touchdowns are landing <b>'+lk+'</b> fantasy points a game below what his yardage normally gives. That tends to bounce back.':'Touchdowns are about what his yardage normally gives, so luck is not a big factor.';
  return p._st={t:t,c:c,short:sh,s:s,prod:prod,real:real,help:help,luck:luck,lt:lt,lc:luck>=1?'b':luck<=-1?'u':'m',ll:luck>=1?'Lucky':luck<=-1?'Unlucky':'Normal'}}
+function qbCast(p,row){var pr=qbStat(p,QCAST.cast_line),wp=qbStat(p,QCAST.cast_wpn),yc=qbStat(p,QCAST.cast_yac),dr=qbStat(p,QCAST.cast_drp);
+ if(!pr&&!wp&&!yc)return '';var qa=p.qa||{},tw=teamWeap(p.team),out='<div class="qcast"><div class="qcH">The team around him</div>',lab=function(x){return x>=65?'Strong':x>=40?'Average':'Weak'};
+ if(pr)out+=row('Offensive line','Pressured on '+pr.v.toFixed(0)+'% of dropbacks (average '+pr.avg.toFixed(0)+'%). '+lab(pr.pc)+' protection.',pr.pc,'cast_line','#94a3b8');
+ if(wp&&tw)out+=row('Weapons','Top receivers, tight end and back by Mania Rating: '+tw.names.join(', ')+'. '+lab(wp.pc)+'.',wp.pc,'cast_wpn','#94a3b8');
+ if(yc){var rp=dr?Math.round((yc.pc+dr.pc)/2):yc.pc;out+=row('Catching and after the catch',yc.v.toFixed(1)+' yards after the catch per completion (average '+yc.avg.toFixed(1)+')'+(qa.drp!=null?', '+qa.drp+' dropped pass'+(qa.drp===1?'':'es'):'')+'. '+lab(rp)+'.',rp,'cast_rec','#94a3b8')}
+ var all=qbSup(p);if(all!=null)out+=row('Overall help','Line, weapons and catching together. High means more help.',all,'cast_all','#64748b')+'<div class="qcT '+(all>=60?'g':all<=40?'u':'m')+'">'+(all>=60?'He gets a lot of help. Some of his numbers belong to his teammates.':all<=40?'He gets less help than most. His numbers are harder to come by.':'His teammates help about as much as an average team.')+'</div>';
+ return out+'<div class="qcN">Tap any number to see every quarterback ranked. Weapons use the current Mania Rating of his best pass catchers and back. Anyone who is out this week does not count, and an empty spot counts as a below average player. Pressure rate depends a little on how long he holds the ball, and yards after the catch depend a little on the scheme, so treat this as a good guide, not a final grade.</div></div>'}
 function qbStoryHTML(p){var v=qbStory(p);if(!v)return '';var row=function(l,sub,pc,key,col){return '<div class="barrow qsr"><span><b class="qsl">'+l+'</b><em class="qss">'+sub+'</em></span><div class="track"><div class="fill" style="width:'+Math.max(3,pc)+'%;background:'+(col||barColor(pc))+'"></div></div>'+(key?'<b class="pctNum lnk '+barGrade(pc)+'" data-board="qb" data-key="'+key+'" data-title="'+l+'" data-pos="QB" style="--s:'+pc+'">'+pc+'</b>':'<b class="pctNum '+barGrade(pc)+'" style="--s:'+pc+'">'+pc+'</b>')+'</div>'};
  return '<div class="ph">The real story</div><div class="qvd '+v.c+'"><b>'+v.t+'</b><span>'+v.s+'</span></div>'
  +row('Points scored','Fantasy points per game',v.prod,'bk0')
  +row('How well he plays','Scoring impact, accuracy, sacks, turnovers',v.real,'bk4')
- +(v.help!=null?row('Help from teammates','Offensive line, receivers, drops. High means more help.',v.help,null,'#94a3b8'):'')
+ +qbCast(p,row)
  +qbGauge(v)+'<div class="qlk '+v.lc+'"><span class="advChip '+(v.lc==='m'?'n':v.lc==='b'?'b':'g')+'">'+v.ll+'</span><div><b>TD luck</b><span>'+v.lt+'</span></div></div>'
  +'<div class="qvn">Each bar is a percentile among quarterbacks. 100 is the best, 50 is average. Points scored above How well he plays can mean he is getting help or luck. The other way around means he is better than his stats look.'+(p.games<4?' He has only '+p.games+' games, so this can swing a lot.':'')+'</div>'}
 
@@ -5493,7 +5518,8 @@ var PJD={},PJFRESH=false;
 (function(){var h=document.getElementById('homeTkr');if(!h)return;var it=[],now=Date.now();
  (XTRA.trades||[]).forEach(function(t){var age=(now-new Date(t.d+'T12:00:00').getTime())/864e5;if(age>7||age<-1)return;var pl=function(x){return (t.g[x]||[]).filter(function(y){return y.id&&byId(y.id)}).slice(0,2)},tm=t.t[0],g=pl(tm);if(!g.length&&t.t[1]){tm=t.t[1];g=pl(tm)}if(!g.length)return;it.push({id:g[0].id,h:'Trade: <b>'+tm+'</b> get '+g.map(function(x){return x.n}).join(', ')})});
  Object.keys(PJD).sort(function(a,b){return Math.abs(PJD[b])-Math.abs(PJD[a])}).slice(0,3).forEach(function(id){var p=byId(id);if(p&&p.proj)it.unshift({id:id,h:'<b>'+p.name+'</b> projection '+(PJD[id]>0?'<u>&#9650; +':'<em>&#9660; ')+PJD[id].toFixed(1)+(PJD[id]>0?'</u>':'</em>')+' after the morning odds update'})});
- var mv=[];allPlayers().forEach(function(p){var L=(p.logs||[]).filter(function(l){return l.ppr!=null});if(L.length<3)return;var last=L[L.length-1],pr=L.slice(0,-1),avg=pr.reduce(function(a,l){return a+l.ppr},0)/pr.length;if(avg<8||last.w!==META.week&&last.w!==META.week-1)return;mv.push({p:p,d:last.ppr-avg,v:last.ppr,a:avg})});
+ var mv=[],wk=META.next_week;allPlayers().forEach(function(p){if(!p.played||p.played.ppr==null)return;var L=(p.logs||[]).filter(function(l){return l.ppr!=null&&l.w<wk});if(L.length<2)return;var avg=L.reduce(function(a,l){return a+l.ppr},0)/L.length;if(avg<8)return;mv.push({p:p,d:p.played.ppr-avg,v:p.played.ppr,a:avg})});
+ if(mv.length<4){mv=[];allPlayers().forEach(function(p){var L=(p.logs||[]).filter(function(l){return l.ppr!=null});if(L.length<3)return;var last=L[L.length-1],pr=L.slice(0,-1),avg=pr.reduce(function(a,l){return a+l.ppr},0)/pr.length;if(avg<8||last.w!==META.week)return;mv.push({p:p,d:last.ppr-avg,v:last.ppr,a:avg})})}
  mv.sort(function(a,b){return b.d-a.d});var up=mv.slice(0,4),dn=mv.slice(-4).reverse();
  for(var k=0;k<4;k++){if(up[k])it.push({id:up[k].p.id,h:'<u>&#9650;</u> <b>'+up[k].p.name+'</b> '+up[k].v.toFixed(1)+' PPR, <u>+'+up[k].d.toFixed(1)+'</u> vs his usual '+up[k].a.toFixed(1)});if(dn[k]&&dn[k].d<0)it.push({id:dn[k].p.id,h:'<em>&#9660;</em> <b>'+dn[k].p.name+'</b> '+dn[k].v.toFixed(1)+' PPR, <em>'+dn[k].d.toFixed(1)+'</em> vs his usual '+dn[k].a.toFixed(1)})}
  if(!it.length)return;var one=it.map(function(x){return '<span class="tkI" data-tk="'+x.id+'">'+x.h+'</span>'}).join('');
@@ -5549,6 +5575,17 @@ function profExtras(p){var po=document.querySelector('#profile .hero2 .portrait'
  var iv=p.inj,hurt=!!(p.out||(iv&&iv.avail<1));if(hurt&&!po.querySelector('.injR')){var o=p.out||(iv&&iv.avail<=0),lab=o?'Out':((iv&&iv.label)||'Questionable').replace(/^OUT$/i,'Out');po.insertAdjacentHTML('afterbegin','<i class="injR '+(o?'o':'q')+'"></i>');var rl=document.querySelector('#profile .hero2 .rankline');if(rl&&!rl.querySelector('.injChip'))rl.insertAdjacentHTML('beforeend','<i class="injChip '+(o?'o':'q')+'">'+lab+'</i>')}
  var pj=document.querySelector('#profile .heroPj.pjGo'),dl=PJD[p.id];if(pj&&dl!=null){var b=pj.querySelector('b');if(b&&!pj.querySelector('.pjDel')){var up=dl>0;pj.insertAdjacentHTML('beforeend','<em class="pjDel '+(up?'up':'dn')+'">'+(up?'&#9650; +':'&#9660; ')+dl.toFixed(1)+' since yesterday</em>');if(PJFRESH&&!p._pjAnim&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)){p._pjAnim=1;b.className='pjPop '+(up?'up':'dn')}}}}
 (function(){var pa=profAnim;profAnim=function(){var now=Date.now(),skip=window._pa&&now-window._pa<250;pa();if(skip)return;try{if(curPlayer)profExtras(curPlayer)}catch(e){}}})();
+
+/* ===== Phone tilt for profile photo ===== */
+(function(){try{if(!window.matchMedia||!matchMedia('(pointer:coarse)').matches||!window.DeviceOrientationEvent||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+ var on=false,base=null,lastHp=null,raf=0,ev=null,cl=function(v,m){return Math.max(-m,Math.min(m,v))};
+ var apply=function(){raf=0;if(!ev)return;var pf=document.getElementById('profile');if(!pf||pf.offsetParent===null)return;var hp=pf.querySelector('.hero2 .hp');if(!hp||!hp.dataset.tl||hp.classList.contains('tlOn'))return;
+  if(hp!==lastHp){lastHp=hp;base=null}if(!base)base={g:ev.gamma||0,b:ev.beta||0};
+  var ty=cl((ev.gamma-base.g)*.28,7),tx=cl(-(ev.beta-base.b)*.22,5);
+  hp.style.transition='transform .18s linear';hp.style.setProperty('--ty',ty.toFixed(1)+'deg');hp.style.setProperty('--tx',tx.toFixed(1)+'deg');hp.style.setProperty('--gx',(50+ty*5)+'%');hp.style.setProperty('--gy',(50-tx*6)+'%')};
+ var h=function(e){if(e.gamma==null||e.beta==null)return;ev=e;if(!raf)raf=requestAnimationFrame(apply)};
+ var start=function(){if(on)return;var D=window.DeviceOrientationEvent;if(typeof D.requestPermission==='function'){D.requestPermission().then(function(r){if(r==='granted'){on=true;window.addEventListener('deviceorientation',h)}}).catch(function(){})}else{on=true;window.addEventListener('deviceorientation',h)}};
+ document.addEventListener('click',start,{once:true});document.addEventListener('touchend',start,{once:true,passive:true})}catch(e){}})();
 
 </script></body></html>'''
 
