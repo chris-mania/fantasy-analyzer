@@ -3832,6 +3832,7 @@ tr.pjFlash td,.rcard.pjFlash{animation:pjF 2.6s ease-out}@keyframes pjF{0%,55%{b
 .hc h3{margin:22px 0 3px}
 .hc .htag{padding:3px 10px;border-radius:99px;background:#eef2f8;color:#4a5872;font-size:12px;font-weight:700}
 .hc[data-front="1"]{box-shadow:0 40px 70px -24px rgba(20,35,70,.45),0 0 0 1px rgba(20,35,70,.06),0 1px 0 #fff inset}
+@media(max-width:900px){.stHd{top:30px!important;left:2px}#heroStage.stage{margin-top:14px!important}}
 #compare.foRun{overflow-x:clip}
 .trSwap{display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:18px;padding:14px 22px;margin:0 0 12px;box-shadow:0 0 0 1px rgba(20,35,70,.07),0 12px 24px -14px rgba(20,35,70,.4);overflow:hidden}
 .tsP{display:flex;flex-direction:column;align-items:center;gap:5px;width:84px;text-align:center;font-size:12px;font-weight:800;color:#12151a}.tsP small{font-weight:600;color:#6b7891;font-size:11px;margin-top:-3px}
