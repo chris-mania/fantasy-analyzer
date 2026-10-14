@@ -3872,7 +3872,42 @@ tr.pjFlash td,.rcard.pjFlash{animation:pjF 2.6s ease-out}@keyframes pjF{0%,55%{b
 .qscBar{display:flex;gap:8px;margin:2px 0 12px;flex-wrap:wrap}
 .qcSc{margin:-6px 0 12px;font-size:13px;color:#5b6b86;font-weight:600}
 .qcSc button{border:0;background:none;color:#2457b8;font-weight:800;font-size:13px;padding:0;cursor:pointer;text-decoration:underline}
+
+/* trade strip v2: whole trade + new-add animation */
+.trSwap{align-items:flex-start!important;padding:14px 12px!important;gap:6px}
+.tsG{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.tsRow{display:flex;justify-content:center;gap:8px;flex-wrap:nowrap}
+.tsG small{font-weight:700;color:#6b7891;font-size:11px;letter-spacing:.02em}
+.tsC{display:flex;flex-direction:column;align-items:center;gap:2px;width:58px;text-align:center}
+.tsC b{font-size:11.5px;font-weight:800;color:#12151a;max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tsC em{font-style:normal;font-size:10px;font-weight:700;color:#8794ad;margin-top:-2px}
+.tsW{position:relative;display:block;width:50px;height:50px}
+.tsC .tsF{width:50px!important;height:50px!important}
+.tsC .tsF .initials{font-size:16px!important}
+.tsMore{font-weight:800;color:#5b6678;font-size:15px}
+.tsM{align-self:center;margin-top:-14px}
+.trSwap .tsP{width:auto}
+.tsRg{position:absolute;inset:-5px;border-radius:50%;border:3px solid #3fcf8e;opacity:0;pointer-events:none}
+.tsC.new.R .tsRg{border-color:#e5525f}
+.tsC.new{animation:tsDrop .75s cubic-bezier(.2,1.5,.4,1) both}
+.tsC.new .tsRg{animation:tsRing .9s .15s ease-out both}
+.tsC.new.R .tsF{box-shadow:0 0 0 3px #fff,0 0 0 5px #e5525f}
+@keyframes tsDrop{0%{opacity:0;transform:translateY(-34px) scale(.3) rotate(-16deg)}55%{opacity:1;transform:translateY(5px) scale(1.18) rotate(3deg)}100%{opacity:1;transform:none}}
+@keyframes tsRing{0%{opacity:.9;transform:scale(.8)}100%{opacity:0;transform:scale(1.9)}}
+.trSwap.play .tsL,.trSwap.play .tsR{will-change:transform}
+.trsrc{margin-top:10px}.trsrc summary{font-weight:800;font-size:13px;color:#2f6bff;cursor:pointer}
+.trsrcB{display:flex;flex-direction:column;gap:6px;padding-top:6px}.trsrcB p{font-size:12.5px;color:#5b6678;margin:0 0 4px;line-height:1.4}
+.trsrcB a{font-size:13px;font-weight:700;color:#2f6bff;text-decoration:none;line-height:1.3}
+.tsteps{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}.tst span{min-width:0;line-height:1.2}.tst>div{flex:none}
+.tst{flex-direction:column;align-items:stretch!important;gap:6px}.tst>div{display:flex;align-items:center;justify-content:space-between}
 #compare.foRun{overflow-x:clip}
+.trSwap{padding:14px 8px!important;gap:2px!important}
+.tsRow{gap:4px!important}
+.tsC{width:48px!important}
+.tsC b{max-width:48px!important;font-size:11px!important}
+.tsW,.tsC .tsF{width:42px!important;height:42px!important}
+.tsC .tsF .initials{font-size:14px!important}
+.tsM{font-size:18px!important}
 .trSwap{display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:18px;padding:14px 22px;margin:0 0 12px;box-shadow:0 0 0 1px rgba(20,35,70,.07),0 12px 24px -14px rgba(20,35,70,.4);overflow:hidden}
 .tsP{display:flex;flex-direction:column;align-items:center;gap:5px;width:84px;text-align:center;font-size:12px;font-weight:800;color:#12151a}.tsP small{font-weight:600;color:#6b7891;font-size:11px;margin-top:-3px}
 .tsF{width:62px;height:62px;border-radius:50%;overflow:hidden;background:#d8dee5;display:grid;place-items:center;box-shadow:0 0 0 3px #fff,0 0 0 5px #3fcf8e}.tsF img{width:100%;height:100%;object-fit:cover;object-position:top}.tsF .initials{font-weight:800;color:#5b6678;font-size:19px!important;width:auto!important;height:auto!important;background:none!important;box-shadow:none!important}
@@ -4344,7 +4379,7 @@ function renderCompare(){if(!A||!B)return;if(!selA)selA=dfl(A);if(!selB)selB=dfl
 /* ===== Team compare ===== */
 const TTYPES=['QB','RB','WR','TE','FLEX','SFLEX','BN'];
 const TLIM={QB:[0,3],RB:[0,5],WR:[0,5],TE:[0,3],FLEX:[0,4],SFLEX:[0,2],BN:[0,10]};
-const TPRE={standard:{QB:1,RB:2,WR:2,TE:1,FLEX:1,SFLEX:0,BN:6},superflex:{QB:1,RB:2,WR:2,TE:1,FLEX:1,SFLEX:1,BN:6},deep:{QB:1,RB:3,WR:3,TE:1,FLEX:2,SFLEX:0,BN:7}};
+const TPRE={standard:{QB:1,RB:2,WR:2,TE:1,FLEX:1,SFLEX:0,BN:6},superflex:{QB:1,RB:2,WR:2,TE:1,FLEX:0,SFLEX:1,BN:6},deep:{QB:1,RB:3,WR:3,TE:1,FLEX:2,SFLEX:0,BN:7}};
 var KD={on:false,k:8,d:6};try{let s=JSON.parse(localStorage.getItem('fmKD')||'null');if(s&&typeof s.k==='number')KD=Object.assign(KD,s)}catch(e){}
 function kdSave(){try{localStorage.setItem('fmKD',JSON.stringify(KD))}catch(e){}}
 function kdAdd(){return KD.on?(+KD.k||0)+(+KD.d||0):0}
@@ -4405,7 +4440,7 @@ var tSub=null;
 function tSubPick(T,t,x){let me=byId(x.id),o=[];TTYPES.forEach(k2=>(T.s[k2]||[]).forEach((id2,i2)=>{if(!id2||id2===x.id)return;let p=byId(id2);if(!p||!tElig(x.k,p))return;if(k2!=='BN'&&!tElig(k2,me))return;o.push({k2,i2,p})}));
  o.sort((a,b)=>(b.p.mania||0)-(a.p.mania||0));
  return `<div class="tsubpick"><small>Swap in a ${tLab(x.k)}</small>${o.map(e=>{let v=tVal(e.p,T.sel[e.p.id]);return `<button type="button" class="tsubo" data-t="${t}" data-k2="${e.k2}" data-i2="${e.i2}"><b>${e.p.name}</b><span>${e.p.pos} • ${e.p.team}${e.k2==='BN'?' • bench':''}${v.tag?' • '+v.tag:''}</span><em>${v.mania==null?'—':Number(v.mania).toFixed(1)}<small> ${v.pts.toFixed(1)} pts</small></em></button>`}).join('')||'<span class="tnote">No one else on this team fits this spot.</span>'}</div>`}
-function tLoadMine(){let ids=TR.my;if(!ids.length)return false;let c=trCtx();LU=Object.assign({},LU,{QB:TR.st.QB,RB:TR.st.RB,WR:TR.st.WR,TE:TR.st.TE,FLEX:TR.st.FLEX,SFLEX:TR.sf?1:0});
+function tLoadMine(){let ids=TR.my;if(!ids.length)return false;let c=trCtx();LU=Object.assign({},LU,{QB:TR.st.QB,RB:TR.st.RB,WR:TR.st.WR,TE:TR.st.TE,FLEX:trFx().F,SFLEX:trFx().SF});
  let L=trLineup(ids,'later'),T=newTeam(TR.tname||'My team'),cnt={},rest=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone&&!L.st.some(x=>x.v&&x.v.p.id===v.p.id)).sort((a,b)=>b.outlook-a.outlook);
  LU.BN=Math.min(TLIM.BN[1],Math.max(LU.BN,rest.length));tEnsure(T);
  L.st.forEach(x=>{let k=x.slot;cnt[k]=cnt[k]||0;if(T.s[k]&&cnt[k]<T.s[k].length){T.s[k][cnt[k]++]=x.v?x.v.p.id:null}});
@@ -4626,8 +4661,9 @@ function trPlan(p){let i=p.inj,lab=((i&&i.label)||''),l=lab.toLowerCase(),out=!!
 function trScale(x){let P=[[0,0],[2,5],[5,20],[10,45],[14,65],[17,77],[20,88],[25,100]];if(x<=0)return 0;for(let i=1;i<P.length;i++)if(x<=P[i][0]){let a=P[i-1],b=P[i];return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])}return 100}
 var TROUT=false;
 function trL(p){return `<span class="tlink" data-open="${p.id}">${p.name}</span>`}
+function trFx(){var f=TR.st.FLEX;return TR.sf?{F:Math.max(0,f-1),SF:1}:{F:f,SF:0}}
 function trCtx(){let key=[TR.n,TR.sf?1:0,JSON.stringify(TR.st),META.next_week].join('|');if(TRC&&TRC.key===key)return TRC;
- let st=TR.st,F=st.FLEX,sf=TR.sf?1:0,V={};
+ let st=TR.st,fx0=trFx(),F=fx0.F,sf=fx0.SF,V={};
  allPlayers().filter(p=>TRPRI[p.pos]!=null&&(p.pos!=='QB'||p.mania!=null)).forEach(p=>{let m=p.m||{},n=p.games||0,sh=(n*(+m.ppr||0)+3*TRPRI[p.pos])/(n+3),pr=p.proj,fx=(pr&&pr.fx)||{},ok=!!pr&&!p.out&&pr.pts!=null,
   pnNo=ok?pr.pts-.75*((fx.script||0)+(fx.matchup||0))-(fx.inj||0):null,boost=ok&&fx.inj>0?fx.inj:0;
   V[p.id]={p,sh,pnNo,boost,wk:ok?pr.pts:null,gw:trGameWeeks(p.team),bye:trBye(p.team),pl:trPlan(p)}});
@@ -4635,12 +4671,12 @@ function trCtx(){let key=[TR.n,TR.sf?1:0,JSON.stringify(TR.st),META.next_week].j
  TRPOS.forEach(pos=>{let L=vs.filter(v=>v.p.pos===pos&&v.p.mania!=null&&(v.p.games||0)>=2),pp=L.map(v=>v.sh).sort((a,b)=>b-a),mm=L.map(v=>v.p.mania).sort((a,b)=>b-a);
   vs.forEach(v=>{if(v.p.pos!==pos)return;if(!pp.length||v.p.mania==null||(v.p.games||0)<2){v.mp=null;return}let q=mm.filter(x=>x>v.p.mania).length/mm.length;v.mp=pp[Math.min(pp.length-1,Math.floor(q*pp.length))]})});
  vs.forEach(v=>{let parts=[[v.pnNo,.35],[v.mp,.30],[v.sh,.35]].filter(x=>x[0]!=null),ws=parts.reduce((s,x)=>s+x[1],0);v.base=Math.max(0,parts.reduce((s,x)=>s+x[0]*x[1],0)/ws)});
- let S={QB:st.QB+sf*.85,RB:st.RB+F*.45+sf*.07,WR:st.WR+F*.45+sf*.07,TE:st.TE+F*.10+sf*.01},repl={},avg={},start={},waiv={};
- TRPOS.forEach(pos=>{let a=vs.filter(v=>v.p.pos===pos&&!v.pl.gone).map(v=>v.base).sort((x,y)=>y-x),r=Math.max(1,Math.round(TR.n*S[pos]+TR.n*(pos==='QB'?.6:.25))),k=Math.max(1,Math.round(TR.n*S[pos]));
+ let S={QB:st.QB+sf*.95,RB:st.RB+F*.45+sf*.03,WR:st.WR+F*.45+sf*.03,TE:st.TE+F*.10+sf*.01},repl={},avg={},start={},waiv={};
+ TRPOS.forEach(pos=>{let a=vs.filter(v=>v.p.pos===pos&&!v.pl.gone).map(v=>v.base).sort((x,y)=>y-x),r=Math.max(1,Math.round(TR.n*S[pos]+(pos==='QB'?(sf?6:1):TR.n*.25))),k=Math.max(1,Math.round(TR.n*S[pos]));
   repl[pos]=a.length?a[Math.min(r,a.length)-1]:0;waiv[pos]=a.length?a[Math.min(a.length,trRosterCut(pos,16))-1]:0;avg[pos]=a.slice(0,k).reduce((s,x)=>s+x,0)/Math.max(1,Math.min(k,a.length));start[pos]=repl[pos]+.45*(avg[pos]-repl[pos])});
  vs.forEach(v=>{v.cause=null;let p=v.p;if(v.boost>0&&p.inj_why){let best=null;p.inj_why.forEach(e=>{if(e.pts>0&&e.kind==='role'){let t=vs.find(x=>x.p.team===p.team&&x.p.name===e.n);if(t&&t.pl.R>0&&!t.pl.gone&&(!best||e.pts>best.pts))best={t,pts:e.pts}}});
   if(best){let t=best.t,ret=.5;if(t.p.pos===p.pos&&p.depth&&p.depth.rank>=2)ret=.25;if(v.base>=t.base*.95)ret=.8;v.cause={n:t.p.name,p:t.p,R:t.pl.R,retain:ret,retW:t.gw[t.pl.R]||99}}}});
- vs.forEach(v=>{let G=v.gw.length,R=Math.min(v.pl.R,G),arr=[],rp=repl[v.p.pos],wv=waiv[v.p.pos],qbb=(v.p.pos==='QB'&&!TR.sf)?1.3:1,pt=x=>x==null?0:trSoft(x-rp)+.35*trSoft(x-wv),av=v.p.inj&&v.p.inj.avail!=null?v.p.inj.avail:1;
+ vs.forEach(v=>{let G=v.gw.length,R=Math.min(v.pl.R,G),arr=[],rp=repl[v.p.pos],wv=waiv[v.p.pos],qbb=TR.sf?1.4:1,pt=x=>x==null?0:trSoft(x-rp)+.35*trSoft(x-wv),av=v.p.inj&&v.p.inj.avail!=null?v.p.inj.avail:1;
   v.later=v.base+(v.boost>0?(v.cause?v.boost*v.cause.retain:v.boost*.6):0);
   for(let c=0;c<G;c++){let x=null;if(c>=R&&!v.pl.gone){x=v.base+(v.boost>0?(v.cause?(c<v.cause.R?v.boost:v.boost*v.cause.retain):v.boost*.6):0);if(R>0&&c===R)x*=.85;else if(R>0&&c===R+1)x*=.93;if(R===0&&c===0&&av<1)x*=av}arr.push(x)}
   v.arr=arr;v.arrW=arr.map((x,ci)=>{if(x==null)return null;let w=v.gw[ci];if(ci===0&&w===META.next_week&&v.wk!=null&&R===0)return v.wk;let vs=trDvp(v.p.pos)[oppOf(v.p.team,w)];return x*(1+Math.max(-.08,Math.min(.08,(vs||0)*.003)))});v.G=G;v.retW=v.gw[R]||99;v.raw=qbb*arr.reduce((s,x)=>s+pt(x),0);if(v.pl.R>=4&&G<=6)v.raw*=.65;v.raw4=qbb*arr.slice(0,4).reduce((s,x)=>s+pt(x),0);
@@ -4653,7 +4689,7 @@ function trWeekPpg(v,w){let i=v.gw.indexOf(w);return i<0?null:v.arr[i]}
 function trPick(ent){let c=trCtx(),s=TR.st,pool=ent.slice().sort((a,b)=>b.ppg-a.ppg),used=new Set(),st=[];
  const take=(slot,ok,fill)=>{let e=pool.find(x=>!used.has(x.v.p.id)&&ok(x.v.p.pos));if(e){used.add(e.v.p.id);st.push({slot,v:e.v,ppg:e.ppg,empty:false})}else st.push({slot,v:null,ppg:fill,empty:true})};
  for(let i=0;i<s.QB;i++)take('QB',p=>p==='QB',c.repl.QB);for(let i=0;i<s.RB;i++)take('RB',p=>p==='RB',c.repl.RB);for(let i=0;i<s.WR;i++)take('WR',p=>p==='WR',c.repl.WR);for(let i=0;i<s.TE;i++)take('TE',p=>p==='TE',c.repl.TE);
- for(let i=0;i<s.FLEX;i++)take('FLEX',p=>p!=='QB',Math.min(c.repl.RB,c.repl.WR));if(TR.sf)take('SFLEX',p=>true,c.repl.QB);
+ let fxx=trFx();for(let i=0;i<fxx.F;i++)take('FLEX',p=>p!=='QB',Math.min(c.repl.RB,c.repl.WR));for(let i=0;i<fxx.SF;i++)take('SFLEX',p=>true,c.repl.QB);
  return {st,bench:pool.filter(x=>!used.has(x.v.p.id)),tot:st.reduce((a,x)=>a+x.ppg,0)}}
 function trEnt(ids,fn){let c=trCtx();return ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone).map(v=>({v,ppg:fn(v)})).filter(e=>e.ppg!=null)}
 function trLineup(ids,key){let c=trCtx(),L=trPick(trEnt(ids,v=>key==='now'?v.nowP:v.later));L.off=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone&&(key==='now'?v.nowP==null:false));L.gone=ids.map(i=>c.V[i]).filter(v=>v&&v.pl.gone);return L}
@@ -4673,7 +4709,7 @@ function trCuffs(ids){let c=trCtx(),V=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone
  V.forEach(v=>{let p=v.p;if(p.pos==='QB'||!p.depth)return;let mates=c.vs.filter(x=>x.p.team===p.team&&x.p.pos===p.pos&&x.p.id!==p.id&&x.p.depth&&!x.pl.gone),
   ahead=mates.filter(x=>x.p.depth.rank<p.depth.rank).sort((a,b)=>b.p.depth.rank-a.p.depth.rank)[0],behind=mates.filter(x=>x.p.depth.rank>p.depth.rank).sort((a,b)=>a.p.depth.rank-b.p.depth.rank)[0];
   res[p.id]={ahead,behind,hasAhead:!!ahead&&ids.includes(ahead.p.id),hasBehind:!!behind&&ids.includes(behind.p.id)}});return res}
-function trRosterCut(pos,size){let n=TR.n,sz=Math.max(size||0,TR.st.QB+TR.st.RB+TR.st.WR+TR.st.TE+TR.st.FLEX+(TR.sf?1:0)+4,12),qb=TR.sf?2.5:1.5,te=1.5,rest=Math.max(2,sz-qb-te),per={QB:qb,TE:te,RB:rest*.46,WR:rest*.54};return Math.round(n*per[pos])}
+function trRosterCut(pos,size){let n=TR.n,sz=Math.max(size||0,TR.st.QB+TR.st.RB+TR.st.WR+TR.st.TE+(TR.sf?Math.max(TR.st.FLEX,1):TR.st.FLEX)+4,12),qb=TR.sf?2.5:1.5,te=1.5,rest=Math.max(2,sz-qb-te),per={QB:qb,TE:te,RB:rest*.46,WR:rest*.54};return Math.round(n*per[pos])}
 function trWaiver(ids){let c=trCtx(),own=new Set(ids),V=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone),L=trLineup(ids,'later'),startIds=new Set(L.st.filter(x=>x.v).map(x=>x.v.p.id)),cuffs=trCuffs(ids),out=[];
  let bench=V.filter(v=>!startIds.has(v.p.id)&&!(cuffs[v.p.id]&&cuffs[v.p.id].hasAhead)).sort((a,b)=>a.later-b.later).slice(0,2);
  bench.forEach(w=>{let pos=w.p.pos,cut=trRosterCut(pos,ids.length),ranked=c.vs.filter(x=>x.p.pos===pos&&!x.pl.gone).sort((a,b)=>b.base-a.base).map(x=>x.p.id),
@@ -4715,7 +4751,7 @@ function trStarTxtN(n){return n+'★'}
 function trDisp(x){return 100*Math.pow(Math.max(x,0)/100,.45)}
 function trCV(m,id){let v=trCtx().V[id],g=v?v.raw:0;return trDisp(100*Math.pow(.45*g+.55*Math.max(m,0),1.3)/trCtx().mx)}
 function trVals(ids,extra,who){let o={};ids.concat(extra||[]).forEach(i=>{if(trCtx().V[i]&&!trCtx().V[i].pl.gone){let q=trGainStars(ids,i);o[i]={val:trCV(trMarg(ids,i),i),stars:q.stars,g:q.g,who}}});return o}
-function trNeedStart(){return TR.st.QB+TR.st.RB+TR.st.WR+TR.st.TE+TR.st.FLEX+(TR.sf?1:0)}
+function trNeedStart(){return TR.st.QB+TR.st.RB+TR.st.WR+TR.st.TE+(TR.sf?Math.max(TR.st.FLEX,1):TR.st.FLEX)}
 function trRecNote(ids,side){let r=TR.rec[side]||[0,0],w=r[0],l=r[1],g=w+l;if(g<2)return '';let c=trCtx(),lg=TRPOS.reduce((s,k)=>s+c.avg[k]*c.S[k],0),d=trLineup(ids,'now').tot-lg,p=.5*(1+erf(d/31.1/Math.SQRT2)),rw=w/g,pct=Math.round(p*100);
  return rw-p>=.3?`Record ${w}-${l} looks better than this roster. On points alone it is a ${pct}% team each week, so some of the wins were luck. Fix the weak spots now instead of trusting the record.`:p-rw>=.3?`Record ${w}-${l} is worse than this roster deserves (about ${pct}% a week). It has been unlucky, so hold your best players and do not panic sell.`:`Record ${w}-${l} fits the roster (about ${pct}% a week).`}
 function trD(k,title,sub,body,def,cls){let o=TRopen[k]!==undefined?TRopen[k]:def;return `<details class="trD${cls?' '+cls:''}" data-k="${k}"${o?' open':''}><summary><span>${title}</span><i>${sub||''}</i></summary><div class="trDB">${body}</div></details>`}
@@ -4731,8 +4767,8 @@ function trRow(id,btns,note,tag){let v=trCtx().V[id];if(!v)return '';let cv=TROU
 function trAttach(root,sel,pick){let inp=root.querySelector(sel+' input'),dd=root.querySelector(sel+' .dd');if(!inp)return;inp.oninput=()=>{let s=inp.value.toLowerCase().trim();if(!s){dd.style.display='none';return}let c=trCtx().V,m=Object.values(c).map(v=>v.p).filter(p=>p.name.toLowerCase().includes(s)).sort((a,b)=>c[b.id].raw-c[a.id].raw).slice(0,8);
  dd.innerHTML=m.map(p=>`<div class="ddi" data-id="${p.id}"><div><span class="ddiName">${p.name}</span><span class="ddiMeta">${p.team} • ${p.pos}</span></div><span class="ddiRate">${trN(c[p.id].val)}</span></div>`).join('')||'<div class="ddi muted">No match</div>';dd.style.display='block';dd.querySelectorAll('.ddi[data-id]').forEach(x=>x.onclick=()=>{dd.style.display='none';inp.value='';pick(x.dataset.id)})}}
 function trAdd(list,id){if(!list.includes(id))list.push(id)}
-function trSettings(){let n=TR.n,s=TR.st,steps=[['Teams in league','n',6,20],['RB','RB',0,4],['WR','WR',0,4],['TE','TE',0,3],['Flex (RB/WR/TE)','FLEX',0,3]];
- return `<details class="tset trSetD"${TRopen.set?' open':''}><summary><span>League</span><i>${n} teams • PPR • ${TR.sf?'Superflex':'1 QB'} • ${TR.hz==='now'?'win now':TR.hz==='play'?'playoffs':'full season'} • ${s.RB}RB ${s.WR}WR ${s.TE}TE ${s.FLEX}FLEX</i></summary><div class="tsetB"><div class="tpre"><button type="button" class="tsb trsf${TR.sf?'':' on'}" data-v="0">1 QB</button><button type="button" class="tsb trsf${TR.sf?' on':''}" data-v="1">Superflex</button></div><div class="tsec" style="margin:6px 2px">What matters most</div><div class="tpre">${[['now','Next 4 weeks'],['ros','Whole season'],['play','Playoffs (Wk 14-17)']].map(([k,l])=>`<button type="button" class="tsb trhz${TR.hz===k?' on':''}" data-v="${k}">${l}</button>`).join('')}</div><div class="tsteps">${steps.map(([l,k,lo,hi])=>`<div class="tst"><span>${l}</span><div><button type="button" class="tstb trst" data-k="${k}" data-d="-1" data-lo="${lo}" data-hi="${hi}">−</button><b>${k==='n'?n:s[k]}</b><button type="button" class="tstb trst" data-k="${k}" data-d="1" data-lo="${lo}" data-hi="${hi}">+</button></div></div>`).join('')}</div><p class="tnote" style="margin:8px 0 0">Scoring is PPR. A bigger league leaves fewer good players on waivers, so every starter is worth more. Superflex makes quarterbacks much more valuable. We assume your bench is just the players you enter.</p></div></details>`}
+function trSettings(){let n=TR.n,s=TR.st,steps=[['Teams in league','n',6,20],['RB','RB',0,4],['WR','WR',0,4],['TE','TE',0,3],[TR.sf?'Superflex (QB/RB/WR/TE)':'Flex (RB/WR/TE)','FLEX',TR.sf?1:0,3]];
+ return `<details class="tset trSetD"${TRopen.set?' open':''}><summary><span>League</span><i>${n} teams • PPR • ${TR.sf?'Superflex':'1 QB'} • ${TR.hz==='now'?'win now':TR.hz==='play'?'playoffs':'full season'} • ${s.RB}RB ${s.WR}WR ${s.TE}TE ${TR.sf?'1 SUPERFLEX'+(s.FLEX>1?' '+(s.FLEX-1)+'FLEX':''):s.FLEX+'FLEX'}</i></summary><div class="tsetB"><div class="tpre"><button type="button" class="tsb trsf${TR.sf?'':' on'}" data-v="0">1 QB</button><button type="button" class="tsb trsf${TR.sf?' on':''}" data-v="1">Superflex</button></div><div class="tsec" style="margin:6px 2px">What matters most</div><div class="tpre">${[['now','Next 4 weeks'],['ros','Whole season'],['play','Playoffs (Wk 14-17)']].map(([k,l])=>`<button type="button" class="tsb trhz${TR.hz===k?' on':''}" data-v="${k}">${l}</button>`).join('')}</div><div class="tsteps">${steps.map(([l,k,lo,hi])=>`<div class="tst"><span>${l}</span><div><button type="button" class="tstb trst" data-k="${k}" data-d="-1" data-lo="${lo}" data-hi="${hi}">−</button><b>${k==='n'?n:s[k]}</b><button type="button" class="tstb trst" data-k="${k}" data-d="1" data-lo="${lo}" data-hi="${hi}">+</button></div></div>`).join('')}</div><p class="tnote" style="margin:8px 0 0">Scoring is PPR. A bigger league leaves fewer good players on waivers, so every starter is worth more. Superflex makes quarterbacks much more valuable. We assume your bench is just the players you enter.</p><details class="trsrc"><summary>How values work and sources</summary><div class="trsrcB"><p>Value is how many points a player adds over a replacement you could grab off waivers, summed over the games left, then stretched so stars are worth far more than depth. In Superflex one starting spot can be a QB, so the replacement QB is a starter-level QB instead of a free pickup, and good QBs jump up. The size of that jump (about 1.4x) is our judgment call to match the written advice below. No 2026 source publishes an exact Superflex number.</p><a href="https://www.fantasypros.com/2026/06/a-beginners-guide-to-understanding-superflex-leagues/" target="_blank" rel="noopener">FantasyPros: Understanding Superflex (Jun 2026)</a><a href="https://fantasynerds.com/news/story/2026/08/24/superflex-league-draft-strategy-prioritizing-qbs-and-navigating-value-1604506" target="_blank" rel="noopener">Fantasy Nerds: Superflex strategy (Aug 2026)</a><a href="https://www.cbssports.com/fantasy/football/news/superflex-fantasy-football-strategy-quarterbacks-drafting/" target="_blank" rel="noopener">CBS Sports: QBs in Superflex (Aug 2026)</a><a href="https://www.fantasypros.com/2026/08/fantasy-football-strategy-how-to-draft-quarterbacks-2026/" target="_blank" rel="noopener">FantasyPros: How to draft QBs (Aug 2026)</a><a href="https://www.rotostreetjournal.com/2026/10/13/2026-fantasy-football-week-6-trade-value-chart/" target="_blank" rel="noopener">Roto Street Journal: Week 6 trade value chart (Oct 2026, 1 QB)</a></div></details></div></details>`}
 function trSearchBox(id,ph){return `<div class="search trS" id="${id}"><input placeholder="${ph}" autocomplete="off"><div class="dd"></div></div>`}
 function trSlotLab(x){return x==='SFLEX'?'SFX':x==='FLEX'?'FLX':x}
 function trLineHTMLm(L,mark,map){TRCVmap=map;let h=trLineHTML(L,mark);TRCVmap=null;return h}
@@ -4887,10 +4923,10 @@ function trOrd(n){let s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[
 var TRAVG=null;
 /* "average team": we run a mock snake draft with the league's size and lineup (best players first), then average each team's best lineup. */
 function trAvgTeam(){let c=trCtx(),key=c.key+'|'+TR.sf;if(TRAVG&&TRAVG.key===key)return TRAVG;
- let n=TR.n,st=TR.st,rs=st.QB+st.RB+st.WR+st.TE+st.FLEX+(TR.sf?1:0)+6,caps={QB:TR.sf?4:3,RB:7,WR:8,TE:3},pool=c.vs.filter(v=>!v.pl.gone&&v.pl.R<=3).sort((a,b)=>b.outlook-a.outlook),teams=Array.from({length:n},()=>({p:[],cnt:{QB:0,RB:0,WR:0,TE:0}})),taken=new Set();
+ let n=TR.n,st=TR.st,rs=st.QB+st.RB+st.WR+st.TE+(TR.sf?Math.max(st.FLEX,1):st.FLEX)+6,caps={QB:TR.sf?4:3,RB:7,WR:8,TE:3},pool=c.vs.filter(v=>!v.pl.gone&&v.pl.R<=3).sort((a,b)=>b.outlook-a.outlook),teams=Array.from({length:n},()=>({p:[],cnt:{QB:0,RB:0,WR:0,TE:0}})),taken=new Set();
  for(let r=0;r<rs;r++){let order=[...Array(n).keys()];if(r%2)order.reverse();order.forEach(t=>{let T=teams[t],v=pool.find(x=>!taken.has(x.p.id)&&T.cnt[x.p.pos]<caps[x.p.pos]);if(v){taken.add(v.p.id);T.p.push(v);T.cnt[v.p.pos]++}})}
  const avg=fn=>{let tot=0,cnt=0;teams.forEach(T=>{let L=trPick(T.p.map(v=>({v,ppg:fn(v)})).filter(e=>e.ppg!=null));tot+=L.tot;cnt++});return tot/Math.max(1,cnt)},
-  slots=st.QB+st.RB+st.WR+st.TE+st.FLEX+(TR.sf?1:0);
+  slots=st.QB+st.RB+st.WR+st.TE+(TR.sf?Math.max(st.FLEX,1):st.FLEX);
  return TRAVG={key,later:avg(v=>v.later),proj:avg(v=>v.wk!=null?v.wk:v.later),ppr:avg(v=>v.p.m&&v.p.m.ppr!=null?+v.p.m.ppr:v.later),mania:avg(v=>v.p.mania==null?null:+v.p.mania)/Math.max(1,slots)}}
 function trTeamGrade(ids){let c=trCtx(),Ll=trLineup(ids,'later'),lg=trAvgTeam().later,d=Ll.tot-lg,pc=.5*(1+erf(d/9/Math.SQRT2)),win=.5*(1+erf(d/31.1/Math.SQRT2)),G=[[.93,'A+'],[.85,'A'],[.77,'A-'],[.68,'B+'],[.58,'B'],[.48,'B-'],[.38,'C+'],[.28,'C'],[.18,'C-'],[.1,'D']],g='F';for(let i=0;i<G.length;i++)if(pc>=G[i][0]){g=G[i][1];break}
  return {g,d,pc,win,lg,tot:Ll.tot,rank:Math.max(1,Math.min(TR.n,Math.round((1-pc)*(TR.n-1))+1))}}
@@ -5135,7 +5171,7 @@ function trMineRaw(){let ids=TR.my,out=trRoster('my','Your roster',false);TRCVma
 /* ---------- render ---------- */
 function trBind(root){const rm=(arr,id)=>{let i=arr.indexOf(id);if(i>=0)arr.splice(i,1)};
  root.querySelectorAll('.trhz').forEach(b=>b.onclick=()=>{TR.hz=b.dataset.v;trSave();trRenderAll()});
- root.querySelectorAll('.trsf').forEach(b=>b.onclick=()=>{TR.sf=b.dataset.v==='1';trSave();trRenderAll()});
+ root.querySelectorAll('.trsf').forEach(b=>b.onclick=()=>{TR.sf=b.dataset.v==='1';if(TR.sf&&TR.st.FLEX<1)TR.st.FLEX=1;trSave();trRenderAll()});
  root.querySelectorAll('.trst').forEach(b=>b.onclick=()=>{let k=b.dataset.k,cur=k==='n'?TR.n:TR.st[k],v=Math.max(+b.dataset.lo,Math.min(+b.dataset.hi,cur+(+b.dataset.d)));if(v===cur)return;if(k==='n')TR.n=v;else TR.st[k]=v;trSave();trRenderAll()});
  trAttach(root,'#trQg',id=>{rm(TR.get,id);trAdd(TR.give,id);trSave();trRenderAll()});trAttach(root,'#trQr',id=>{rm(TR.give,id);trAdd(TR.get,id);trSave();trRenderAll()});
  trAttach(root,'#trRmy',id=>{TR.last=id;trAdd(TR.my,id);rm(TR.their,id);trSave();trRenderAll()});trAttach(root,'#trRtheir',id=>{trAdd(TR.their,id);rm(TR.my,id);trSave();trRenderAll()});
@@ -5577,11 +5613,15 @@ var PJD={},PJFRESH=false;
 /* ===== Motion v2 ===== */
 (function(){var rm=function(){return window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches};
  var rc=renderCompare,last='';renderCompare=function(){var r=rc.apply(this,arguments);try{if(A&&B){var k=A.id+'|'+B.id,h=document.querySelector('#compare .compareHero');if(h&&k!==last&&!rm()){var c=document.getElementById('compare');h.classList.remove('foGo');void h.offsetWidth;h.classList.add('foGo');if(c)c.classList.add('foRun');setTimeout(function(){h.classList.remove('foGo');if(c)c.classList.remove('foRun')},1500)}last=k}else last=''}catch(e){}return r};
- var tr=trRenderAll,tl='';trRenderAll=function(){var r=tr.apply(this,arguments);try{trSwapIn()}catch(e){}return r};
+ var tr=trRenderAll,tl={g:[],t:[]};trRenderAll=function(){var r=tr.apply(this,arguments);try{trSwapIn()}catch(e){}return r};
  function trSwapIn(){var b=document.getElementById('trBody');if(!b||TR.mode!=='quick'||!TR.give.length||!TR.get.length)return;var v=b.querySelector('.trVerdict');if(!v||b.querySelector('.trSwap'))return;
-  var best=function(ids){return ids.map(byId).filter(Boolean).sort(function(x,y){return (y.mania||0)-(x.mania||0)})[0]},pa=best(TR.give),pb=best(TR.get);if(!pa||!pb)return;
-  var key=TR.give.join(',')+'>'+TR.get.join(','),play=key!==tl&&!rm();tl=key;var ln=function(p){return p.name.split(' ').slice(-1)[0]};
-  v.insertAdjacentHTML('beforebegin','<div class="trSwap"><div class="tsP tsL"><span class="tsF">'+pic(pb)+'</span>'+ln(pb)+'<small>joins you</small></div><div class="tsM">&#8646;</div><div class="tsP tsR"><span class="tsF">'+pic(pa)+'</span>'+ln(pa)+'<small>leaves you</small></div></div>');
+  var top=function(ids){return ids.map(byId).filter(Boolean).sort(function(x,y){return (y.mania||0)-(x.mania||0)})},G=top(TR.give),T=top(TR.get);if(!G.length||!T.length)return;
+  var gi=G.map(function(p){return p.id}),ti=T.map(function(p){return p.id}),overlap=gi.filter(function(i){return tl.g.indexOf(i)>=0}).length+ti.filter(function(i){return tl.t.indexOf(i)>=0}).length,
+   fresh=!tl.g.length&&!tl.t.length||overlap===0,addG=gi.filter(function(i){return tl.g.indexOf(i)<0}),addT=ti.filter(function(i){return tl.t.indexOf(i)<0}),anim=!rm();
+  var play=anim&&fresh,incr=anim&&!fresh&&(addG.length||addT.length);tl={g:gi,t:ti};
+  var ln=function(p){return p.name.split(' ').slice(-1)[0]},chip=function(p,isNew,side){return '<div class="tsC'+(isNew?' new '+side:'')+'" data-id="'+p.id+'"><span class="tsW"><span class="tsF">'+pic(p)+'</span><i class="tsRg"></i></span><b>'+ln(p)+'</b><em>'+p.pos+'</em></div>'},
+   grp=function(L,cls,cap,adds,side){var shown=L.length>3?L.slice(0,2):L,more=L.length-shown.length;return '<div class="tsG '+cls+'"><div class="tsRow">'+shown.map(function(p){return chip(p,adds.indexOf(p.id)>=0&&incr,side)}).join('')+(more>0?'<div class="tsC"><span class="tsW"><span class="tsF tsMore">+'+more+'</span></span><b>more</b></div>':'')+'</div><small>'+cap+'</small></div>'};
+  v.insertAdjacentHTML('beforebegin','<div class="trSwap">'+grp(T,'tsL','joins you',addT,'L')+'<div class="tsM">&#8646;</div>'+grp(G,'tsR','leaves you',addG,'R')+'</div>');
   var s=b.querySelector('.trSwap'),L=s.querySelector('.tsL'),R=s.querySelector('.tsR');if(play)requestAnimationFrame(function(){var dx=Math.round(R.getBoundingClientRect().left-L.getBoundingClientRect().left);if(dx>30){s.style.setProperty('--dx',dx+'px');s.classList.add('play')}})}
 })();
 function glHTML(p){var L=(p.logs||[]).filter(function(l){return l.ppr!=null});if(L.length<2)return '';var W=320,H=124,pl=20,pr=20,pt=20,pb=26,mx=10;L.forEach(function(l){mx=Math.max(mx,l.ppr,l.pj||0)});var n=L.length,X=function(i){return pl+(W-pl-pr)*(i/(n-1))},Y=function(v){return pt+(H-pt-pb)*(1-v/mx)},avg=L.reduce(function(a,l){return a+l.ppr},0)/n,sh=n<=9,tm=1.2;
