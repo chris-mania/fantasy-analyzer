@@ -3900,6 +3900,8 @@ tr.pjFlash td,.rcard.pjFlash{animation:pjF 2.6s ease-out}@keyframes pjF{0%,55%{b
 .trsrcB a{font-size:13px;font-weight:700;color:#2f6bff;text-decoration:none;line-height:1.3}
 .tsteps{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}.tst span{min-width:0;line-height:1.2}.tst>div{flex:none}
 .tst{flex-direction:column;align-items:stretch!important;gap:6px}.tst>div{display:flex;align-items:center;justify-content:space-between}
+.qcv{display:flex;justify-content:space-between;gap:10px;margin-top:5px;font-weight:800;font-size:14px}.qcv span{display:flex;flex-direction:column;flex:1}.qcv span:last-child{align-items:flex-end;text-align:right}.qcv small{font-weight:600;font-size:11px;color:#6b7891}.qcv .good{color:#16803f}
+.qcsw{font-size:12px;color:#6b7891;text-align:center;margin:10px 4px 18px;line-height:1.4}
 #compare.foRun{overflow-x:clip}
 .trSwap{padding:14px 8px!important;gap:2px!important}
 .tsRow{gap:4px!important}
@@ -4361,7 +4363,7 @@ function bkCompare(A,B,ca,cb){let la=Object.keys(ca.b),lb=Object.keys(cb.b),gen=
   bub=(v,q,key)=>`<b class="pctNum lnk ${barGrade(v)}" style="--s:${v}" data-board="bucket" data-idx="${i}" data-title="${key}" data-pos="${q.pos}" title="See everyone ranked">${v}</b>`,
   help=same?(HELP[la[i]]||''):`<b>${A.name}:</b> ${HELP[la[i]]||''} <b>${B.name}:</b> ${HELP[lb[i]]||''}`;
   return `<div class="cbrow"><button type="button" class="cbl cbTap" title="What does this mean?">${lab}<span class="chev">ⓘ</span></button><div class="cbbars">${bub(pa,A,la[i])}<div class="cbt l"><div style="width:${Math.max(3,pa)}%;background:${barColor(pa)}"></div></div><div class="cbt r"><div style="width:${Math.max(3,pb)}%;background:${barColor(pb)}"></div></div>${bub(pb,B,lb[i])}</div><div class="cbHelp" hidden>${help} <b>${A.name} ranks better than ${pa}% of ${A.pos}s, ${B.name} better than ${pb}% of ${B.pos}s.</b></div></div>`}).join('')+`<div class="cexp">Each bubble is a percentile among players at that position. 100 is the best, 50 is average. Tap a category to see what it means, or tap a bubble to see everyone ranked.</div>`}
-function renderCompare(){if(!A||!B)return;if(!selA)selA=dfl(A);if(!selB)selB=dfl(B);let ca=calc(A,selA),cb=calc(B,selB);if(!ca||!cb)return;
+function renderCompare(){if(!A||!B)return;if(A.pos==='QB'||B.pos==='QB')return renderCmpQB();if(!selA)selA=dfl(A);if(!selB)selB=dfl(B);let ca=calc(A,selA),cb=calc(B,selB);if(!ca||!cb)return;
  let wk=META.next_week,sA=A.start!=null?A.start:ca.start,sB=B.start!=null?B.start:cb.start,pA=A.proj&&!A.out?A.proj.pts:null,pB=B.proj&&!B.out?B.proj.pts:null,oa=outlook(A,sA),ob=outlook(B,sB),aB=A.opp==='BYE'||A.out||A.played,bB=B.opp==='BYE'||B.out||B.played,starter=aB&&!bB?B:bB&&!aB?A:(pA!=null&&pB!=null?pA>=pB:sA>=sB)?A:B,
  rows=[['Mania Rating',ca.mania,cb.mania],['PPR/G',ca.M.ppr_pg,cb.M.ppr_pg],['Targets/G',ca.M.targets_pg,cb.M.targets_pg],['Receptions/G',ca.M.rec_pg,cb.M.rec_pg],['Rushing Attempts/G',ca.M.carries_pg,cb.M.carries_pg],['Rush Yds/G',ca.M.rush_yards_pg,cb.M.rush_yards_pg],['Scrimmage Yds/G',ca.M.scrim_pg,cb.M.scrim_pg],['Snap %',ca.M.snap_pct,cb.M.snap_pct],['Target Share %',ca.M.target_share,cb.M.target_share],['Touch Share %',ca.M.touch_share,cb.M.touch_share],['Air-Yard Share %',ca.M.air_share,cb.M.air_share],['Red-Zone Targets/G',ca.M.rz_targets_pg,cb.M.rz_targets_pg],['End-Zone Targets/G',ca.M.endzone_targets_pg,cb.M.endzone_targets_pg],['Red-Zone Carries/G',ca.M.rz_carries_pg,cb.M.rz_carries_pg],['Goal-Line Carries/G',ca.M.gl_carries_pg,cb.M.gl_carries_pg]],
  sg=v=>(v>=0?'+':'')+v.toFixed(1),oppT=q=>q.opp==='BYE'?'Bye':q.opp==='TBD'?'TBD':q.opp,
@@ -5672,6 +5674,46 @@ document.addEventListener('click',function(e){var g=e.target.closest&&e.target.c
 document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-qsc]');if(!b)return;e.stopPropagation();var v=b.dataset.qsc==='all'?'all':'starters';if(v===QBSC)return;QBSC=v;try{localStorage.setItem('fm_qbsc',v)}catch(x){}
  var bv=document.querySelector('.view.on');if(bv&&bv.id==='board'&&curBoard){skipPush=true;qbBoard(curBoard)}
  else if(curPlayer&&curPlayer.pos==='QB'){var k=(document.querySelector('.ptile.open')||{dataset:{}}).dataset.k,y=window.scrollY;skipPush=true;openQBP(curPlayer);setTimeout(function(){var t=k&&document.querySelector('.ptile[data-k="'+k+'"] .pprev');if(t)t.click();window.scrollTo(0,y)},120)}},true);
+
+/* ===== QB compare ===== */
+var cmpQOpen={};
+function qcVal(M,q){var v=Number(M.g(q));if(!Number.isFinite(v))return '—';var t=v.toFixed(M.d==null?1:M.d);if(M.sg&&v>0)t='+'+t;return t+(M.sf||'')}
+function qcRow(M,A,B){var sa=qbStat(A,M),sb=qbStat(B,M);if(!sa&&!sb)return '';var va=sa?sa.v:NaN,vb=sb?sb.v:NaN,hi=M.hi,wa=sa&&sb&&va!==vb&&(hi?va>vb:va<vb),wb=sa&&sb&&va!==vb&&!wa,pa=sa?sa.pc:0,pb=sb?sb.pc:0,
+ bub=function(s){return s?'<b class="pctNum '+barGrade(s.pc)+'" style="--s:'+s.pc+'">'+s.pc+'</b>':'<b class="pctNum g0" style="--s:0">—</b>'},
+ bar=function(s,side){return '<div class="cbt '+side+'"><div style="width:'+Math.max(3,s?s.pc:0)+'%;background:'+barColor(s?s.pc:0)+'"></div></div>'},
+ rk=function(s){return s?'<small>'+ordN(s.rk)+' of '+s.n+'</small>':''},
+ help=M.help?'<p style="margin:0 0 6px">'+M.help+'</p>':'';
+ return '<div class="cbrow"><button type="button" class="cbl cbTap">'+(M.l)+'<span class="chev">ⓘ</span></button><div class="cbbars">'+bub(sa)+bar(sa,'l')+bar(sb,'r')+bub(sb)+'</div><div class="qcv"><span class="'+(wa?'good':'')+'">'+qcVal(M,A)+rk(sa)+'</span><span class="'+(wb?'good':'')+'">'+qcVal(M,B)+rk(sb)+'</span></div><div class="cbHelp" hidden>'+help+'<b>Bubbles</b> show where each QB ranks among the '+((sa||sb).n)+' '+(QBSC==='all'?'quarterbacks':'starting quarterbacks')+'. 100 is the best.'+(M.neutral?' This is style, not quality, so neither side is better.':'')+'</div></div>'}
+function qcSec(key,title,ms,A,B,open){var rows=ms.map(function(M){return M?qcRow(M,A,B):''}).join('');if(!rows)return '';var o=cmpQOpen[key];if(o==null)o=open;return '<details class="cdet" data-qk="'+key+'"'+(o?' open':'')+'><summary><span>'+title+'</span><i>Tap to '+(o?'hide':'see')+'</i></summary><div class="cdBody"><div class="cbhead"><span>'+A.name+'</span><span>'+B.name+'</span></div>'+rows+'</div></details>'}
+function qcHero(q,side){var r=Number(q.mania);return '<div class="comparePlayer"><div class="cmpPortrait" style="--score:'+r+';--ring:'+ring(r)+'">'+ringSvg(r)+pic(q)+'</div><h2 class="playerlink cmpOpen" data-id="'+q.id+'">'+q.name+'</h2><div class="meta">'+tlogo(q.team)+q.team+' • QB • vs '+(q.opp||'—')+'</div><div class="scorebig '+grade(r)+'">'+r.toFixed(1)+'</div><div class="scorelab">Mania Rating</div>'+bdgPills(q)+'</div>'}
+function qcVerdict(A,B){var n=function(q){return q.name.split(' ').slice(-1)[0]},ua=function(q){return q.opp==='BYE'?n(q)+' is on a bye':q.played?n(q)+' already played':q.out?n(q)+' is out':''},wk=META.next_week,ra=Number(A.mania),rb=Number(B.mania),top=ra>=rb?A:B,oth=top===A?B:A,gap=Math.abs(ra-rb),
+ season=gap<2?'These two are about even this season (Mania Rating '+ra.toFixed(1)+' vs '+rb.toFixed(1)+').':'<b>'+top.name+'</b> has been the better quarterback this season (Mania Rating '+Number(top.mania).toFixed(1)+' vs '+Number(oth.mania).toFixed(1)+').',
+ aU=ua(A),bU=ua(B),wkTxt='',pk=null;
+ var pa=A.proj&&!aU?A.proj.pts:null,pb=B.proj&&!bU?B.proj.pts:null;
+ if(aU&&bU)wkTxt='Neither is available for Week '+wk+' ('+aU+', '+bU+').';
+ else if(aU||bU){pk=aU?B:A;wkTxt=(aU||bU)+', so <b>'+pk.name+'</b> is the easy start.'}
+ else if(pa!=null&&pb!=null){pk=pa>=pb?A:B;var o=pk===A?B:A,g=Math.abs(pa-pb),pp=pk===A?pa:pb,po=pk===A?pb:pa;wkTxt=g<1.2?'Week '+wk+': a coin flip. <b>'+pk.name+'</b> is projected '+pp.toFixed(1)+' to '+po.toFixed(1)+', so start whichever you trust.':(g<2.5?'Week '+wk+': lean <b>'+pk.name+'</b>, projected '+g.toFixed(1)+' more points ('+pp.toFixed(1)+' vs '+po.toFixed(1)+').':'Week '+wk+': start <b>'+pk.name+'</b>, projected '+g.toFixed(1)+' more points ('+pp.toFixed(1)+' vs '+po.toFixed(1)+').')}
+ else{pk=(A.start_rank||99)<=(B.start_rank||99)?A:B;wkTxt='Week '+wk+': <b>'+pk.name+'</b> ranks higher this week (QB'+(pk.start_rank||'?')+').'}
+ var pj=function(q){return q.proj&&!ua(q)?Number(q.proj.pts).toFixed(1):'—'};
+ return '<details class="cdet" data-qk="start"'+(cmpQOpen.start===false?'':' open')+'><summary><span>Who is better, and who to start</span><i>Tap to '+(cmpQOpen.start===false?'see':'hide')+'</i></summary><div class="cdBody"><div class="cwin"><div class="cwk">Our pick this week</div><strong>'+(pk?pk.name:top.name)+'</strong><div class="sub">'+pj(A)+' '+A.name+' &nbsp;vs&nbsp; '+pj(B)+' '+B.name+' projected points</div><p class="cnote">'+season+' '+wkTxt+'</p></div><div class="disclaimer">'+DISC+'</div></div></details>'}
+function renderCmpQB(){var q=document.getElementById('compareBody');if(!q)return;
+ if(!(A.pos==='QB'&&B.pos==='QB')){q.innerHTML='<div class="compareHero" style="display:block;text-align:center;padding:26px 16px"><h2 class="cmpH" style="justify-content:center">Quarterbacks compare with quarterbacks</h2><p class="sub">'+(A.pos==='QB'?B.name:A.name)+' is not a QB. Pick another quarterback, or pick two non-QBs.</p></div>';return}
+ if(A.mania==null||B.mania==null){q.innerHTML='<div class="compareHero" style="display:block;text-align:center;padding:26px 16px"><h2 class="cmpH" style="justify-content:center">Not rated yet</h2><p class="sub">'+(A.mania==null?A.name:B.name)+' has not played enough to get a Mania Rating yet.</p></div>';return}
+ var bk=Object.keys(A.buckets||{}).map(function(_,i){return qbMetric('bk'+i)}),
+ sec=[
+ qcSec('mania','Mania breakdown',bk,A,B,true),
+ qcSec('prod','Production',[QBMET[0],QBMET[1],QBMET[2],QBMET[3],QBMET[6],QBMET[7]],A,B,true),
+ qcSec('adv','Advanced passing',QBADV,A,B,false),
+ qcSec('cast','Team around him',[QCAST.cast_all,QCAST.cast_wpn,QCAST.cast_line,QCAST.cast_yac,QCAST.cast_drp],A,B,false)].join('');
+ q.innerHTML='<div class="compareHero">'+qcHero(A,'A')+'<div class="vs"><i class="vsSl"></i><b>VS</b></div>'+qcHero(B,'B')+'</div>'+qcVerdict(A,B)+sec+'<div class="qcsw">Percentiles compare against '+(QBSC==='all'?'all '+qbQ(true).length+' rated quarterbacks':'the '+qbQ().length+' starting quarterbacks')+'. Change this with the Starters / All switch in the QB rankings.</div>';
+ q.querySelectorAll('.cdet').forEach(function(d){d.ontoggle=function(){cmpQOpen[d.dataset.qk]=d.open;var i=d.querySelector('summary i');if(i)i.textContent='Tap to '+(d.open?'hide':'see')}})}
+/* compare search: QBs allowed, but only against other QBs */
+(function(){function wire(inp,dd,side){var el=document.getElementById(inp),box=document.getElementById(dd);if(!el)return;el.oninput=function(e){var v=e.target.value.toLowerCase().trim();if(!v){box.style.display='none';return}var m=allPlayers().filter(function(p){return p.name.toLowerCase().includes(v)}).slice(0,9);
+ box.innerHTML=m.map(function(p){return '<div class="ddi" data-id="'+p.id+'"><div><span class="ddiName">'+p.name+'</span><span class="ddiMeta">'+p.team+' • '+p.pos+'</span></div><span class="ddiRate">'+(p.mania==null?'—':p.mania)+'</span></div>'}).join('');box.style.display=m.length?'block':'none';
+ box.querySelectorAll('.ddi').forEach(function(x){x.onclick=function(){var p=byId(x.dataset.id);box.style.display='none';el.value=p.name;if(side==='A'){A=p;selA=dfl(p)}else{B=p;selB=dfl(p)}
+ var o=side==='A'?B:A;if(o&&((o.pos==='QB')!==(p.pos==='QB'))){if(side==='A'){B=null;selB=null;document.getElementById('bQ').value=''}else{A=null;selA=null;document.getElementById('aQ').value=''}var cb=document.getElementById('compareBody');if(cb)cb.innerHTML='';document.getElementById('compare').classList.remove('cmpRes');cmpShow=false;_cmA=A;_cmB=B;return}
+ renderCompare()}})}}
+ wire('aQ','aDD','A');wire('bQ','bDD','B')})();
 
 </script></body></html>'''
 
