@@ -530,7 +530,10 @@ def summarize_player(d):
     }
 
 rows = []
-for keys, d in merged.groupby(["player_id", "player_name", "team", "position"]):
+# A player traded mid-season has games for two teams. Keep ONE row per player (latest team),
+# otherwise he shows up twice and the matchup engine crashes.
+merged["_team_latest"] = merged["player_id"].map(merged.sort_values("week").groupby("player_id")["team"].last())
+for keys, d in merged.groupby(["player_id", "player_name", "_team_latest", "position"]):
     pid, name, team, pos = keys
     x = summarize_player(d)
     x.update({"player_id": pid, "player_name": name, "team": team, "position": pos})
