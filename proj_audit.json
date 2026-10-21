@@ -1,0 +1,21 @@
+{
+ "week": 7,
+ "items": [
+  {
+   "kind": "vegas line cut back",
+   "name": "Jaleel McLaughlin",
+   "stat": "td",
+   "line": 0.51,
+   "model": 0.15,
+   "used": 0.45
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Roschon Johnson",
+   "stat": "ruy",
+   "line": 399.5,
+   "model": 20.68,
+   "used": 51.7
+  }
+ ]
+}
