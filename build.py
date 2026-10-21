@@ -3986,6 +3986,22 @@ tr.pjFlash td,.rcard.pjFlash{animation:pjF 2.6s ease-out}@keyframes pjF{0%,55%{b
 .cmpAT{display:flex;align-items:center;gap:10px;width:100%;margin:2px 0 14px;padding:12px 14px;border:0;border-radius:14px;background:#e9f1ff;box-shadow:inset 0 0 0 1px #c9dbfb;text-align:left;font:inherit;cursor:pointer;color:#12151a}
 .cmpAT span{flex:1;display:flex;flex-direction:column}.cmpAT b{font-size:14.5px;font-weight:800;color:#1f4fb3}.cmpAT small{font-size:12px;font-weight:600;color:#5b6c8c;margin-top:1px}.cmpAT i{font-style:normal;font-size:22px;color:#6f93d6}
 #compare.cmpRes .cmpAT,#compare[data-m=teams] .cmpAT{display:none}
+.tsVd small{display:block;font-size:12px;font-weight:700;color:#5b6678;margin-top:3px}
+.tsHint{font-size:12px;font-weight:600;color:#8b97ad;margin:-2px 0 0 56px}
+.tsh:not(.hideC) .ed b{border-bottom:2px dotted #9fb0cc;cursor:pointer}.tsh:not(.hideC) .tsSt.ed,.tsh:not(.hideC) .tsSL.ed,.tsh:not(.hideC) .tsRc.ed{cursor:pointer}
+.tsNote{margin:8px auto 0;max-width:94%;font-size:10px;font-weight:700;color:#5b6678;background:#e6ecf5;border-radius:999px;padding:3px 9px;text-align:center;line-height:1.25}
+.tsNt{margin-top:3px;font-size:10px;font-weight:700;color:#5b6678;background:#e6ecf5;border-radius:999px;padding:2px 8px;align-self:flex-start;line-height:1.25}
+.tsEd{position:fixed;inset:0;z-index:5;background:rgba(5,8,14,.62);display:flex;align-items:flex-end;justify-content:center}
+.tsEdB{background:#fff;color:#12151a;width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:18px 16px 20px;max-height:86vh;overflow:auto;display:flex;flex-direction:column;gap:12px}
+@media(min-width:700px){.tsEd{align-items:center}.tsEdB{border-radius:22px}}
+.tsEdT b{display:block;font-size:18px;font-weight:900}.tsEdT small{font-size:12.5px;font-weight:600;color:#6b7891}
+.tsEdF{display:flex;flex-wrap:wrap;gap:6px}.tsEdF .tsB{background:#e9f1ff;color:#1f4fb3}
+.tsEdG{display:flex;flex-wrap:wrap;gap:8px}.tsGc{display:flex;align-items:center;gap:8px;background:#f1f4f9;border-radius:12px;padding:9px 12px;font-size:13.5px;font-weight:700;cursor:pointer;flex:1 1 44%}.tsGc.on{background:#e3f5ea}.tsGc input{accent-color:#16803f;width:17px;height:17px}.tsGc span{flex:1}.tsGc b{font-weight:900}.tsGc em{font-style:normal;font-size:10px;color:#8a6d00}
+.tsEdN{border:0;border-radius:12px;background:#f1f4f9;padding:12px 14px;font:inherit;font-size:14px;font-weight:600;color:#12151a;outline:none}
+.tsEdP{display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;color:#5b6678}.tsEdP b{font-size:20px;color:#12151a;margin-left:6px;flex:1}.tsEdP .tsB{background:#eef2f8;color:#3b475c}
+.tsEdD{align-self:stretch;text-align:center;padding:13px}
+.tsStr.n3 .tsSt small{white-space:nowrap}
+.tsh,.tsh *,.tsEd *{font-family:var(--ff)!important;font-feature-settings:normal!important}
 #compare.foRun{overflow-x:clip}
 .trSwap{padding:14px 8px!important;gap:2px!important}
 .tsRow{gap:4px!important}
@@ -5276,7 +5292,7 @@ function trBind(root){const rm=(arr,id)=>{let i=arr.indexOf(id);if(i>=0)arr.spli
  root.querySelectorAll('.trfGo').forEach(b=>b.onclick=()=>{TRF.go=true;TRF.n=15;trRenderAll()});
  root.querySelectorAll('.trfMore').forEach(b=>b.onclick=()=>{TRF.n=Math.min(30,TRF.n+5);trRenderAll()});
  root.querySelectorAll('.trfTwoC').forEach(b=>b.onchange=()=>{TRF.two=b.checked;if(b.checked)trNotice('Two players back','You can only search for <b>one player</b> at a time, because we do not know what the other team has. We will find the first player, then describe the <b>second player</b> you would ask for (position and value). After you pick an offer, look at that team and check that they have a player like the one we describe.');trRenderAll()});
- root.querySelectorAll('.trfPick').forEach(b=>b.onclick=()=>{TR.get=[b.dataset.id];trSave();trRenderAll();let v=document.querySelector('#trBody .trVerdict');if(v)v.scrollIntoView({behavior:'smooth',block:'center'})});
+ root.querySelectorAll('.trfPick').forEach(b=>b.onclick=()=>{TR.get=[b.dataset.id];trSave();let bk=document.querySelector('#trHub .thBack');if(bk)bk.click();let ck=document.querySelector('#trHub .thCard[data-go="check"]');if(ck)ck.click();trRenderAll();setTimeout(()=>{let v=document.querySelector('#trBody .trVerdict');if(v)v.scrollIntoView({behavior:'smooth',block:'center'})},80)});
  root.querySelectorAll('.trWk').forEach(b=>b.onclick=()=>{TRW_SEL=+b.dataset.w;TRPSUB=null;let box=document.getElementById('trPlanBox');if(box){box.innerHTML=trOut(()=>trPlanBody(TR.my));trBind(box)}});
  root.querySelectorAll('.trSoloB').forEach(b=>b.onclick=()=>{TR.solo=b.dataset.v==='1';if(TR.solo)TRopen.rlmy=false;trSave();trRenderAll()});
  trAttach(root,'#trInc',id=>{trAdd(TR.inc,id);let i=TR.my.indexOf(id);if(i>=0){TR.my.splice(i,1)}trSave();trRenderAll()});
@@ -5802,10 +5818,16 @@ function renderCmpQB(){var q=document.getElementById('compareBody');if(!q)return
 /* ===== trade share screenshot page ===== */
 var TSH={s:'card',v:true,m:true,a:true,w:true,hide:false};
 try{var _t=JSON.parse(localStorage.getItem('fm_tsh2')||'null');if(_t)for(var _k in TSH)if(_k in _t)TSH[_k]=_t[_k]}catch(e){}
-function tshSave(){try{localStorage.setItem('fm_tsh2',JSON.stringify(TSH))}catch(e){}}
+TSH.ov={};
+function tshSave(){try{localStorage.setItem('fm_tsh2',JSON.stringify({s:TSH.s,v:TSH.v,m:TSH.m,a:TSH.a,w:TSH.w}))}catch(e){}}
+function tshPpg(p){var o=TSH.ov[p.id];if(o&&p.logs&&o.sel.length&&o.sel.length<p.logs.length){var t=0;o.sel.forEach(function(i){t+=p.logs[i].ppr});return t/o.sel.length}return p.m&&p.m.ppr!=null?Number(p.m.ppr):null}
+function tshNote(p){var o=TSH.ov[p.id];if(!o||!p.logs||o.sel.length>=p.logs.length)return '';if(o.note&&o.note.trim())return o.note.trim();
+ var wk=o.sel.map(function(i){return p.logs[i].w}).sort(function(a,b){return a-b}).join(','),f=(p.flags||[]).filter(function(f){return f.use.filter(function(w){return p.logs.some(function(l){return l.w===w})}).sort(function(a,b){return a-b}).join(',')===wk})[0];
+ if(f&&f.btn)return 'Games '+f.btn.replace(/^Count only games /,'');
+ var ex=p.logs.map(function(l,i){return o.sel.indexOf(i)>=0?null:'W'+l.w}).filter(Boolean);return 'Without '+ex.join(', ')}
 function tshCol(m){return m==null?'':m>=80?'#16803f':m>=60?'#b87a00':'#c0303c'}
 function tshStats(v){var p=v.p,w=META.next_week,o=[];
- if(TSH.a)o.push({k:'a',val:p.m&&p.m.ppr!=null?Number(p.m.ppr).toFixed(1):'—',col:'',sh:'PPG',lg:'Season PPG'});
+ if(TSH.a){var pg=tshPpg(p);o.push({k:'a',val:pg!=null?pg.toFixed(1):'—',col:'',sh:'PPG',lg:'Season PPG'})}
  if(TSH.w){var x=p.out?'OUT':p.opp==='BYE'?'BYE':(p.proj?Number(p.proj.pts).toFixed(1):'—');o.push({k:'w',val:x,col:'',sh:'Proj W'+w,lg:'Proj Week '+w})}
  if(TSH.m)o.push({k:'m',val:p.mania==null?'—':Math.round(p.mania),col:tshCol(p.mania),sh:'Mania',lg:'Mania Rating'});
  return o}
@@ -5813,30 +5835,67 @@ function tshLast(p){var n=p.name.split(' ');var l=n.slice(1).join(' ')||p.name;r
 function tshPh(p,cl){return '<div class="tsPh '+(cl||'')+'" style="--ring:'+ring(p.mania||0)+'">'+pic(p)+'</div>'}
 function tshPlayer(id){var v=trCtx().V[id];if(!v)return '';var p=v.p,st=tshStats(v),n=st.length,S=TSH.s;
  if(S==='photo')return '<div class="tsP2 ph">'+tshPh(p,'big')+'<div class="tsPn">'+trEsc(tshLast(p))+'</div><div class="tsPm">'+p.pos+' • '+(p.team||'')+'</div></div>';
- if(S==='strip')return '<div class="tsP2 sp">'+tshPh(p,'mid')+'<div class="tsPn">'+trEsc(tshLast(p))+'</div><div class="tsPm">'+p.pos+'</div>'+st.map(function(c){return '<div class="tsSL"><b'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.val+'</b> <small>'+c.sh+'</small></div>'}).join('')+'</div>';
- if(S==='list')return '<div class="tsRw">'+tshPh(p,'sm')+'<div class="tsRn"><b>'+trEsc(p.name)+'</b><small>'+p.pos+' • '+(p.team||'')+'</small></div>'+st.map(function(c){return '<div class="tsRc"><b'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.val+'</b></div>'}).join('')+'</div>';
- var cells=st.map(function(c,i){return (i?'<i class="tsSl">/</i>':'')+'<div class="tsSt"><b'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.val+'</b><small>'+(n===3?c.sh:c.lg)+'</small></div>'}).join('');
- return '<div class="tsP2"><div class="tsPh" style="--ring:'+ring(p.mania||0)+'">'+pic(p)+'</div><div class="tsPn">'+trEsc(p.name)+'</div><div class="tsPm">'+p.pos+' • '+(p.team||'')+'</div>'+(n?'<div class="tsStr n'+n+'">'+cells+'</div>':'')+'</div>'}
-function tshVerdict(){var G=trSide(TR.give,TR.get.length),R=trSide(TR.get,TR.give.length);if(!G.it.length||!R.it.length)return null;var a=R.tot,b=G.tot,gap=(a-b)/Math.max(a,b,1),ag=Math.abs(gap),who=gap>0?'me':'you';
- var t=ag<.05?'Even trade':ag<.12?'Slight edge to '+who:ag<.25?'Edge to '+who:'Big edge to '+who;return {t:t,c:ag<.05?'':gap>0?'me':'you'}}
-function tshInner(){var w=META.next_week,vd=tshVerdict(),S=TSH.s,V=trCtx().V,
+ var nt=tshNote(p),NT=nt?'<div class="tsNote">'+trEsc(nt)+'</div>':'',FK=function(c){return ' data-fk="'+id+'|'+c.k+'"'+(c.k==='a'?' data-ed="'+id+'"':'')};
+ if(S==='strip')return '<div class="tsP2 sp">'+tshPh(p,'mid')+'<div class="tsPn">'+trEsc(tshLast(p))+'</div><div class="tsPm">'+p.pos+'</div>'+st.map(function(c){return '<div class="tsSL'+(c.k==='a'?' ed':'')+'"'+FK(c)+'><b'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.val+'</b> <small>'+c.sh+'</small></div>'}).join('')+NT+'</div>';
+ if(S==='list')return '<div class="tsRw">'+tshPh(p,'sm')+'<div class="tsRn"><b>'+trEsc(p.name)+'</b><small>'+p.pos+' • '+(p.team||'')+'</small>'+(nt?'<span class="tsNt">'+trEsc(nt)+'</span>':'')+'</div>'+st.map(function(c){return '<div class="tsRc'+(c.k==='a'?' ed':'')+'"'+FK(c)+'><b'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.val+'</b></div>'}).join('')+'</div>';
+ var cells=st.map(function(c,i){return (i?'<i class="tsSl">/</i>':'')+'<div class="tsSt'+(c.k==='a'?' ed':'')+'"'+FK(c)+'><b'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.val+'</b><small>'+(n===3?c.sh:c.lg)+'</small></div>'}).join('');
+ return '<div class="tsP2"><div class="tsPh" style="--ring:'+ring(p.mania||0)+'">'+pic(p)+'</div><div class="tsPn">'+trEsc(p.name)+'</div><div class="tsPm">'+p.pos+' • '+(p.team||'')+'</div>'+(n?'<div class="tsStr n'+n+'">'+cells+'</div>':'')+NT+'</div>'}
+function tshSides(){if(TR.mode!=='full')return {give:TR.give.slice(),get:TR.get.slice(),full:false};var V=trCtx().V;
+ if(TR.solo)return {give:TR.send.my.filter(function(i){return TR.my.includes(i)&&V[i]}),get:TR.inc.filter(function(i){return V[i]&&!TR.my.includes(i)}),full:true,solo:true};
+ return {give:TR.send.my.filter(function(i){return TR.my.includes(i)&&V[i]}),get:TR.send.their.filter(function(i){return TR.their.includes(i)&&V[i]}),full:true,solo:false}}
+function tshVerdict(){var S=tshSides();if(!S.give.length||!S.get.length)return null;
+ if(!S.full){var G=trSide(S.give,S.get.length),R=trSide(S.get,S.give.length);var a=R.tot,b=G.tot,gap=(a-b)/Math.max(a,b,1),ag=Math.abs(gap),who=gap>0?'me':'you';
+  return {t:ag<.05?'Even trade':ag<.12?'Slight edge to '+who:ag<.25?'Edge to '+who:'Big edge to '+who,c:ag<.05?'':gap>0?'me':'you',sub:''}}
+ /* full-team: real lineups for both teams, byes and injuries counted */
+ var sgn=function(x){return (x>=0?'+':'')+x.toFixed(1)},wN=TR.hz==='now'?.85:.3,sm,st=null;
+ var myAfter=TR.my.filter(function(i){return !S.give.includes(i)}).concat(S.get);
+ var f=function(b,a){var na=trTVd(b,a,'now'),la=trTVd(b,a,'ros'),pa=trTVd(b,a,'play');return TR.hz==='play'?pa:wN*na+(1-wN)*la};
+ sm=f(TR.my,myAfter);
+ if(S.solo){return {t:sm>=1.2?'Big upgrade for my team':sm>=.35?'Makes my team better':sm>-.35?'Barely changes my team':sm>-1.2?'Makes my team a bit worse':'Hurts my team',c:sm>=.35?'me':'',sub:'My lineup '+sgn(sm)+' pts/wk'}}
+ var thAfter=TR.their.filter(function(i){return !S.get.includes(i)}).concat(S.give);st=f(TR.their,thAfter);
+ var d=sm-st,ag=Math.abs(d),who=d>0?'me':'you',t;
+ if(sm>=.35&&st>=.35)t='Helps both teams';else if(Math.abs(sm)<.35&&Math.abs(st)<.35)t='Barely changes either team';else t=ag<.5?'Even trade':ag<1.5?'Slight edge to '+who:ag<3?'Edge to '+who:'Big edge to '+who;
+ return {t:t,c:(t==='Helps both teams'||ag<.5)?'':(d>0?'me':'you'),sub:'My lineup '+sgn(sm)+' · Yours '+sgn(st)+' pts/wk'}}
+function tshInner(){var w=META.next_week,vd=tshVerdict(),S=TSH.s,V=trCtx().V,SD=tshSides(),
  on=S==='photo'?[]:[TSH.a?'<b>PPG</b> = season average PPR points per game':'',TSH.w?'<b>Proj W'+w+'</b> = projected points this week':'',TSH.m?'<b>Mania</b> = Mania Rating (0-100)':''].filter(Boolean),
  chip=function(k,l,x){return '<button type="button" class="tsB'+((x==null?TSH[k]:x)?' on':'')+'" data-k="'+k+'"'+(k==='s'?' data-v="'+l[0]+'"':'')+'>'+(k==='s'?l[1]:l)+'</button>'},
  sty=[['photo','Photos'],['strip','Strip'],['card','Cards'],['list','List']],
- ctl='<div class="tsCtl"><div class="tsCr"><span>Style</span>'+sty.map(function(x){return chip('s',x,TSH.s===x[0])}).join('')+'</div>'+(S==='photo'?'':'<div class="tsCr"><span>Show</span>'+chip('a','Season PPG')+chip('w','Proj Wk '+w)+chip('m','Mania Rating')+'</div>')+'<div class="tsCr"><span>Verdict</span>'+chip('v','Who it favors')+'</div><div class="tsCr"><button type="button" class="tsB act" data-k="hide">Hide buttons</button><button type="button" class="tsB act" data-k="close">Close</button></div></div>',
+ ctl='<div class="tsCtl"><div class="tsCr"><span>Style</span>'+sty.map(function(x){return chip('s',x,TSH.s===x[0])}).join('')+'</div>'+(S==='photo'?'':'<div class="tsCr"><span>Show</span>'+chip('a','Season PPG')+chip('w','Proj Wk '+w)+chip('m','Mania Rating')+'</div>')+'<div class="tsCr"><span>Verdict</span>'+chip('v','Who it favors')+'</div>'+(S==='photo'||!TSH.a?'':'<div class="tsHint">Tap a PPG number to choose which games count.</div>')+'<div class="tsCr"><button type="button" class="tsB act" data-k="hide">Hide buttons</button><button type="button" class="tsB act" data-k="close">Close</button></div></div>',
  srt=function(ids){return ids.slice().sort(function(x,y){return (V[y]?V[y].tv:0)-(V[x]?V[x].tv:0)})},
- hdr=function(){if(S!=='list')return '';var st=tshStats({p:{m:{},mania:0}});var h=[];if(TSH.a)h.push('PPG');if(TSH.w)h.push('Proj W'+w);if(TSH.m)h.push('Mania');return '<div class="tsRh"><span></span>'+h.map(function(x){return '<em>'+x+'</em>'}).join('')+'</div>'},
- side=function(ids,t){return '<div class="tsSd"><div class="tsH">'+t+'</div>'+hdr()+ids.map(tshPlayer).join('')+'</div>'},
- G=srt(TR.give),R=srt(TR.get),
+ hdr=function(t){if(S!=='list')return '';var h=[];if(TSH.a)h.push(['a','PPG']);if(TSH.w)h.push(['w','Proj W'+w]);if(TSH.m)h.push(['m','Mania']);return '<div class="tsRh"><span></span>'+h.map(function(x){return '<em data-fk="'+t+'|h|'+x[0]+'">'+x[1]+'</em>'}).join('')+'</div>'},
+ side=function(ids,t){return '<div class="tsSd"><div class="tsH">'+t+'</div>'+hdr(t)+ids.map(tshPlayer).join('')+'</div>'},
+ G=srt(SD.give),R=srt(SD.get),
  body=S==='list'?'<div class="tsList">'+side(G,'I give')+'<div class="tsMidH">⇅</div>'+side(R,'I get')+'</div>':'<div class="tsCols s-'+S+'">'+side(G,'I give')+'<div class="tsMid">⇄</div>'+side(R,'I get')+'</div>';
- return ctl+'<div class="tsCard"><div class="tsTop"><span class="tsBr">FANTASY MANIA</span><span class="tsTt">Trade proposal</span></div>'+body+(TSH.v&&vd?'<div class="tsVd '+vd.c+'">'+vd.t+'</div>':'')+(on.length?'<div class="tsLg">'+on.join(' · ')+'</div>':'')+'<div class="tsFt">fantasymania.pages.dev</div></div>'}
+ return ctl+'<div class="tsCard"><div class="tsTop"><span class="tsBr">FANTASY MANIA</span><span class="tsTt">Trade proposal</span></div>'+body+(TSH.v&&vd?'<div class="tsVd '+vd.c+'">'+vd.t+(vd.sub?'<small>'+vd.sub+'</small>':'')+'</div>':'')+(on.length?'<div class="tsLg">'+on.join(' · ')+'</div>':'')+'<div class="tsFt">fantasymania.pages.dev</div></div>'}
+function tshEdit(el,id,redraw){var p=byId(id);if(!p||!p.logs||!p.logs.length)return;var o=TSH.ov[id]||(TSH.ov[id]={sel:p.logs.map(function(_,i){return i}),note:''});
+ el.querySelectorAll('.tsEd').forEach(function(x){x.remove()});var d=document.createElement('div');d.className='tsEd';
+ var FL=function(){return (p.flags||[]).filter(function(f){return f.btn&&f.use})};
+ var html=function(){var fl=FL();return '<div class="tsEdB"><div class="tsEdT"><b>'+trEsc(p.name)+'</b><small>Choose which games count toward PPG</small></div>'
+  +(fl.length?'<div class="tsEdF">'+fl.map(function(f,i){return '<button type="button" class="tsB" data-f="'+i+'">'+trEsc(f.btn.replace(/^Count only games /,'Games '))+'</button>'}).join('')+'</div>':'')
+  +'<div class="tsEdG">'+p.logs.map(function(l,i){return '<label class="tsGc'+(o.sel.indexOf(i)>=0?' on':'')+'"><input type="checkbox" data-i="'+i+'"'+(o.sel.indexOf(i)>=0?' checked':'')+'><span>Week '+l.w+'</span><b>'+Number(l.ppr).toFixed(1)+'</b>'+(l.partial?'<em>left early</em>':'')+'</label>'}).join('')+'</div>'
+  +'<input class="tsEdN" type="text" maxlength="40" placeholder="Add a short note, like: Caleb Williams out" value="'+trEsc(o.note||'')+'">'
+  +'<div class="tsEdP">PPG now <b>'+(tshPpg(p)!=null?tshPpg(p).toFixed(1):'—')+'</b><button type="button" class="tsB" data-r="1">All games</button></div><button type="button" class="tsB on tsEdD">Done</button></div>'};
+ var paint=function(keep){var v=d.querySelector('.tsEdN'),val=v?v.value:'';d.innerHTML=html();if(keep){d.querySelector('.tsEdN').value=val}
+  d.querySelectorAll('input[type=checkbox]').forEach(function(c){c.onchange=function(){var i=+c.dataset.i,k=o.sel.indexOf(i);if(c.checked&&k<0)o.sel.push(i);else if(!c.checked&&k>=0){if(o.sel.length<=1){c.checked=true;return}o.sel.splice(k,1)}paint(1);redraw()}});
+  d.querySelectorAll('[data-f]').forEach(function(b){b.onclick=function(){var f=FL()[+b.dataset.f],ix=p.logs.map(function(l,i){return f.use.indexOf(l.w)>=0?i:-1}).filter(function(i){return i>=0});if(ix.length){o.sel=ix;o.note='';paint();redraw()}}});
+  var r=d.querySelector('[data-r]');if(r)r.onclick=function(){o.sel=p.logs.map(function(_,i){return i});o.note='';paint();redraw()};
+  var n=d.querySelector('.tsEdN');n.oninput=function(){o.note=n.value;redraw()};
+  d.querySelector('.tsEdD').onclick=function(e){e.stopPropagation();d.remove()}};
+ d.onclick=function(e){e.stopPropagation();if(e.target===d)d.remove()};el.appendChild(d);paint()}
 function tshOpen(){document.querySelectorAll('.tsh').forEach(function(x){x.remove()});var el=document.createElement('div');el.className='tsh';el.innerHTML='<div class="tshW"></div>';document.body.appendChild(el);document.body.classList.add('shotOpen');var box=el.firstChild;
  var cl=function(){el.remove();document.body.classList.remove('shotOpen');document.removeEventListener('keydown',kf)},kf=function(e){if(e.key==='Escape')cl()};document.addEventListener('keydown',kf);
- var draw=function(){box.innerHTML=tshInner();el.classList.toggle('hideC',TSH.hide);
+ var lastS=null,calm=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ var draw=function(){var old={};if(lastS===TSH.s&&!calm)box.querySelectorAll('[data-fk]').forEach(function(e){old[e.dataset.fk]=e.getBoundingClientRect()});
+  box.innerHTML=tshInner();el.classList.toggle('hideC',TSH.hide);
+  if(lastS===TSH.s&&!calm&&box.animate)box.querySelectorAll('[data-fk]').forEach(function(e){var o=old[e.dataset.fk],r=e.getBoundingClientRect();
+   if(o){var dx=o.left-r.left,dy=o.top-r.top;if(Math.abs(dx)>1||Math.abs(dy)>1)e.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'none'}],{duration:460,easing:'cubic-bezier(.25,1.15,.4,1)'})}
+   else e.animate([{opacity:0,transform:'scale(.55)'},{opacity:1,transform:'none'}],{duration:420,delay:160,fill:'backwards',easing:'cubic-bezier(.2,1.4,.4,1)'})});
+  lastS=TSH.s;
+  box.querySelectorAll('[data-ed]').forEach(function(x){x.onclick=function(e){if(TSH.hide)return;e.stopPropagation();tshEdit(el,x.dataset.ed,draw)}});
   box.querySelectorAll('.tsB').forEach(function(b){b.onclick=function(e){e.stopPropagation();var k=b.dataset.k;if(k==='close'){cl();return}if(k==='hide'){TSH.hide=true;draw();return}
-   if(k==='s'){TSH.s=b.dataset.v;tshSave();draw();return}if((k==='m'||k==='a'||k==='w')&&TSH[k]&&!(TSH.m?1:0)+(TSH.a?1:0)+(TSH.w?1:0)-1)return;TSH[k]=!TSH[k];tshSave();draw()}})};
+   if(k==='s'){TSH.s=b.dataset.v;tshSave();draw();return}if((k==='m'||k==='a'||k==='w')&&TSH[k]&&(TSH.m?1:0)+(TSH.a?1:0)+(TSH.w?1:0)<=1)return;TSH[k]=!TSH[k];tshSave();draw()}})};
  el.onclick=function(e){if(TSH.hide){TSH.hide=false;draw()}else if(e.target===el)cl()};draw()}
-(function(){var tr=trRenderAll;trRenderAll=function(){var r=tr.apply(this,arguments);try{var b=document.getElementById('trBody');if(b&&TR.mode==='quick'&&TR.give.length&&TR.get.length&&!b.querySelector('.tshBtn')){var v=b.querySelector('.trVerdict');if(v){var x=document.createElement('button');x.type='button';x.className='tshBtn';x.innerHTML='Share this trade as a screenshot';x.onclick=tshOpen;v.parentNode.insertBefore(x,v)}}}catch(e){}return r}})();
+(function(){var tr=trRenderAll;trRenderAll=function(){var r=tr.apply(this,arguments);try{var b=document.getElementById('trBody');var _S=b&&tshSides();if(b&&_S.give.length&&_S.get.length&&!b.querySelector('.tshBtn')){var v=b.querySelector('.trVerdict');if(v){var x=document.createElement('button');x.type='button';x.className='tshBtn';x.innerHTML='Share this trade as a screenshot';x.onclick=tshOpen;v.parentNode.insertBefore(x,v)}}}catch(e){}return r}})();
 
 /* ===== analyze-your-team shortcuts ===== */
 function goMyTeam(){showView('players');var b=document.querySelector('#plModes .tsb[data-v="mine"]');if(b)b.click();window.scrollTo(0,0)}
