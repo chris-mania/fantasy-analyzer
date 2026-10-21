@@ -5,17 +5,9 @@
    "kind": "vegas line cut back",
    "name": "Jaleel McLaughlin",
    "stat": "td",
-   "line": 0.51,
+   "line": 0.49,
    "model": 0.15,
    "used": 0.45
-  },
-  {
-   "kind": "vegas line cut back",
-   "name": "Roschon Johnson",
-   "stat": "ruy",
-   "line": 399.5,
-   "model": 22.74,
-   "used": 56.85
   }
  ]
 }
