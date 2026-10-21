@@ -3240,6 +3240,7 @@ body.shotOpen{overflow:hidden}
 .shS.pQB{background:rgba(239,107,115,.2);color:#ff9aa1}.shS.pRB{background:rgba(76,195,138,.2);color:#6fe3a3}.shS.pWR{background:rgba(91,155,255,.2);color:#8fb8ff}.shS.pTE{background:rgba(242,176,74,.2);color:#ffcd7c}.shS.pFLEX{background:rgba(167,139,250,.2);color:#c4b2ff}
 .shBigW b{background:linear-gradient(180deg,#fff,#a9c3f5);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none}
 
+.trLg{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px}.trLg select{flex:1;min-width:160px;max-width:320px;padding:8px 10px;border-radius:10px;border:1.5px solid #d5ddea;font:inherit;background:#fff}
 .trSoloT{display:flex;width:100%;max-width:420px;margin:0 0 12px}.trSoloT .tsb{flex:1}
 .trSoloNote{background:#eef4ff;color:#233b6e;border-radius:14px;padding:12px 14px;font-size:13.5px;line-height:1.5;margin:0 0 14px}
 
@@ -4696,9 +4697,9 @@ document.querySelectorAll('.rcWeek').forEach(x=>x.textContent=META.week);pillGro
    player gets while a teammate is out (which fades when that teammate returns).
    Value = points above a replacement player in a league that size (a smooth version so nobody is exactly zero), scaled 0 to 100. */
 const TRK='fmTrade2',TRPRI={QB:15,RB:8,WR:8,TE:6},TRLAST=17,TRPOS=['QB','RB','WR','TE'],TRW=[1,.85,.7,.55,.45,.4],TRO={QB:0,RB:1,WR:2,TE:3},TRIDEAL={QB:1,RB:4,WR:4,TE:1};
-var TR={tname:'',solo:false,inc:[],n:10,sf:false,hz:'ros',st:{QB:1,RB:2,WR:2,TE:1,FLEX:1},mode:'quick',give:[],get:[],my:[],their:[],send:{my:[],their:[]},rec:{my:[0,0],their:[0,0]}},TRC=null,TRopen={};
+var TR={tname:'',solo:false,inc:[],n:10,sf:false,hz:'ros',st:{QB:1,RB:2,WR:2,TE:1,FLEX:1},mode:'quick',give:[],get:[],my:[],their:[],send:{my:[],their:[]},rec:{my:[0,0],their:[0,0]},lg:[],lgi:-1},TRC=null,TRopen={};
 try{let s=JSON.parse(localStorage.getItem(TRK)||'null');if(s&&s.st&&s.send){TR=Object.assign(TR,s,{mode:'quick'});if(s.v!==3)TR.n=10}}catch(e){}
-function trSave(){try{localStorage.setItem(TRK,JSON.stringify({v:3,tname:TR.tname||'',solo:!!TR.solo,inc:TR.inc||[],n:TR.n,sf:TR.sf,hz:TR.hz,st:TR.st,give:TR.give,get:TR.get,my:TR.my,their:TR.their,send:TR.send,rec:TR.rec}))}catch(e){}}
+function trSave(){if(TR.lg[TR.lgi])TR.lg[TR.lgi].ids=TR.their.slice();try{localStorage.setItem(TRK,JSON.stringify({v:3,tname:TR.tname||'',solo:!!TR.solo,inc:TR.inc||[],n:TR.n,sf:TR.sf,hz:TR.hz,st:TR.st,give:TR.give,get:TR.get,my:TR.my,their:TR.their,send:TR.send,rec:TR.rec,lg:TR.lg,lgi:TR.lgi}))}catch(e){}}
 const trSoft=x=>1.4*Math.log(1+Math.exp(x/1.4)),trN=v=>v==null||isNaN(v)?'—':Math.abs(v)>=10?String(Math.round(v)):(Math.round(v*10)/10).toFixed(1).replace(/\.0$/,'');
 function trGameWeeks(team){let o=(META.opps||{})[team]||{},a=[];for(let w=META.next_week;w<=TRLAST;w++)if(o[w])a.push(w);return a}
 function trBye(team){let o=(META.opps||{})[team]||{};for(let w=1;w<=18;w++)if(!o[w])return w;return 0}
@@ -4903,6 +4904,8 @@ function trSeason(b,a,inc,title){let wk=trWeeks('ros'),w0=wk.map(w=>trLineupW(b,
  return `<div><div class="tsec">${title}</div><div class="trSeasonT"><b class="${dt>=.05?'up':dt<=-.05?'dn':''}">${trSgn(dt)}</b><span>starting-lineup points over the next ${wk.length} weeks (${trN(t0)} → ${trN(t1)}), about <b>${trSgn(dt/Math.max(1,wk.length))}</b> a week</span></div><svg class="trChart" viewBox="0 0 ${W} 108" preserveAspectRatio="xMidYMid meet"><line x1="0" x2="${W}" y1="50" y2="50" stroke="#dfe6f1"/>${bars}</svg><div class="trSBl">Better in <b>${up}</b> of ${wk.length} weeks${dn?`, worse in <b>${dn}</b>`:''}. ${ex2.join(' ')}</div>${ex.length?`<ul class="trHints">${ex.map(h=>`<li>${h}</li>`).join('')}</ul>`:''}</div>`}
 function trSideBox(name,d,na,la,pa,up,notes,l0,l1,nowLater){let lv=trLevel(d),cell=(t,x)=>`<div><small>${t}</small><b class="${x>=.05?'up':x<=-.05?'dn':''}">${trSgn(x)}</b></div>`;
  return `<div class="trSB ${lv[1]}"><div class="trSBh"><span>${name}</span><strong>${lv[0]}</strong></div><div class="trSBg">${cell('Next 4 weeks',na)}${cell('Whole season',la)}${trWeeks('play').length?cell('Playoffs',pa):''}</div><div class="trSBl">Points per week. Lineup this week: <b>${trN(l0)} → ${trN(l1)}</b>. Starting spots: <b>${up.up}</b> better${up.dn?`, ${up.dn} worse`:''}.</div>${nowLater?`<p class="trSBn">${nowLater}</p>`:''}<ul class="trHints">${notes.map(h=>`<li>${h}</li>`).join('')}</ul></div>`}
+function trLgBar(){let o=TR.lg.map((t,i)=>`<option value="${i}"${i===TR.lgi?' selected':''}>${trEsc(t.n)} (${t.ids.length})</option>`).join('');
+ return `<div class="trLg"><b>Trade partner</b><select id="trLgSel"><option value="-1">${TR.their.length&&TR.lgi<0?'Unsaved team':'New team'}</option>${o}</select>${TR.lgi>=0?'<button type="button" class="reset" id="trLgDel">Remove from league</button>':TR.their.length?'<button type="button" class="reset" id="trLgSave">Save to league</button>':''}</div>`}
 function trFullTog(){return `<div class="tseg trSoloT"><button type="button" class="tsb trSoloB${TR.solo?'':' on'}" data-v="0">Both teams</button><button type="button" class="tsb trSoloB${TR.solo?' on':''}" data-v="1">Just my team</button></div>`}
 function trFullSolo(){TRCVmap=null;let a=trRosterRaw('my','Your team',true),V=trCtx().V,inc=TR.inc.filter(i=>V[i]&&!TR.my.includes(i)),sa=TR.send.my.filter(i=>TR.my.includes(i)),
  incRows=inc.map(i=>trRow(i,`<button type="button" class="tx trDelInc" data-id="${i}" title="Remove">✕</button>`)).join('')||'<div class="trEmpty">Search for a player you would get. No other team needed.</div>',
@@ -4961,7 +4964,7 @@ function trFull(){if(TR.solo)return trFullSolo();let a=trRoster('my','Your team'
    +trD('fneeds2','Needs and depth: before → after','what each position becomes',`<div class="trCols"><div><div class="tsec">You</div>${trNeedsDiffHTML(TR.my,myAfter)}</div><div><div class="tsec">Them</div>${trNeedsDiffHTML(TR.their,thAfter)}</div></div><p class="tnote">Grades compare the starters at each position with the average starter in a ${TR.n}-team league, at full strength (healthy players, byes ignored).</p>`,true)
    +trD('fdeals','Other deals that help both teams','tap to test',trDealsHTML(),false)}}
  else res=`<div class="trVerdict even"><div class="trvK">Trade check</div><strong>Enter both teams</strong><div class="trvS">Add every player on each roster, injured players too. Then you can ask for a suggested fair trade or tap Trade on the players who would move.</div></div>`;
- return `${trFullTog()}<div class="trCols">${a}${b}</div>${res}<div class="trFoot"><button type="button" class="reset" id="trSamp2">Try a sample</button><button type="button" class="reset" id="trClrAll">Clear all</button></div>`}
+ return `${trFullTog()}${trLgBar()}<div class="trCols">${a}${b}</div>${res}<div class="trFoot"><button type="button" class="reset" id="trSamp2">Try a sample</button><button type="button" class="reset" id="trClrAll">Clear all</button></div>`}
 /* ---------- My team (lives in the Players tab) ---------- */
 var TRS={k:'out',d:-1,f:'ALL',view:'tbl',v:'ov'},TRW_SEL=null,TRI={tab:'trade',pos:'NEED',n:4},TRIC=null,TRDVP={};
 function trPlanRe(){let box=document.getElementById('trPlanBox');if(box){box.innerHTML=trOut(()=>trPlanBody(TR.my));trBind(box)}}
@@ -5264,9 +5267,12 @@ root.querySelectorAll('.trJump button[data-j]').forEach(b=>b.onclick=()=>{let t=
  root.querySelectorAll('.trIdea').forEach(b=>{b.onclick=()=>{TR.give=b.dataset.a.split(',');TR.get=[b.dataset.t];trSave();TR.mode='quick';openTrade('quick')}});
  let e=root.querySelector('#trEx');if(e)e.onclick=()=>{let f=n=>{let q=allPlayers().find(p=>p.name===n);return q&&q.id},ids=['Patrick Mahomes','Lamar Jackson','Cam Skattebo'].map(f);if(ids.every(Boolean)){TR.give=[ids[0]];TR.get=[ids[1],ids[2]]}else{let c=trCtx().vs,top=(pos,n)=>c.filter(v=>v.p.pos===pos).sort((a,b)=>b.raw-a.raw).slice(n,n+1).map(v=>v.p.id)[0];TR.give=[top('QB',2)];TR.get=[top('QB',4),top('RB',9)]}trSave();trRenderAll()};
  e=root.querySelector('#trClr');if(e)e.onclick=()=>{TR.give=[];TR.get=[];trSave();trRenderAll()};
- let samp=()=>{let c=trCtx().vs,pools={QB:5,RB:15,WR:15,TE:6},A=[],B=[];TRPOS.forEach(pos=>{c.filter(v=>v.p.pos===pos&&!v.pl.gone).sort((a,b)=>b.raw-a.raw).slice(0,pools[pos]).forEach((v,i)=>((i+(pos==='RB'||pos==='TE'?1:0))%2?B:A).push(v.p.id))});TR.my=A;TR.their=B;TR.send={my:[],their:[]};trSave();trRenderAll()};
+ let samp=()=>{let c=trCtx().vs,pools={QB:5,RB:15,WR:15,TE:6},A=[],B=[];TRPOS.forEach(pos=>{c.filter(v=>v.p.pos===pos&&!v.pl.gone).sort((a,b)=>b.raw-a.raw).slice(0,pools[pos]).forEach((v,i)=>((i+(pos==='RB'||pos==='TE'?1:0))%2?B:A).push(v.p.id))});TR.my=A;TR.their=B;TR.lgi=-1;TR.send={my:[],their:[]};trSave();trRenderAll()};
  e=root.querySelector('#trSamp');if(e)e.onclick=()=>{let c=trCtx().vs,pick=(pos,rs)=>{let a=c.filter(v=>v.p.pos===pos&&!v.pl.gone).sort((x,y)=>y.raw-x.raw);return rs.map(r=>a[r]&&a[r].p.id).filter(Boolean)};TR.my=[...pick('QB',[5,16]),...pick('RB',[3,11,19,27,38]),...pick('WR',[2,9,17,25,33,44]),...pick('TE',[4,13])];TR.send={my:[],their:[]};trSave();trRenderAll()};
- e=root.querySelector('#trSamp2');if(e)e.onclick=samp;e=root.querySelector('#trClrAll');if(e)e.onclick=()=>{TR.my=[];TR.their=[];TR.send={my:[],their:[]};TRSUG=false;trSave();trRenderAll()}}
+ e=root.querySelector('#trSamp2');if(e)e.onclick=samp;e=root.querySelector('#trClrAll');if(e)e.onclick=()=>{TR.my=[];TR.their=[];TR.lgi=-1;TR.send={my:[],their:[]};TRSUG=false;trSave();trRenderAll()}
+ e=root.querySelector('#trLgSel');if(e)e.onchange=ev=>{TR.lgi=+ev.target.value;TR.their=TR.lgi<0?[]:TR.lg[TR.lgi].ids.slice();TR.send.their=[];TR.rec.their=[0,0];TRSUG=false;trSave();trRenderAll()};
+ e=root.querySelector('#trLgSave');if(e)e.onclick=()=>{let n=(prompt('Team name')||'').trim();if(!n)return;TR.lg.push({n,ids:TR.their.slice()});TR.lgi=TR.lg.length-1;trSave();trRenderAll()};
+ e=root.querySelector('#trLgDel');if(e)e.onclick=()=>{if(!confirm(`Remove ${TR.lg[TR.lgi].n} from your league? Its roster stays loaded.`))return;TR.lg.splice(TR.lgi,1);TR.lgi=-1;trSave();trRenderAll()}}
 function trEditRoster(){let t=document.getElementById('trRosterBox');if(!t)return;t.classList.add('open');TRTO.roster=1;if(window.innerWidth>800)t.scrollIntoView({behavior:'smooth',block:'start'});else t.scrollTop=0}
 function trRenderAll(){TRC=null;TRTV={};TRCVmap=null;let set=$('trSet'),body=$('trBody');
  if(set&&body){set.innerHTML=trSettings();body.innerHTML=TR.mode==='full'?trFull():trQuick();document.querySelectorAll('#trModes .tsb').forEach(b=>b.classList.toggle('on',b.dataset.v===TR.mode));trBind(set);trBind(body)}
@@ -5391,6 +5397,7 @@ function apply(){
  else if(TRH==='find'){kids.forEach(function(c){if(c!==cols&&!c.classList.contains('trFind'))c.hidden=true});if(ch[1])ch[1].hidden=true}
  else{var rest=kids.filter(function(c){return c!==cols&&!c.hidden}),last=TRS===steps().length;
   rest.forEach(function(c){c.hidden=!last});
+  var lg=body.querySelector('.trLg');if(lg)lg.hidden=!(TRH==='both'&&TRS>1);
   ch.forEach(function(c){c.hidden=true});
   var pick=function(c){if(!c)return;c.hidden=false;c.classList.add('trPick');c.querySelectorAll('details.trRL').forEach(function(d){d.open=true})};
   if(TRH==='both'){if(TRS===1)ch[0]&&(ch[0].hidden=false);else if(TRS===2)ch[1]&&(ch[1].hidden=false);else pick(ch[TRTAB])}
