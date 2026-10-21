@@ -3946,6 +3946,7 @@ tr.pjFlash td,.rcard.pjFlash{animation:pjF 2.6s ease-out}@keyframes pjF{0%,55%{b
 .tst{flex-direction:column;align-items:stretch!important;gap:6px}.tst>div{display:flex;align-items:center;justify-content:space-between}
 .qcv{display:flex;justify-content:space-between;gap:10px;margin-top:5px;font-weight:800;font-size:14px}.qcv span{display:flex;flex-direction:column;flex:1}.qcv span:last-child{align-items:flex-end;text-align:right}.qcv small{font-weight:600;font-size:11px;color:#6b7891}.qcv .good{color:#16803f}
 .qcsw{font-size:12px;color:#6b7891;text-align:center;margin:10px 4px 18px;line-height:1.4}
+@media(max-width:900px){#home .a2Tile{order:4;margin:2px 0 16px!important}}
 #compare.foRun{overflow-x:clip}
 .trSwap{padding:14px 8px!important;gap:2px!important}
 .tsRow{gap:4px!important}
