@@ -3240,6 +3240,7 @@ body.shotOpen{overflow:hidden}
 .shS.pQB{background:rgba(239,107,115,.2);color:#ff9aa1}.shS.pRB{background:rgba(76,195,138,.2);color:#6fe3a3}.shS.pWR{background:rgba(91,155,255,.2);color:#8fb8ff}.shS.pTE{background:rgba(242,176,74,.2);color:#ffcd7c}.shS.pFLEX{background:rgba(167,139,250,.2);color:#c4b2ff}
 .shBigW b{background:linear-gradient(180deg,#fff,#a9c3f5);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:none}
 
+.trImpT{width:100%;box-sizing:border-box;margin:4px 0 0;padding:10px;border-radius:12px;border:1.5px solid #d5ddea;font:inherit;font-size:13px}.trImpE{color:#b42318!important;margin:6px 0!important}
 .trLg{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px}.trLg select{flex:1;min-width:160px;max-width:320px;padding:8px 10px;border-radius:10px;border:1.5px solid #d5ddea;font:inherit;background:#fff}
 .trSoloT{display:flex;width:100%;max-width:420px;margin:0 0 12px}.trSoloT .tsb{flex:1}
 .trSoloNote{background:#eef4ff;color:#233b6e;border-radius:14px;padding:12px 14px;font-size:13.5px;line-height:1.5;margin:0 0 14px}
@@ -3694,7 +3695,7 @@ tr.pjFlash td,.rcard.pjFlash{animation:pjF 2.6s ease-out}@keyframes pjF{0%,55%{b
 .thOpt ul{list-style:none;padding:0;margin:0 0 12px}.thOpt li{position:relative;padding:3px 0 3px 24px;font-size:14px;line-height:1.35;color:#33445f}.thOpt li:before{content:"\2713";position:absolute;left:2px;top:3px;color:#16803f;font-weight:900}.thOpt li.n:before{content:"i";color:#2457b8;font-style:italic;left:6px}
 .thGo{display:block;width:100%;border:0;border-radius:14px;background:#0b1220;color:#fff;font:inherit;font-weight:800;font-size:15px;padding:14px;cursor:pointer}
 .thNav{display:flex;gap:10px;margin:0 0 14px}.thNav button{flex:1;border:0;border-radius:14px;font:inherit;font-weight:800;font-size:15px;padding:15px 10px;cursor:pointer;min-height:50px}.thNav .nx{background:#0b1220;color:#fff}.thNav .nx:disabled{background:#b6c0d2;cursor:default}.thNav .bk{background:#fff;color:#0b1220;box-shadow:inset 0 0 0 2px #d5ddea}.thNav:empty{display:none}
-.thSamp{border:0;background:none;color:#2457b8;font:inherit;font-weight:800;font-size:14px;padding:8px 0;cursor:pointer}
+.thSamp{border:0;background:none;color:#2457b8;font:inherit;font-weight:800;font-size:14px;padding:8px 0;cursor:pointer}.thSamp+.thSamp{margin-left:18px}
 .thTabs{display:flex;background:#fff;border-radius:999px;padding:4px;box-shadow:inset 0 0 0 1.5px #d5ddea;margin:0 0 12px}.thTabs button{flex:1;border:0;background:none;font:inherit;font-weight:800;font-size:14px;color:#33445f;padding:10px;border-radius:999px;cursor:pointer}.thTabs button.on{background:#0b1220;color:#fff}
 .trPick details.trRL>.trDB{max-height:330px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 4px 4px}.trPick .trS,.trPick .trRecRow,.trPick .trMeta,.trPick .trFoot,.trPick .trEmpty,.trPick details.trRL>summary{display:none!important}
 .brand img.logo{height:17px!important}@media(max-width:900px){.brand img.logo{height:12.5px!important}}
@@ -4911,6 +4912,25 @@ function trSideBox(name,d,na,la,pa,up,notes,l0,l1,nowLater){let lv=trLevel(d),ce
  return `<div class="trSB ${lv[1]}"><div class="trSBh"><span>${name}</span><strong>${lv[0]}</strong></div><div class="trSBg">${cell('Next 4 weeks',na)}${cell('Whole season',la)}${trWeeks('play').length?cell('Playoffs',pa):''}</div><div class="trSBl">Points per week. Lineup this week: <b>${trN(l0)} → ${trN(l1)}</b>. Starting spots: <b>${up.up}</b> better${up.dn?`, ${up.dn} worse`:''}.</div>${nowLater?`<p class="trSBn">${nowLater}</p>`:''}<ul class="trHints">${notes.map(h=>`<li>${h}</li>`).join('')}</ul></div>`}
 function trLgBar(){let o=TR.lg.map((t,i)=>`<option value="${i}"${i===TR.lgi?' selected':''}>${trEsc(t.n)} (${t.ids.length})</option>`).join('');
  return `<div class="trLg"><b>Trade partner</b><select id="trLgSel"><option value="-1">${TR.their.length&&TR.lgi<0?'Unsaved team':'New team'}</option>${o}</select>${TR.lgi>=0?'<button type="button" class="reset" id="trLgDel">Remove from league</button>':TR.their.length?'<button type="button" class="reset" id="trLgSave">Save to league</button>':''}</div>`}
+/* ESPN import: the League > Rosters page copied whole (Ctrl+A, Ctrl+C). ESPN has no login-free API for private leagues,
+   so we read the page text. Each team is its name then a "(W-L-T)" line; each player is "NameName", then "Name", then team,
+   injury tag and position lines. ESPN lists the viewer's own team first. Kickers and defenses are skipped. */
+function trEspnKey(s){return s.toLowerCase().replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g,'').replace(/[^a-z]/g,'')}
+function trEspnParse(txt,players){let idx={},L=txt.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),teams=[],miss=[];
+ players.forEach(p=>(idx[trEspnKey(p.name)]=idx[trEspnKey(p.name)]||[]).push(p));
+ L.forEach((l,i)=>{if(/^\(\d+-\d+(-\d+)?\)$/.test(l)&&i)return teams.push({n:L[i-1],ids:[]});
+  let h=l.length/2,T=teams[teams.length-1],nm=L[i+1];if(!T||l.length%2||nm!==l.slice(0,h)||nm!==l.slice(h))return;
+  let pos=L.slice(i+2,i+6).find(x=>/^(QB|RB|WR|TE|K|D\/ST)$/.test(x));if(pos==='K'||pos==='D/ST')return;
+  let c=idx[trEspnKey(nm)]||[],p=c.find(x=>x.pos===pos)||c[0];if(p)T.ids.push(p.id);else miss.push(nm)});
+ return {teams,miss}}
+function trEspnModal(){let m=document.createElement('div');m.className='trModal';
+ m.innerHTML=`<div class="trModalB"><b>Import your ESPN league</b><p>On ESPN open <b>League &rsaquo; Rosters</b>, press Ctrl+A then Ctrl+C, and paste it here. Your team is the first one ESPN lists. Re-import any time to refresh all rosters.</p><textarea class="trImpT" rows="6" placeholder="Paste the whole Rosters page"></textarea><p class="trImpE"></p><button type="button" class="trAsk">Import league</button></div>`;
+ m.onclick=e=>{if(e.target===m)m.remove()};
+ m.querySelector('.trAsk').onclick=()=>{let r=trEspnParse(m.querySelector('textarea').value,Object.values(trCtx().V).map(v=>v.p));
+  if(r.teams.length<2){m.querySelector('.trImpE').textContent='No teams found. Copy the whole League › Rosters page, not one team.';return}
+  let me=r.teams.shift();TR.my=me.ids;TR.tname=me.n.slice(0,22);TR.lg=r.teams;TR.lgi=0;TR.their=TR.lg[0].ids.slice();TR.send={my:[],their:[]};TR.n=Math.max(6,Math.min(20,r.teams.length+1));trSave();trRenderAll();m.remove();
+  trNotice('League imported',`<b>${trEsc(me.n)}</b> is your team, plus ${r.teams.length} trade partners in a ${TR.n}-team league. Kickers and defenses were skipped.${r.miss.length?` Not in our player pool, so left out: ${r.miss.map(trEsc).join(', ')}.`:''}`)};
+ document.body.appendChild(m);m.querySelector('textarea').focus()}
 function trFullTog(){return `<div class="tseg trSoloT"><button type="button" class="tsb trSoloB${TR.solo?'':' on'}" data-v="0">Both teams</button><button type="button" class="tsb trSoloB${TR.solo?' on':''}" data-v="1">Just my team</button></div>`}
 function trFullSolo(){TRCVmap=null;let a=trRosterRaw('my','Your team',true),V=trCtx().V,inc=TR.inc.filter(i=>V[i]&&!TR.my.includes(i)),sa=TR.send.my.filter(i=>TR.my.includes(i)),
  incRows=inc.map(i=>trRow(i,`<button type="button" class="tx trDelInc" data-id="${i}" title="Remove">✕</button>`)).join('')||'<div class="trEmpty">Search for a player you would get. No other team needed.</div>',
@@ -5386,7 +5406,7 @@ function hubHTML(){
  if(TRH==='find')return back('Trade','menu')+'<div class="thH">Find me a trade</div><p class="thP">Add who you would send, then tap Find trades. We suggest players worth about the same.</p>';
  if(TRH==='adv')return back('Trade','menu')+'<div class="thH">Advanced trade test</div><p class="thP">These look at real starting lineups, so you enter a roster. What do you want to see?</p><div class="thOpt"><b>Two whole teams</b><ul><li>See both lineups change</li><li>Find trades that help both sides</li><li>Best for judging a deal between two other people</li><li class="n">You enter both rosters</li></ul><button type="button" class="thGo" data-go="both">Start with two teams</button></div><div class="thOpt"><b>Just my team</b><ul><li>Only enter your own roster</li><li>See how the trade changes your lineup and your weeks ahead</li><li>Faster, and you only care about you</li><li class="n">Does not check if the other team would say yes</li></ul><button type="button" class="thGo" data-go="mine">Start with just my team</button></div>';
  var st=steps(),n=st.length,i=TRS-1,h=back(TRH==='both'?'Advanced':'Advanced','adv')+'<div class="thProg">'+st.map(function(_,k){return '<i'+(k<=i?' class="on"':'')+'></i>'}).join('')+'</div><div class="thSt">Step '+TRS+' of '+n+' &middot; '+(TRH==='both'?'Two whole teams':'Just my team')+'</div><div class="thH">'+st[i]+'</div>';
- if(TRS===1)h+='<p class="thP">Add every player on your roster, injured ones too.</p><button type="button" class="thSamp" data-go="samp">Try a sample roster</button>';
+ if(TRS===1)h+='<p class="thP">Add every player on your roster, injured ones too.</p><button type="button" class="thSamp" data-go="samp">Try a sample roster</button>'+(TRH==='both'?'<button type="button" class="thSamp" data-go="espn">Import an ESPN league</button>':'');
  else if(TRH==='both'&&TRS===2)h+='<p class="thP">Now add the other team&#39;s roster.</p>';
  else{h+='<p class="thP">'+(TRH==='both'?'Tap Trade on a player to send him. We show how both lineups change.':'Tap Trade on players you would send, then search who you would get.')+'</p>';if(TRH==='both')h+='<div class="thTabs"><button type="button" data-tab="0" class="'+(TRTAB===0?'on':'')+'">Your players</button><button type="button" data-tab="1" class="'+(TRTAB===1?'on':'')+'">Their players</button></div>'}
  return h}
@@ -5412,7 +5432,7 @@ function apply(){
 }
 var orig=trRenderAll;trRenderAll=function(){if(TRH==='check'||TRH==='find')TR.mode='quick';else if(TRH==='both'){TR.mode='full';TR.solo=false}else if(TRH==='mine'){TR.mode='full';TR.solo=true}
  orig.apply(this,arguments);apply()};renderTrade=trRenderAll;
-function go(k){if(k==='samp'){var b=document.getElementById(TRH==='mine'?'trSamp':'trSamp2');if(b)b.click();return}
+function go(k){if(k==='espn')return trEspnModal();if(k==='samp'){var b=document.getElementById(TRH==='mine'?'trSamp':'trSamp2');if(b)b.click();return}
  if(k==='prev'){if(TRS>1)TRS--;else TRH='adv'}else if(k==='next'){TRS++}else{TRH=k;TRS=1;TRTAB=0}
  if(TRH==='mine'&&TRS>2)TRS=2;trRenderAll();window.scrollTo(0,0)}
 tv.addEventListener('click',function(e){var g=e.target.closest('[data-go]');if(g){e.preventDefault();go(g.dataset.go);return}var t=e.target.closest('.thTabs [data-tab]');if(t){TRTAB=+t.dataset.tab;apply()}});
