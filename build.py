@@ -1232,6 +1232,8 @@ PROPS_MIN_HOURS = 20
 PROPS_MAX_AGE_H = 72
 PROPS_W = {"rec": .65, "ryd": .65, "ruy": .65, "td": .55, "pyd": .65, "ptd": .55}
 PROPS_PTS = {"rec": 1.0, "ryd": .1, "ruy": .1, "td": 6.0, "pyd": .04, "ptd": 4.0}
+PROPS_MAXGAP = {"rec": 2.5, "ryd": 25.0, "ruy": 30.0, "td": 0.30, "pyd": 80.0, "ptd": 0.7}
+PROJ_AUDIT = []
 PROPS_STAT = {"receiving_receptions": "rec", "receiving_yards": "ryd", "rushing_yards": "ruy", "receptions": "rec", "passing_yards": "pyd", "passing_touchdowns": "ptd"}
 
 def _pn(s):
@@ -1426,6 +1428,12 @@ def props_blend(frame, names, cols, thin, hist, tag):
         add, vadd, comps = 0.0, 0.0, []
         for k in got:
             m, vv = float(frame.at[pid, cols[k]]), float(v[k])
+            # Safety: a line wildly above what the model sees (and above any normal gap) is treated as bad data,
+            # not as news. It is pulled back to a believable level and written to the audit list.
+            _mx = max(m * 2.5, m + PROPS_MAXGAP.get(k, 1e9))
+            if vv > _mx:
+                PROJ_AUDIT.append({"kind": "vegas line cut back", "name": str(names.get(pid, pid)), "stat": k, "line": round(vv, 2), "model": round(m, 2), "used": round(_mx, 2)})
+                vv = _mx
             gap = abs(vv - m) / max(abs(vv), abs(m), 1.0)
             w = PROPS_W[k] + (0.15 if thin.get(pid) else 0.0) + (0.05 if gap > 0.35 else 0.0) - (0.10 if len(got) < 2 else 0.0)
             w = min(max(w, 0.35), 0.88)
@@ -1501,6 +1509,39 @@ if not AS_OF_WEEK and schedule_ok and week_has_games:
             }
             if _pid in VG:
                 PROJ[_pid]["vg"] = VG[_pid]
+        # ---- Final sanity cap: no projection may sit far above anything the player has actually done ----
+        try:
+            _bestg = merged.groupby("player_id")["fantasy_points_ppr"].max().to_dict()
+            _ngg = merged.groupby("player_id")["week"].nunique().to_dict()
+            _avgg = dict(zip(g["player_id"], g["ppr_pg"]))
+            _posg = dict(zip(g["player_id"], g["position"]))
+            _namg = dict(zip(g["player_id"], g["player_name"]))
+            _POSCAP = {"RB": 30.0, "WR": 30.0, "TE": 24.0}
+            for _pid_c, _e in PROJ.items():
+                _cap = _POSCAP.get(_posg.get(_pid_c), 30.0)
+                _b, _a = _bestg.get(_pid_c), _avgg.get(_pid_c)
+                if _ngg.get(_pid_c, 0) >= 3 and _b is not None and not (isinstance(_b, float) and math.isnan(_b)):
+                    _a = 0.0 if (_a is None or (isinstance(_a, float) and math.isnan(_a))) else float(_a)
+                    _cap = min(_cap, max(1.8 * _a, 1.2 * float(_b), 9.0))
+                if _e["pts"] > _cap:
+                    _k = _cap / _e["pts"]
+                    PROJ_AUDIT.append({"kind": "projection capped", "name": str(_namg.get(_pid_c, _pid_c)), "was": _e["pts"], "now": round(_cap, 1),
+                                       "best_game": None if _b is None else round(float(_b), 1), "avg": None if _a is None else round(float(_a), 1)})
+                    for _f in ("rec", "ryd", "ruy", "td", "tgt", "car"):
+                        if _f in _e:
+                            _e[_f] = round(_e[_f] * _k, 2 if _f == "td" else (1 if _f in ("rec", "tgt", "car") else 0))
+                    _e["pts"] = round(_cap, 1)
+                    _e["lo"] = round(min(_e["lo"], _e["pts"]), 1)
+                    _e["hi"] = round(max(_e["hi"] * _k, _e["pts"]), 1)
+        except Exception as e_:
+            print("   Projection sanity cap skipped:", e_)
+        try:
+            os.makedirs("public", exist_ok=True)
+            json.dump({"week": next_week, "items": PROJ_AUDIT}, open(os.path.join("public", "proj_audit.json"), "w"), indent=1)
+        except Exception:
+            pass
+        for _a_ in PROJ_AUDIT:
+            print("   AUDIT:", _a_)
         for _pid_, _row_ in PLAYED_ROWS.items():
             _row_["proj"] = PROJ[_pid_]["pts"] if _pid_ in PROJ else None
         print(f"   Projected points for {len(PROJ)} players (Week {next_week}).")
