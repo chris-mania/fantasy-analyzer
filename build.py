@@ -4003,7 +4003,7 @@ tr.pjFlash td,.rcard.pjFlash{animation:pjF 2.6s ease-out}@keyframes pjF{0%,55%{b
 .tsStr.n3 .tsSt small{white-space:nowrap}
 .tsh,.tsh *,.tsEd *{font-family:var(--ff)!important;font-feature-settings:normal!important}
 
-#mvStage.mvx{overflow-y:auto;overflow-x:hidden;padding:56px 0 0;-webkit-overflow-scrolling:touch;background:radial-gradient(120% 28% at 25% 0,#13203a 0,transparent 60%),radial-gradient(120% 28% at 80% 0,#2a1c12 0,transparent 60%),#06080c;scrollbar-width:none;text-transform:uppercase}
+#mvStage.mvx{overflow:hidden;display:flex;flex-direction:column;padding:50px 0 0;-webkit-overflow-scrolling:touch;background:radial-gradient(120% 28% at 25% 0,#13203a 0,transparent 60%),radial-gradient(120% 28% at 80% 0,#2a1c12 0,transparent 60%),#06080c;scrollbar-width:none;text-transform:uppercase}
 #mvStage.mvx::-webkit-scrollbar{display:none}
 #mv .mvx,#mv .mvx *,#mv #mvTog,#mv #mvTog *,#mv #mvClose{font-family:'Barlow Condensed','Arial Narrow','Helvetica Neue',sans-serif!important;font-style:normal!important}
 #mvTog button{font-size:12px!important;padding:5px 9px!important;letter-spacing:.08em!important}
@@ -4013,25 +4013,26 @@ tr.pjFlash td,.rcard.pjFlash{animation:pjF 2.6s ease-out}@keyframes pjF{0%,55%{b
 .mvx .l{background-image:linear-gradient(180deg,#c9d0dc 0%,#9aa5b8 40%,#5a6577 54%,#98a3b6 72%,#c4ccd9 100%)!important;-webkit-text-stroke:1px rgba(150,160,180,.45)}
 .mvx .mqBig{font-size:68px;margin-top:4px}
 .mvx .mqK{font-weight:600;letter-spacing:.22em;font-size:13px;color:#7c879b;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mvx .mqSub{text-align:center;font-weight:600;letter-spacing:.2em;font-size:11px;color:#5d687b;margin-top:8px}
-.mvx .mqWcw{margin:10px 24px 12px;text-align:center}
+.mvx .mqSub{text-align:center;font-weight:600;letter-spacing:.2em;font-size:11px;color:#5d687b;margin-top:4px}
+.mvx .mqWcw{margin:6px 24px 10px;text-align:center}
 .mvx .mqWc{font-weight:700;letter-spacing:.14em;font-size:13px;color:#7c879b}.mvx .mqWc b{color:#fff;font-size:16px;letter-spacing:.06em}
 .mvx .mqBar{height:6px;border-radius:4px;background:#1a202b;overflow:hidden;margin-top:8px;box-shadow:inset 0 1px 2px #000}.mvx .mqBar i{display:block;height:100%;background:linear-gradient(90deg,#4f8dff,#8fc4ff)}
-.mvx .mqRw{position:relative;display:grid;grid-template-columns:1fr 40px 1fr;align-items:end;height:112px;border-top:1px solid #10151e}
+.mvx .mqRows{flex:1;min-height:0;display:flex;flex-direction:column}
+.mvx .mqRw{position:relative;flex:1;min-height:0;max-height:118px;display:grid;grid-template-columns:1fr 34px 1fr;align-items:end;border-top:1px solid #10151e}
 .mvx .mqRw::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,#2a3345,transparent)}
 .mvx .mqP{position:relative;height:100%;min-width:0}
-.mvx .mqPh{position:absolute;left:0;top:0;bottom:0;width:118px;-webkit-mask-image:linear-gradient(to right,#000 55%,transparent);mask-image:linear-gradient(to right,#000 55%,transparent)}
-.mvx .mqP.r .mqPh{left:auto;right:0;-webkit-mask-image:linear-gradient(to left,#000 55%,transparent);mask-image:linear-gradient(to left,#000 55%,transparent)}
-.mvx .mqPh svg{height:100%;width:auto;max-width:100%}
-.mvx .mqTx{position:absolute;bottom:10px;left:68px;right:2px;display:flex;flex-direction:column;gap:2px}
-.mvx .mqP.r .mqTx{left:2px;right:68px;align-items:flex-end;text-align:right}
-.mvx .mqNm{font-weight:700;letter-spacing:.06em;font-size:14px;color:#e4e9f1;text-shadow:0 2px 0 #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.mvx .mqSc{font-size:42px}
-.mvx .mqSl{align-self:center;text-align:center;padding-bottom:6px;font-weight:700;letter-spacing:.12em;color:#d8b46b;font-size:13px;text-shadow:0 1px 0 #000;z-index:2}
-.mvx .mqStr{display:grid;margin:8px 12px 0;padding:14px 0 12px;border-top:1px solid #1a2230;text-align:center}
+.mvx .mqPh{position:absolute;right:0;top:0;bottom:0;width:min(58%,calc(var(--rh,100px)*1.05));z-index:3;-webkit-mask-image:linear-gradient(to right,transparent 0,#000 22%);mask-image:linear-gradient(to right,transparent 0,#000 22%)}
+.mvx .mqP.r .mqPh{right:auto;left:0;-webkit-mask-image:linear-gradient(to left,transparent 0,#000 22%);mask-image:linear-gradient(to left,transparent 0,#000 22%)}
+.mvx .mqPh svg{height:100%;width:auto;max-width:100%;margin-left:auto}.mvx .mqP.r .mqPh svg{margin-left:0}
+.mvx .mqTx{position:absolute;bottom:calc(var(--rh,100px)*.1);left:10px;display:flex;flex-direction:column;gap:2px;z-index:1;max-width:calc(100% - 10px)}
+.mvx .mqP.r .mqTx{left:auto;right:10px;align-items:flex-end;text-align:right}
+.mvx .mqNm{font-weight:700;letter-spacing:.06em;font-size:clamp(11px,calc(var(--rh,100px)*.15),15px);color:#e4e9f1;text-shadow:0 2px 0 #000;white-space:nowrap;max-width:100%}
+.mvx .mqSc{font-size:clamp(26px,calc(var(--rh,100px)*.4),44px)}
+.mvx .mqSl{align-self:center;text-align:center;padding-bottom:4px;font-weight:700;letter-spacing:.08em;color:#d8b46b;font-size:13px;text-shadow:0 1px 0 #000;z-index:4}
+.mvx .mqStr{display:grid;margin:0 12px;padding:10px 0 6px;border-top:1px solid #1a2230;text-align:center}
 .mvx .mqStr em{display:block;font-style:normal;font-weight:700;letter-spacing:.14em;color:#d8b46b;font-size:14px;margin-bottom:6px}
 .mvx .mqStr b{display:block;font-weight:700;font-size:21px;color:#e4e9f1;line-height:1.25;font-variant-numeric:tabular-nums}
-.mvx .mqFt{text-align:center;padding:14px 0 30px;letter-spacing:.24em;font-size:11px;color:#4d576a}
+.mvx .mqFt{text-align:center;padding:4px 0 14px;letter-spacing:.24em;font-size:11px;color:#4d576a}
 #compare.foRun{overflow-x:clip}
 .trSwap{padding:14px 8px!important;gap:2px!important}
 .tsRow{gap:4px!important}
@@ -4690,7 +4691,7 @@ function mvMobileC(A,B,W,H){let half=W/2,top0=H*.235,bot=H*.875,rk={QB:0,RB:1,WR
  return out.join('')}
 let mvMode=null;
 function mvAvgOf(T,p){let L=[];try{L=(T.sel[p.id]||dfl(p)).map(i=>p.logs&&p.logs[i]).filter(Boolean)}catch(e){}return L.length?L.reduce((t,l)=>t+(+l.ppr||0),0)/L.length:(p.ppg!=null&&!isNaN(p.ppg)?+p.ppg:null)}
-function mvPhoto(e,side,uid){let sil=mvSil(120,1,uid);if(!e.p.headshot)return sil;return `<img src="${e.p.headshot}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:${side<0?'left':'right'} bottom;display:block" onerror="this.outerHTML=this.dataset.sil" data-sil='${sil.replace(/'/g,"&#39;")}'>`}
+function mvPhoto(e,side,uid){let sil=mvSil(120,1,uid);if(!e.p.headshot)return sil;return `<img src="${e.p.headshot}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:${side<0?'right':'left'} bottom;display:block" onerror="this.outerHTML=this.dataset.sil" data-sil='${sil.replace(/'/g,"&#39;")}'>`}
 function renderMV(){let ov=$('mv');if(!ov||!mvOn)return;let st=$('mvStage'),vw=innerWidth,vh=innerHeight;
  if(!mvMode)mvMode=showM&&!showW?'M':'P';
  st.style.width=Math.min(vw,520)+'px';st.style.height=vh+'px';st.className='mvx';
@@ -4709,12 +4710,13 @@ function renderMV(){let ov=$('mv');if(!ov||!mvOn)return;let st=$('mvStage'),vw=i
  let sub=md==='P'?`Projected · Week ${wk}`:md==='A'?'Lineup average · points a game':'Average Mania Rating',
  side=(e,sd2,uid)=>{if(!e)return `<div class="mqP${sd2>0?' r':''}"><div class="mqPh"></div><div class="mqTx"><span class="mqNm">—</span></div></div>`;return `<div class="mqP${sd2>0?' r':''}"><div class="mqPh">${mvPhoto(e,sd2,uid)}</div><div class="mqTx"><span class="mqNm">${mvLast(e.p)}</span><span class="mqSc"></span></div></div>`};
  let rowsH=pairs.map(([k,a,b],i)=>{let xa=a?a.x:null,xb=b?b.x:null,wa=(xa||0)>=(xb||0),mkSide=(e,sd2,win,uid)=>{if(!e)return `<div class="mqP${sd2>0?' r':''}"><div class="mqTx"><span class="mqNm">&nbsp;</span><span class="mqSc l">—</span></div></div>`;return `<div class="mqP${sd2>0?' r':''}"><div class="mqPh">${mvPhoto(e,sd2,uid)}</div><div class="mqTx"><span class="mqNm">${mvLast(e.p)}</span><span class="mqSc${win?' w':' l'}">${f1(e.x)}</span></div></div>`};
-  return `<div class="mqRw">${mkSide(a,-1,wa,i*2)}<div class="mqSl">${lab(k)}</div>${mkSide(b,1,!wa||xa===xb,i*2+1)}</div>`}).join('');
+  return `<div class="mqRw">${mkSide(a,-1,wa,i*2)}<div class="mqSl">${lab(k)}</div>${mkSide(b,1,!wa||xa===xb,i*2+1)}</div>`}).join('');rowsH=`<div class="mqRows">${rowsH}</div>`;
  let gk=GKEYS.filter(k=>GA[k]||GB[k]),gv=(L,k)=>{let a=(L[k]||[]).filter(e=>e.x!=null);if(!a.length)return '—';let t=a.reduce((s,e)=>s+e.x,0);return f1(md==='M'?t/a.length:t)};
  let strip=gk.map(k=>`<div><em>${lab(k)}</em><b>${gv(GA,k)}</b><b>${gv(GB,k)}</b></div>`).join('');
  st.innerHTML=`<div class="mqHd"><div><div class="mqBig${tieT||dd>0?' w':' l'}">${f1(totA)}</div><div class="mqK">${nA}</div></div><div><div class="mqBig${tieT||dd<0?' w':' l'}">${f1(totB)}</div><div class="mqK">${nB}</div></div></div><div class="mqSub">${sub}</div><div class="mqWcw">${wcHTML}</div>${rowsH}<div class="mqStr" style="grid-template-columns:repeat(${Math.max(1,gk.length)},1fr)">${strip}</div><div class="mqFt">Fantasy Mania · Maniac View · Week ${wk}</div>`;
+ {let r=st.querySelector('.mqRw');if(r)st.style.setProperty('--rh',r.offsetHeight+'px')}
  $('mvTog').innerHTML=[['P','Projected'],['A','Season avg'],['M','Mania avg']].map(([k,l])=>`<button type="button" data-b="${k}" class="${md===k?'on':''}">${l}</button>`).join('');
- $('mvTog').querySelectorAll('button').forEach(b=>b.onclick=()=>{mvMode=b.dataset.b;let sc=st.scrollTop;renderMV();st.scrollTop=sc});
+ $('mvTog').querySelectorAll('button').forEach(b=>b.onclick=()=>{mvMode=b.dataset.b;renderMV()});
 }
 function toggleMV(on){mvOn=on;let ov=$('mv');ov.hidden=!on;document.body.classList.toggle('mvLock',on);if(on)renderMV();else{$('mvStage').innerHTML='';renderTeams()}}
 addEventListener('resize',()=>{if(mvOn)renderMV()});
