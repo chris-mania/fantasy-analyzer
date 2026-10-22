@@ -5047,16 +5047,25 @@ function trLgBar(){let o=TR.lg.map((t,i)=>`<option value="${i}"${i===TR.lgi?' se
    so we read the page text. Each team is its name then a "(W-L-T)" line; each player is "NameName", then "Name", then team,
    injury tag and position lines. ESPN lists the viewer's own team first. Kickers and defenses are skipped. */
 function trEspnKey(s){return s.toLowerCase().replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g,'').replace(/[^a-z]/g,'')}
+function trEspnSettings(L,teams){let SL=/^(QB|RB|WR|TE|FLEX|OP|SUPERFLEX|D\/ST|K|Bench|IR)(\s|$)/,prevOK=x=>x==null||/^(ACQ|Draft|Free Agency|Trade|Waivers|Empty)$/.test(x)||/Empty$/.test(x),best=null;
+ teams.forEach((T,k)=>{let end=k+1<teams.length?teams[k+1].i0-1:L.length,c={QB:0,RB:0,WR:0,TE:0,FLEX:0,OP:0,K:0,DST:0,Bench:0,IR:0},n=0;
+  for(let i=T.i0+1;i<end;i++){let l=L[i],m=l.match(SL);if(!m||!prevOK(L[i-1]))continue;let nx=L[i+1];if(l===m[1]&&nx&&/^(Draft|Free Agency|Trade|Waivers)$/.test(nx))continue;let t=m[1];if(t==='SUPERFLEX')t='OP';if(t==='D/ST')t='DST';c[t]++;n++}
+  if(!best||n>best.n)best={n,c}});
+ if(!best||best.c.QB+best.c.RB+best.c.WR<3)return null;let c=best.c,sf=c.OP>0;
+ return {n:teams.length,QB:Math.max(1,c.QB),RB:c.RB,WR:c.WR,TE:c.TE,FLEX:c.FLEX+c.OP,sf,K:c.K>0,DST:c.DST>0,bench:c.Bench,ir:c.IR}}
 function trEspnParse(txt,players){let idx={},L=txt.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),teams=[],miss=[];
  players.forEach(p=>(idx[trEspnKey(p.name)]=idx[trEspnKey(p.name)]||[]).push(p));
  L.forEach((l,i)=>{if(/^\(\d+-\d+(-\d+)?\)$/.test(l)&&i){let m=l.match(/(\d+)-(\d+)(?:-(\d+))?/);return teams.push({n:L[i-1],ids:[],w:+m[1],l:+m[2],t:+(m[3]||0),rec:m[1]+'-'+m[2]+(+(m[3]||0)?'-'+m[3]:''),i0:i})}
-  let h=l.length/2,T=teams[teams.length-1],nm=L[i+1];if(!T||l.length%2||nm!==l.slice(0,h)||nm!==l.slice(h))return;
-  let pos=L.slice(i+2,i+6).find(x=>/^(QB|RB|WR|TE|K|D\/ST)$/.test(x));if(pos==='K'||pos==='D/ST')return;
+  let h=l.length/2,T=teams[teams.length-1],nm=L[i+1],sm=l.match(/^(QB|RB|WR|TE|FLEX|Bench|IR|K|D\/ST)\s+(\S.*)$/);
+  if(!T)return;let pos;
+  if(sm&&!/^Empty$/i.test(sm[2].trim())){nm=sm[2].trim();pos=L.slice(i+1,i+7).find(x=>/^(QB|RB|WR|TE|K|D\/ST)$/.test(x));if(sm[1]==='K'||sm[1]==='D/ST')return}
+  else{if(l.length%2||nm!==l.slice(0,h)||nm!==l.slice(h))return;pos=L.slice(i+2,i+6).find(x=>/^(QB|RB|WR|TE|K|D\/ST)$/.test(x))}
+  if(pos==='K'||pos==='D/ST')return;
   let c=idx[trEspnKey(nm)]||[],p=c.find(x=>x.pos===pos)||c[0];if(p)T.ids.push(p.id);else miss.push(nm)});
  /* your own team is the one with no "Propose Trade" button */
- teams.forEach((T,k)=>{let end=k+1<teams.length?teams[k+1].i0-1:L.length;T.prop=L.slice(T.i0,end).includes('Propose Trade')});
+ teams.forEach((T,k)=>{let end=k+1<teams.length?teams[k+1].i0-1:L.length;T.prop=L.slice(T.i0,end).some(x=>x.indexOf('Propose Trade')>=0)});
  let mine=teams.map((T,k)=>T.prop?-1:k).filter(k=>k>=0);
- return {teams,miss,me:mine.length===1?mine[0]:-1}}
+ return {teams,miss,me:mine.length===1?mine[0]:-1,set:trEspnSettings(L,teams)}}
 /* ===== League (ESPN import), shared by Compare, My team analyzer and Trade ===== */
 function lgOn(){return !!(TR.lg&&TR.lg.length)}
 function lgOwned(){let m={};(TR.lg||[]).forEach(t=>t.ids.forEach(i=>m[i]=t.n));return m}
@@ -5064,9 +5073,20 @@ function lgAllIds(){let st=new Set(TR.my);(TR.lg||[]).forEach(t=>t.ids.forEach(i
 function lgApply(all,me,fresh){TR.lgAll=all.map(t=>({n:t.n,ids:t.ids.slice(),rec:t.rec||'',w:t.w,l:t.l,t:t.t}));TR.lgMe=me;if(fresh)TR.lgTs=Date.now();let m=all[me],oth=all.filter((t,i)=>i!==me).map(t=>({n:t.n,ids:t.ids.slice()}));
  TR.my=m.ids.slice();TR.tname=m.n.slice(0,22);TR.lg=oth;TR.lgi=oth.length?0:-1;TR.their=oth.length?oth[0].ids.slice():[];TR.send={my:[],their:[]};TR.give=[];TR.get=[];TR.inc=[];TR.n=Math.max(6,Math.min(20,all.length));TRIC=null;
  trSave();trRenderAll();try{tAutoMine();renderTeams()}catch(e){}}
-function lgPickBody(m,all,det,miss){let B=m.querySelector('.trModalB');
+function trEspnWhy(txt,r){let t=(txt||'').trim();if(!t)return 'The box is empty. Paste the Rosters page you copied from ESPN.';
+ if(/^\s*(\{|\[)/.test(t))return 'That looks like code, not the page. Click on the page, press Ctrl+A (Cmd+A on a Mac), then copy.';
+ if(t.length<400)return 'That is too short to be the whole Rosters page. Click on the page, select all, and copy again.';
+ if(/yahoo\.com|sleeper\.(app|com)/i.test(t)&&!/espn/i.test(t))return 'This only reads ESPN right now. Yahoo and Sleeper are not supported yet.';
+ let hasRec=/\(\d+-\d+(-\d+)?\)/.test(t),nTeams=r.teams.length,got=r.teams.reduce((s,x)=>s+x.ids.length,0);
+ if(!hasRec&&/espn/i.test(t))return 'We only found the ESPN menu, not the teams. Wait until every team’s player list is showing on the Rosters page (scroll down once so it loads), then select all and copy again.';
+ if(!hasRec)return 'We could not find any teams. Open League › Rosters on ESPN, select the whole page, and copy it.';
+ if(nTeams===1)return 'We found only one team. Copy the League › Rosters page (it shows every team), not a single team’s page.';
+ if(nTeams<2)return 'We could not find teams in that. Make sure you are on League › Rosters, then select all and copy.';
+ if(got<nTeams*3)return 'We found '+nTeams+' teams but almost no players in them. The page may not have finished loading. Wait for the rosters to appear, then copy again.';
+ return ''}
+function lgPickBody(m,all,det,miss,set){let B=m.querySelector('.trModalB');
  B.innerHTML=`<b>Which team is yours?</b><p>Tap your team.${det>=0?' We highlighted the one we think it is, because ESPN shows no Propose Trade button on your own team.':''}</p><div class="lgPick">${all.map((t,i)=>`<button type="button" class="lgPk${i===det?' det':''}" data-i="${i}"><b>${trEsc(t.n)}</b><small>${t.rec?t.rec+' • ':''}${t.ids.length} players${i===det?' • looks like yours':''}</small></button>`).join('')}</div>`;
- B.querySelectorAll('.lgPk').forEach(b=>b.onclick=()=>{let i=+b.dataset.i;lgApply(all,i,true);m.remove();trNotice('League saved',`<b>${trEsc(all[i].n)}</b> is your team. The other ${all.length-1} teams are saved as trade partners and for comparing.${miss&&miss.length?` Not in our player pool, so left out: ${miss.map(trEsc).join(', ')}.`:''} Kickers and defenses were skipped.`)})}
+ B.querySelectorAll('.lgPk').forEach(b=>b.onclick=()=>{let i=+b.dataset.i;lgApply(all,i,true);let sm='';if(set){TR.st={QB:set.QB,RB:set.RB,WR:set.WR,TE:set.TE,FLEX:set.FLEX};TR.sf=set.sf;TR.n=Math.max(6,Math.min(20,set.n));TRC=null;trSave();try{trRenderAll()}catch(e){};sm=` Settings read from your page: ${set.n} teams, ${set.QB} QB, ${set.RB} RB, ${set.WR} WR, ${set.TE} TE, ${set.FLEX} ${set.sf?'superflex':'flex'}, ${set.bench} bench.`}m.remove();trNotice('League saved',`<b>${trEsc(all[i].n)}</b> is your team.${sm} The other ${all.length-1} teams are saved as trade partners and for comparing.${miss&&miss.length?` Not in our player pool, so left out: ${miss.map(trEsc).join(', ')}.`:''} Kickers and defenses were skipped.`)})}
 function lgChange(){if(!TR.lgAll||TR.lgAll.length<2)return trEspnModal();let m=document.createElement('div');m.className='trModal';m.innerHTML='<div class="trModalB"></div>';m.onclick=e=>{if(e.target===m)m.remove()};document.body.appendChild(m);lgPickBody(m,TR.lgAll,TR.lgMe,[])}
 function lgRecOf(t,me){let a=TR.lgAll||[];let x=me?a[TR.lgMe]:a.find(z=>z.n===t.n);return x&&x.w!=null?x:null}
 function lgRecTxt(t,me){let x=lgRecOf(t,me);return x?x.w+'-'+x.l+(x.t?'-'+x.t:''):''}
@@ -5179,8 +5199,8 @@ function trEspnModal(){let m=document.createElement('div');m.className='trModal'
  m.innerHTML=`<div class="trModalB"><b>Import your ESPN league</b><div class="lgHow"><p><b>On a computer</b></p><ol><li>Open your league on ESPN and go to <b>League &rsaquo; Rosters</b>.</li><li>Select everything (Ctrl+A, or Cmd+A on a Mac), then copy it (Ctrl+C or Cmd+C).</li><li>Paste it in the box below.</li></ol><details class="lgMob"><summary>On your phone</summary><p>Sorry, this part is a little harder on a phone, but it is only a couple of steps. ESPN’s page is much easier to copy on a computer, so:</p><ol><li>On a computer, copy the Rosters page the same way.</li><li>Email it to yourself, or send it to yourself in a text or a note.</li><li>Open it on your phone, press and hold the text, tap Select All, then Copy.</li><li>Come back here, paste it in the box, and tap Import league.</li></ol></details><p class="lgKeep">Your league is saved on this device only. Add Fantasy Mania to your Home Screen and do not use a private tab, or your browser will forget it. Import again any time to refresh rosters.</p></div><textarea class="trImpT" rows="5" placeholder="Paste the whole Rosters page"></textarea><p class="trImpE"></p><button type="button" class="trAsk">Import league</button></div>`;
  m.onclick=e=>{if(e.target===m)m.remove()};
  m.querySelector('.trAsk').onclick=()=>{let r=trEspnParse(m.querySelector('textarea').value,Object.values(trCtx().V).map(v=>v.p));
-  if(r.teams.length<2){m.querySelector('.trImpE').textContent='No teams found. Copy the whole League › Rosters page, not one team.';return}
-  lgPickBody(m,r.teams,r.me,r.miss)};
+  let txt=m.querySelector('textarea').value,E=m.querySelector('.trImpE'),why=trEspnWhy(txt,r);if(why){E.textContent=why;return}
+  lgPickBody(m,r.teams,r.me,r.miss,r.set)};
  document.body.appendChild(m);m.querySelector('textarea').focus()}
 function trFullTog(){return `<div class="tseg trSoloT"><button type="button" class="tsb trSoloB${TR.solo?'':' on'}" data-v="0">Both teams</button><button type="button" class="tsb trSoloB${TR.solo?' on':''}" data-v="1">Just my team</button></div>`}
 function trFullSolo(){TRCVmap=null;let a=trRosterRaw('my','Your team',true),V=trCtx().V,inc=TR.inc.filter(i=>V[i]&&!TR.my.includes(i)),sa=TR.send.my.filter(i=>TR.my.includes(i)),
