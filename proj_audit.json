@@ -3,9 +3,17 @@
  "items": [
   {
    "kind": "vegas line cut back",
+   "name": "David Montgomery",
+   "stat": "td",
+   "line": 0.95,
+   "model": 0.37,
+   "used": 0.92
+  },
+  {
+   "kind": "vegas line cut back",
    "name": "Jaleel McLaughlin",
    "stat": "td",
-   "line": 0.51,
+   "line": 0.5,
    "model": 0.17,
    "used": 0.47
   }
