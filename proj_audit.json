@@ -5,25 +5,17 @@
    "kind": "vegas line cut back",
    "name": "David Montgomery",
    "stat": "td",
-   "line": 0.95,
+   "line": 0.89,
    "model": 0.27,
    "used": 0.66
   },
   {
    "kind": "vegas line cut back",
-   "name": "Jaleel McLaughlin",
-   "stat": "td",
-   "line": 0.5,
-   "model": 0.16,
-   "used": 0.46
-  },
-  {
-   "kind": "projection capped",
-   "name": "Cade Otton",
-   "was": 11.9,
-   "now": 11.3,
-   "best_game": 8.8,
-   "avg": 6.3
+   "name": "Jameis Winston",
+   "stat": "ptd",
+   "line": 3.0,
+   "model": 0.95,
+   "used": 2.38
   }
  ]
 }
