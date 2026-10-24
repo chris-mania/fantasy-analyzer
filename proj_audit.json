@@ -6,16 +6,16 @@
    "name": "David Montgomery",
    "stat": "td",
    "line": 0.89,
-   "model": 0.27,
-   "used": 0.66
+   "model": 0.26,
+   "used": 0.65
   },
   {
    "kind": "vegas line cut back",
    "name": "Jameis Winston",
    "stat": "ptd",
    "line": 3.0,
-   "model": 0.95,
-   "used": 2.38
+   "model": 0.97,
+   "used": 2.42
   }
  ]
 }
