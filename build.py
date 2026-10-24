@@ -5311,18 +5311,30 @@ function lgSideEv(ids,after,got,sent){let V=trCtx().V,b=lgBase(ids),a=lgBase(aft
  let nh=a.hp.filter(p=>a.hp.filter(q=>q===p).length>b.hp.filter(q=>q===p).length);
  return {d:a.L.tot-b.L.tot,wd:a.w-b.w,hi:a.h-b.h,junk,ns:a.L.st.filter(x=>x.v&&!b.st.has(x.v.p.id)).map(x=>x.v),hp:nh,ins:got.some(i=>(HC[i]||[]).some(sid=>a.st.has(sid)))}}
 function lgThin(ids){let c=trCtx(),V=c.V,mn={QB:TR.sf?2:TR.st.QB,RB:TR.st.RB+1,WR:TR.st.WR+1,TE:TR.st.TE},o={};TRPOS.forEach(pos=>{let n=ids.filter(i=>V[i]&&!V[i].pl.gone&&V[i].p.pos===pos&&V[i].later>=(c.repl[pos]||0)*.95).length;o[pos]={n,thin:(pos==='RB'||pos==='WR')&&n<mn[pos]+1,surplus:(pos==='RB'||pos==='WR')&&n>=mn[pos]+2}});return o}
+var LGSTRICT=false;
+function lgReal(my,their,ia,ib,myA,thA,M,T){let V=trCtx().V,b=lgBase(my),bt=lgBase(their);
+ const top2=ids=>new Set(ids.map(i=>V[i]).filter(v=>v&&!v.pl.gone).sort((a,b)=>b.raw-a.raw).slice(0,2).map(v=>v.p.id));
+ const side=(ids,after,sent,base,d,k)=>{let ss=sent.filter(i=>base.st.has(i)),c2=top2(ids),cs=sent.filter(i=>c2.has(i));
+  if(ss.length&&d<0.9+0.5*(ss.length-1))return false;
+  if(cs.length&&d<(k?1.2:2))return false;
+  if(ss.length>1&&d<1.8)return false;
+  let t0=lgThin(ids),t1=lgThin(after);
+  for(const pos of ['RB','WR']){if(sent.some(i=>V[i]&&V[i].p.pos===pos)&&t1[pos].n<t0[pos].n&&t1[pos].thin)return false}
+  return true};
+ return side(my,myA,ia,b,M.d,0)&&side(their,thA,ib,bt,T.d,1)}
 function lgEval(my,their,ia,ib,mn,rx){if(mn==null)mn=.05;let sa=new Set(ia),sb=new Set(ib),myA=my.filter(i=>!sa.has(i)).concat(ib),thA=their.filter(i=>!sb.has(i)).concat(ia);
  if(!trDepthOK(my,myA))return null;
  let ba=lgBase(myA),bb=lgBase(my);if(ba.L.tot-bb.L.tot<mn)return null;if(!trDepthOK(their,thA))return null;
  let M=lgSideEv(my,myA,ib,ia),T;
- if(rx){if(M.hi>.8||M.d<-.3)return null;T=lgSideEv(their,thA,ia,ib);let th0=lgThin(their),V0=trCtx().V;if(T.hi>.8||T.d<-.3||!(T.ns.some(v=>ia.indexOf(v.p.id)>=0)||ia.some(i=>V0[i]&&th0[V0[i].p.pos]&&th0[V0[i].p.pos].thin)))return null;let nm0=a=>a.map(v=>v.p.name).join(', ');return {la:M.d,lb:T.d,eM:M.d,eT:T.d,tier:5,score:1.5*T.d+M.d,why:(M.ns.length?'You start '+nm0(M.ns)+'. ':'Your starters stay the same. ')+(T.d>=.1?'Their lineup improves.':'Their starters stay about the same.'),M,T}}
- if(M.junk||M.hi>.8)return null;T=lgSideEv(their,thA,ia,ib);if(T.junk||T.hi>.8)return null;
+ if(rx){if(M.hi>.8||M.d<-.3)return null;T=lgSideEv(their,thA,ia,ib);if(LGSTRICT===true&&!lgReal(my,their,ia,ib,myA,thA,M,T))return null;if(LGSTRICT===true&&M.d<.3){let q0=lgThin(my),q1=lgThin(myA);if(!['RB','WR'].some(p=>q0[p].thin&&q1[p].n>q0[p].n))return null}let th0=lgThin(their),V0=trCtx().V;if(T.hi>.8||T.d<-.3||!(T.ns.some(v=>ia.indexOf(v.p.id)>=0)||ia.some(i=>V0[i]&&th0[V0[i].p.pos]&&th0[V0[i].p.pos].thin)))return null;let nm0=a=>a.map(v=>v.p.name).join(', ');return {la:M.d,lb:T.d,eM:M.d,eT:T.d,tier:5,score:1.5*T.d+M.d,why:(M.ns.length?'You start '+nm0(M.ns)+'. ':'Your starters stay the same. ')+(T.d>=.1?'Their lineup improves.':'Their starters stay about the same.'),M,T}}
+ if(M.junk||M.hi>.8)return null;T=lgSideEv(their,thA,ia,ib);if(T.junk||T.hi>.8)return null;if(LGSTRICT===true&&!lgReal(my,their,ia,ib,myA,thA,M,T))return null;
  let eM=M.d+.25*M.wd+(M.ins?.2:0),eT=T.d+.25*T.wd+(T.ins?.4:0),tier=(eM>=.3&&eT>=.3)?1:(eM>=.3&&eT>=-.1)?2:(eM>=.3&&eT>=-.5&&T.hi<=.3)?2.5:4,nm=a=>a.map(v=>v.p.name).join(', ');
  let why=(M.ns.length?'You start '+nm(M.ns)+'. ':'Your starters stay the same. ')+(T.ns.length?'They start '+nm(T.ns)+'.':'Their starters stay the same.')+(M.ins?' You lock up the backup for your RB.':'')+(T.ins?' They get insurance for their RB.':'');
  return {la:M.d,lb:T.d,eM,eT,tier,score:2*Math.min(eM,eT)+eM+eT,why,M,T}}
 function lgKind(A,B,E){if(E&&E.M.ins&&!E.T.ins)return 'Handcuff';if(E&&E.T.ins&&!E.M.ins)return 'Handcuff sale';let pa=Array.from(new Set(A.map(x=>x.p.pos))).sort().join(),pb=Array.from(new Set(B.map(x=>x.p.pos))).sort().join();
  if(A.length<B.length)return 'Star for depth';if(A.length>B.length)return pa.indexOf(',')>=0&&pa!==pb?'Sweetener':'Consolidation';return pa!==pb?'Position swap':'Upgrade'}
-function lgIdeasAll(ids,fp){let c=trCtx(),V=c.V,key=JSON.stringify([ids,TR.lg,c.key,'e',fp||'']);if(LGI.key===key)return LGI.res;
+function lgIdeasAll(ids,fp){let c=trCtx(),V=c.V,key=JSON.stringify([ids,TR.lg,c.key,'e',fp||'']);if(LGI.key===key)return LGI.res;LGSTRICT=true;
+ LGSTRICT=true;
  let b0=lgBase(ids),pool=ids.map(i=>V[i]).filter(v=>v&&!v.pl.gone&&v.raw>0),top=pool.slice().sort((a,b)=>b.raw-a.raw).slice(0,9),
   bnP=pool.filter(v=>!b0.st.has(v.p.id)).sort((a,b)=>b.raw-a.raw).slice(0,6),seenA=new Set(),subA=lgSubs(top,3).concat(lgSubs(bnP,3)).filter(A=>{let k=A.map(x=>x.p.id).sort().join();if(seenA.has(k))return false;seenA.add(k);return true}),
   As=subA.map(A=>{let ia=A.map(x=>x.p.id),sm=Math.min.apply(null,pool.filter(v=>b0.st.has(v.p.id)&&ia.indexOf(v.p.id)<0).map(v=>v.later).concat(99));return {A,ia,sm,ga:trSide(ia).tot}}),res=[],mineBn={};
@@ -5341,14 +5353,29 @@ function lgIdeasAll(ids,fp){let c=trCtx(),V=c.V,key=JSON.stringify([ids,TR.lg,c.
    A2=lgSubs(nc,2),B2=lgSubs(pl.slice(0,9).filter(x=>!fp||true),2).filter(B=>!fp||B.some(x=>x.p.pos===fp)),th=lgThin(their);
    A2.forEach(A=>{let ia=A.map(x=>x.p.id),ga=trSide(ia).tot;B2.forEach(B=>{let ib=B.map(x=>x.p.id),k=ia.join()+'>'+ib.join();if(seen.has(k))return;let gb=trSide(ib).tot,mx=Math.max(ga,gb);if(mx<=0||Math.abs(ga-gb)/mx>.45)return;
     let up=Math.max.apply(null,B.map(x=>x.later))>=Math.max.apply(null,A.map(x=>x.later))+.3||B.some(x=>myTh[x.p.pos]&&myTh[x.p.pos].thin);if(!up)return;
-    let E=lgEval(ids,their,ia,ib,-99,true);if(!E||E.M.d<-.3)return;seen.add(k);
-    loc.push({ti,t,A,B,la:E.la,lb:E.lb,gap:(gb-ga)/mx,score:E.score-2*Math.abs((gb-ga)/mx)+(B.some(x=>th[x.p.pos].surplus)?.4:0),tn,tier:5,rx:1,kind:'Closest fit',why:E.why+(A.some(x=>th[x.p.pos].thin)?' They are thin at '+Array.from(new Set(A.filter(x=>th[x.p.pos].thin).map(x=>x.p.pos))).join(' and ')+', so your depth helps.':''),pos:Array.from(new Set(B.map(x=>x.p.pos))),key:k})})})}
-  loc.forEach(d=>{d.ty=lgType(d.A,d.B)});
+    let E=lgEval(ids,their,ia,ib,-99,true),lo=0;if(!E){LGSTRICT='loose';E=lgEval(ids,their,ia,ib,-99,true);LGSTRICT=true;lo=1}if(!E||E.M.d<-.3)return;seen.add(k);
+    loc.push({ti,t,A,B,la:E.la,lb:E.lb,gap:(gb-ga)/mx,score:E.score-2*Math.abs((gb-ga)/mx)+(B.some(x=>th[x.p.pos].surplus)?.4:0),tn,tier:lo?7:5,rx:1,kind:lo?'Long shot':'Closest fit',why:E.why+(A.some(x=>th[x.p.pos].thin)?' They are thin at '+Array.from(new Set(A.filter(x=>th[x.p.pos].thin).map(x=>x.p.pos))).join(' and ')+', so your depth helps.':''),pos:Array.from(new Set(B.map(x=>x.p.pos))),key:k})})})}
+  {let core2=lgCore(),ben=pool.filter(v=>!b0.st.has(v.p.id)&&!core2.has(v.p.id)).sort((a,b)=>b.raw-a.raw).slice(0,6),A3=lgSubs(ben,3).filter(A=>A.length>=2),th=lgThin(their);
+   A3.forEach(A=>{let ia=A.map(x=>x.p.id),ga=trSide(ia).tot;pl.slice(0,12).forEach(b=>{if(fp&&b.p.pos!==fp)return;let ib=[b.p.id],k=ia.join()+'>'+ib.join();if(seen.has(k))return;let gb=trSide(ib).tot,mx=Math.max(ga,gb);if(mx<=0||Math.abs(ga-gb)/mx>.5)return;
+    let E=lgEval(ids,their,ia,ib,-99,true);if(!E||E.M.d<.8)return;seen.add(k);
+    let ins=A.some(x=>x.p.pos==='RB'&&(lgHC()[x.p.id]||[]).length);
+    loc.push({ti,t,A,B:[b],la:E.la,lb:E.lb,gap:(gb-ga)/mx,score:E.score-1.5*Math.abs((gb-ga)/mx)+.3,tn,tier:5,rx:1,kind:'Depth package',why:E.why+(A.some(x=>th[x.p.pos]&&th[x.p.pos].thin)?' They are thin at '+Array.from(new Set(A.filter(x=>th[x.p.pos]&&th[x.p.pos].thin).map(x=>x.p.pos))).join(' and ')+', so your bench helps them.':''),pos:[b.p.pos],key:k})})})}
+  {let core3=lgCore(),ben6=pool.filter(v=>!b0.st.has(v.p.id)&&!core3.has(v.p.id)).sort((a,b)=>b.raw-a.raw).slice(0,6),A4=lgSubs(ben6,3),th4=lgThin(their),bt0=lgBase(their),my4=lgThin(ids),
+   thn=new Set(tn),myN=new Set(trNeeds(ids).filter(n=>n.grade==='Need').map(n=>n.pos)),hc4=lgHC();
+   ['RB','WR'].forEach(p=>{if(th4[p]&&th4[p].thin)thn.add(p);if(my4[p]&&my4[p].thin)myN.add(p)});bt0.hp.forEach(p=>thn.add(p));b0.hp.forEach(p=>myN.add(p));
+   let tb=pl.filter(v=>!bt0.st.has(v.p.id)).slice(0,6),Bl=pl.slice(0,14).map(v=>[v]).concat(lgSubs(tb,2).filter(x=>x.length===2));
+   A4.forEach(A=>{let ia=A.map(x=>x.p.id),ga=trSide(ia).tot;Bl.forEach(B=>{if(fp&&!B.some(x=>x.p.pos===fp))return;let b=B.slice().sort((x,y)=>y.later-x.later)[0],ib=B.map(x=>x.p.id);
+    let bb=ben6.filter(v=>v.p.pos===b.p.pos&&ia.indexOf(v.p.id)<0).map(v=>v.later),bestB=Math.max.apply(null,A.filter(x=>x.p.pos===b.p.pos).map(x=>x.later).concat(bb,0));if(b.later<bestB+.3)return;
+    let k=ia.join()+'>'+ib.join();if(seen.has(k))return;let gb=trSide(ib).tot,mx=Math.max(ga,gb);if(mx<=0||ga>gb*3.2||gb>ga*1.2)return;
+    LGSTRICT='bench';let E=lgEval(ids,their,ia,ib,-99,true);LGSTRICT=true;if(!E||E.M.d<-.1)return;seen.add(k);
+    let aT=A.filter(x=>thn.has(x.p.pos)).length,bM=B.filter(x=>myN.has(x.p.pos)).length;
+    loc.push({ti,t,A,B,la:E.la,lb:E.lb,gap:(gb-ga)/mx,score:E.score-.6*Math.abs((gb-ga)/mx)+(b.later-bestB)*.3+.35*A.length+(aT?.5:0)+(bM?.5:0)+A.filter(x=>x.p.pos==='RB').length*(th4.RB&&th4.RB.thin?.5:.15)+A.filter(x=>(hc4[x.p.id]||[]).some(sid=>their.indexOf(sid)>=0)).length*.8,tn,tier:6,rx:1,kind:'Bench upgrade',why:'None of the players you send are in your lineup. '+B.map(x=>x.p.name).join(' and ')+' could be a starter for you down the road. '+(E.T.d>=.1?'Their lineup improves.':'Their starters stay about the same.')+(aT?' They need '+Array.from(new Set(A.filter(x=>thn.has(x.p.pos)).map(x=>x.p.pos))).join(' and ')+', so your bench helps them.':''),pos:Array.from(new Set(B.map(x=>x.p.pos))),key:k})})})}
+  loc.forEach(d=>{d.ty=lgType(d.A,d.B,their)});
   loc.sort((x,y)=>x.tier-y.tier||y.score-x.score);
-  loc.filter(d=>d.tier!==3&&d.tier!==5).slice(0,14).concat(loc.filter(d=>d.tier===3).slice(0,6),loc.filter(d=>d.tier===5).slice(0,10)).forEach(d=>res.push(d))});
- LGI={key,res};return res}
+  loc.filter(d=>d.tier!==3&&d.tier!==5).slice(0,14).concat(loc.filter(d=>d.tier===3).slice(0,6),loc.filter(d=>d.tier===5).slice(0,10),loc.filter(d=>d.tier===6).slice(0,10),loc.filter(d=>d.tier===7).slice(0,8)).forEach(d=>res.push(d))});
+ LGSTRICT=false;LGI={key,res};return res}
 function lgStarThr(){let V=trCtx().V,a=TR.my.map(i=>V[i]).filter(v=>v&&!v.pl.gone).map(v=>v.raw).sort((x,y)=>y-x);return (a[2]||a[a.length-1]||0)*.9}
-function lgType(A,B){let t=lgStarThr();return (A.some(x=>x.raw>=t)?'s':'d')+(B.some(x=>x.raw>=t)?'s':'d')}
+function lgType(A,B,their){let t=lgStarThr(),V=trCtx().V,t3=new Set((their||[]).map(i=>V[i]).filter(v=>v&&!v.pl.gone).sort((a,b)=>b.raw-a.raw).slice(0,3).map(v=>v.p.id));return (A.some(x=>x.raw>=t)?'s':'d')+(B.some(x=>x.raw>=t||t3.has(x.p.id))?'s':'d')}
 function lgCore(){let V=trCtx().V;return new Set(TR.my.map(i=>V[i]).filter(v=>v&&!v.pl.gone).sort((a,b)=>b.raw-a.raw).slice(0,3).map(v=>v.p.id))}
 function lgIdeasPick(all,pos,k,used){let r=all.filter(d=>d.pos.indexOf(pos)>=0&&!used.has(d.key)&&(TRI.ty==='all'||d.ty===TRI.ty)).sort((a,b)=>(a.tier===5)-(b.tier===5)||a.tier-b.tier||b.score-a.score),out=[],cnt={},seen=new Set(),
  tp=d=>d.ti+'T'+d.B.slice().sort((a,b)=>b.raw-a.raw)[0].p.id,sa=d=>'S'+d.A.slice().sort((a,b)=>b.raw-a.raw)[0].p.id,
@@ -5356,10 +5383,12 @@ function lgIdeasPick(all,pos,k,used){let r=all.filter(d=>d.pos.indexOf(pos)>=0&&
  add=d=>{seen.add(tp(d));seen.add(sa(d));seen.add(d.ti+'A'+d.A.map(x=>x.p.id).join());seen.add(d.ti+'B'+d.B.map(x=>x.p.id).join());out.push(d)};
  let tys=['dd','ds','sd','ss'],qs=tys.map(t=>r.filter(d=>d.ty===t)),pi=tys.map(()=>0),turn=0,guard=0;
  while(out.length<k&&guard++<800&&qs.some((q,i)=>pi[i]<q.length)){let d=qs[turn][pi[turn]];if(d===undefined){turn=(turn+1)%4;continue}pi[turn]++;if(!dup(d)&&(cnt[d.ti]||0)<2){add(d);cnt[d.ti]=(cnt[d.ti]||0)+1;turn=(turn+1)%4}}
- r.forEach(d=>{if(out.length<k&&out.indexOf(d)<0&&!dup(d))add(d)});out.forEach(d=>used.add(d.key));return out}
+ r.forEach(d=>{if(out.length<k&&out.indexOf(d)<0&&!dup(d))add(d)});
+ if(out.length<5){all.filter(d=>d.pos.indexOf(pos)>=0&&!used.has(d.key)&&out.indexOf(d)<0).sort((a,b)=>a.tier-b.tier||b.score-a.score).forEach(d=>{if(out.length<5&&!dup(d))add(d)})}
+ out.forEach(d=>used.add(d.key));return out}
 function lgIdeasHTML(ids,nd){let pchip=(k,t)=>`<button type="button" class="trImpP trCh${TRI.pos===k?' on':''}" data-k="${k}">${t}</button>`,per=TRI.n+1,needs=nd.filter(n=>n.grade==='Need').map(n=>n.pos),P=lgProtect(ids),V=trCtx().V,
  spare=ids.map(i=>V[i]).filter(v=>v&&!v.pl.gone&&!P.has(v.p.id)).sort((a,b)=>b.raw-a.raw).slice(0,4).map(v=>trEsc(v.p.name)),weak=nd.slice().sort((a,b)=>a.pct-b.pct)[0].pos,groups=TRI.pos==='NEED'?(needs.length?needs:[weak]):[TRI.pos],used=new Set(),more=false,
- card=d=>{let sent=new Set(d.A.map(x=>x.p.pos)),nn=d.tn.filter(p=>sent.has(p));return `<div class="lgIT">${trEsc(d.t.n)} ${nn.length?` <em class="ok">needs ${nn.join(' and ')}</em>`:''}${d.tier===1?' <em class="ok">both lineups improve</em>':d.tier===3?' <em class="rx">small depth upgrade</em>':d.tier===2?' <em class="rx">fine for them</em>':d.tier===5?' <em class="rx">closest fit</em>':d.rx?' <em class="rx">leans your way</em>':''}</div>`+trDealCard(d,`<button type="button" class="trAsk trLgOf" data-g="${d.A.map(v=>v.p.id).join(',')}" data-b="${d.B.map(v=>v.p.id).join(',')}">Test this trade</button>`)},
+ card=d=>{let sent=new Set(d.A.map(x=>x.p.pos)),nn=d.tn.filter(p=>sent.has(p));return `<div class="lgIT">${trEsc(d.t.n)} ${nn.length?` <em class="ok">needs ${nn.join(' and ')}</em>`:''}${d.tier===1?' <em class="ok">both lineups improve</em>':d.tier===3?' <em class="rx">small depth upgrade</em>':d.tier===2?' <em class="rx">fine for them</em>':d.tier===5?' <em class="rx">closest fit</em>':d.tier===6?' <em class="rx">bench upgrade</em>':d.tier===7?' <em class="rx">long shot</em>':d.rx?' <em class="rx">leans your way</em>':''}</div>`+trDealCard(d,`<button type="button" class="trAsk trLgOf" data-g="${d.A.map(v=>v.p.id).join(',')}" data-b="${d.B.map(v=>v.p.id).join(',')}">Test this trade</button>`)},
  body=groups.map(pp=>{let all=lgIdeasAll(ids,pp),tot=all.filter(d=>d.pos.indexOf(pp)>=0).length,L=lgIdeasPick(all,pp,per,used);if(tot>L.length)more=true;return `<div class="tsec">Trades to get a ${pp}</div>`+(L.length?L.map(card).join(''):`<p class="tnote">No ${pp} trade of this type works for both teams right now. Try another type or position.</p>`)}).join('');
  return `<div class="trChipsRow"><span><b>You can spare:</b> ${spare.length?spare.join(', '):'nobody without losing depth'}</span><span><b>Your needs:</b> ${needs.length?needs.join(', '):'nothing glaring'}</span></div><div class="trSortBar"><div><span>Look for</span>${pchip('NEED','My needs')}${['QB','RB','WR','TE'].map(p=>pchip(p,p)).join('')}</div></div><div class="trSortBar"><div><span>Type</span>${[['all','All'],['dd','Depth for depth'],['ds','Depth for a star'],['sd','Star for depth'],['ss','Star swap']].map(([k,t])=>`<button type="button" class="trImpTy trCh${TRI.ty===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div></div>`+body
  +(more&&TRI.n<12?`<div class="trMoreW"><button type="button" class="trAsk trImpMore">Show more trades</button></div>`:'')
