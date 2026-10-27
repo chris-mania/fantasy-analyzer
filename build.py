@@ -4314,7 +4314,7 @@ html.faGl .view.on,html.faGl #faApp{animation:faSh .6s steps(6)}
 .fa2 .mh.sw{background:#e8f0ff}.fa2 .mh.el{background:#effaf3}
 .fa2 .tt .mh{justify-content:center;min-height:50px}.fa2 .mh .ki{grid-column:auto;width:62px;margin-left:auto}.fa2 .mh.R .ki{margin-left:0;margin-right:auto}
 .fa2 .mh.emp .nm small{color:#9aa7be}
-.fa2 .note{font-size:11px;line-height:1.45;color:#7d8aa5;padding:12px 16px}
+.fa2 .nm b.mp{display:inline;color:#2563eb;font-weight:850;font-size:inherit}.fa2 .note{font-size:11px;line-height:1.45;color:#7d8aa5;padding:12px 16px}
 /* players */
 .fa2 .srch{padding:8px 12px 0;background:#fff}.fa2 .srch input{width:100%;height:36px;border-radius:10px;border:1px solid #dbe3f1;background:#f4f6fb;padding:0 12px;font-size:13px}
 .fa2 .chips{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;background:#fff;border-bottom:1px solid var(--ln);scrollbar-width:none}.fa2 .chips::-webkit-scrollbar{display:none}
@@ -4823,8 +4823,8 @@ function renderCompare(){if(!A||!B)return;if(A.pos==='QB'||B.pos==='QB')return r
 const TTYPES=['QB','RB','WR','TE','FLEX','SFLEX','BN'];
 const TLIM={QB:[0,3],RB:[0,5],WR:[0,5],TE:[0,3],FLEX:[0,4],SFLEX:[0,2],BN:[0,10]};
 const TPRE={standard:{QB:1,RB:2,WR:2,TE:1,FLEX:1,SFLEX:0,BN:6},superflex:{QB:1,RB:2,WR:2,TE:1,FLEX:0,SFLEX:1,BN:6},deep:{QB:1,RB:3,WR:3,TE:1,FLEX:2,SFLEX:0,BN:7}};
-var KD={on:false,k:8,d:6};try{let s=JSON.parse(localStorage.getItem('fmKD')||'null');if(s&&typeof s.k==='number')KD=Object.assign(KD,s)}catch(e){}
-function kdSave(){try{localStorage.setItem('fmKD',JSON.stringify(KD))}catch(e){}}
+var KD={on:true,k:8,d:6};try{let s=JSON.parse(localStorage.getItem('fmKD2')||'null');if(s&&typeof s.k==='number')KD=Object.assign(KD,s)}catch(e){}
+function kdSave(){try{localStorage.setItem('fmKD2',JSON.stringify(KD))}catch(e){}}
 function kdAdd(){return KD.on?(+KD.k||0)+(+KD.d||0):0}
 var ICO={k:'<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="10" ry="6" transform="rotate(-35 12 12)"/><path d="M8.6 15.4l6.8-6.8M10.2 9.8l1.6 1.6M12.6 12.2l1.6 1.6"/></svg>',d:'<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/><path d="M9 12l2.2 2.2L15.5 10" stroke-linecap="round"/></svg>',cam:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.4h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.4"/></svg>'};
 function kdInner(){return `<label class="kdCheck"><input type="checkbox" class="kdC"${KD.on?' checked':''}><span class="kdIc">${ICO.k}${ICO.d}</span>Add kicker and defense to projections</label>${KD.on?`<span class="kdE"><label><i class="kdI1">${ICO.k}</i>Kicker <input type="number" class="kdI" data-k="k" value="${KD.k}" min="0" max="30" step="0.5" inputmode="decimal"></label><label><i class="kdI1">${ICO.d}</i>Defense <input type="number" class="kdI" data-k="d" value="${KD.d}" min="0" max="30" step="0.5" inputmode="decimal"></label><small>average points, you can edit them. Only used for team totals.</small></span>`:''}`}
@@ -5441,7 +5441,7 @@ function lgWvJudge(ids,o){let c=trCtx(),V=c.V,x=o.x,pos=x.p.pos,L=trLineup(ids,'
  if(o.gw>=.3)return {k:'now',cls:'up',tag:'Pick up',txt:`Would start for you this week, +${trN(o.gw)} points.`,your};
  if(o.g>=.3)return {k:'later',cls:'up',tag:'Pick up',txt:`Would start for you later in the season, +${trN(o.g)} a week.`,your};
  if(cu)return {k:'cuff',cls:'ok',tag:'Handcuff',txt:`Backs up your starter ${trEsc(cu.p.name)}. Insurance if he gets hurt.`,your};
- {let beat=bench.filter(v=>v.pl.R<=1&&x.later>v.later+.5);let w=beat[0],dr=beat[beat.length-1],rk=w?mine.indexOf(w)+1:99;if(w&&rk<=(TR.st[pos]||1)+2)return {k:'up',cls:'up',tag:'Pick up',txt:`Better than ${trEsc(w.p.name)}, your ${pos}${rk}. He would not start yet, but he is a real upgrade over your depth.${dr&&dr!==w?` Drop ${trEsc(dr.p.name)} to make room.`:` Drop ${trEsc(w.p.name)} to make room.`}`,your}}
+ {let bt=(v)=>{if(x.later>v.later+.5)return true;let a=[[x.later,v.later],[x.p.mania,v.p.mania],[x.p.m&&x.p.m.ppr,v.p.m&&v.p.m.ppr],[trWeekPpg(x,META.next_week),trWeekPpg(v,META.next_week)]].filter(q=>q[0]!=null&&q[1]!=null),wn=a.filter(q=>q[0]>q[1]).length;return a.length>=3&&wn>=a.length-0&&x.later>=v.later-.3};let beat=bench.filter(bt);let w=beat[0],dr=beat[beat.length-1],rk=w?mine.indexOf(w)+1:99;if(w&&rk<=(TR.st[pos]||1)+3)return {k:'up',cls:'up',tag:'Pick up',txt:`Better than ${trEsc(w.p.name)}, your ${pos}${rk}. He would not start yet, but he is a real upgrade over your depth.${dr&&dr!==w?` Drop ${trEsc(dr.p.name)} to make room.`:` Drop ${trEsc(w.p.name)} to make room.`}`,your}}
  if(back&&x.later>back.later+.5)return {k:'up',cls:'ok',tag:'Bench upgrade',txt:`Better than your backup ${trEsc(back.p.name)}, but he would not start.`,your};
  if(!mine.length)return {k:'up',cls:'ok',tag:'Fills a hole',txt:`You have no ${pos} yet.`,your};
  return {k:'skip',cls:'dn',tag:'Skip',txt:`Not better than ${worst?trEsc(worst.p.name):'your '+pos+'s'}${back?' or '+trEsc(back.p.name):''}.`,your}}
@@ -6633,8 +6633,8 @@ function cur(){return FA.team!=null?FA.team:myIdx()}
 function wk(){return META.next_week}
 function W(){return FA.wk||wk()}
 function VV(){return trCtx().V}
-var FAKD=(function(){try{return JSON.parse(localStorage.getItem('faKD'))||{}}catch(e){return {}}})();
-function kdSave(){try{localStorage.setItem('faKD',JSON.stringify(FAKD))}catch(e){}}
+var FAKD=(function(){var o={};try{o=JSON.parse(localStorage.getItem('faKD2'))||{}}catch(e){}if(o.on===undefined)o.on=true;return o})();
+function kdSave(){try{localStorage.setItem('faKD2',JSON.stringify(FAKD))}catch(e){}}
 function kdOn(){return !!FAKD.on}
 function kdv(i){FAKD.v=FAKD.v||{};var d=(typeof KD!=='undefined'&&KD)?KD:{};return FAKD.v[i]||(FAKD.v[i]={k:+(d.k||9.7),d:+(d.d||6.4)})}
 function kdAll(i){return (+kdv(i).k||0)+(+kdv(i).d||0)}
@@ -6673,7 +6673,7 @@ function rowR(v,slot,i,k){var p=v.p,w=pj(v),a=avg(p);
 function rowE(slot,i,k){return '<div class="r2 emp'+cls(i,'',k)+(FA.mania?' m3':'')+'" data-t="'+i+'" data-pid="" data-k="'+k+'">'+pill(slot)+'<div class="kc">+</div><div class="nm"><b>Empty</b><small>Open starting spot</small></div></div>'}
 function kdRows(i){return '<div class="r2 kd'+(FA.mania?' m3':'')+'">'+pill('K')+'<div class="kc">K</div><div class="nm"><b>Kicker</b><small>Projected points</small></div>'+kdIn(i,'k')+'</div><div class="r2 kd'+(FA.mania?' m3':'')+'">'+pill('D/ST')+'<div class="kc">D</div><div class="nm"><b>Defense / ST</b><small>Projected points</small></div>'+kdIn(i,'d')+'</div>'}
 function toolbar(){return '<div class="tbr"><div class="wkc"><button type="button" data-d="-1"'+(W()<=wk()?' disabled':'')+'>&lsaquo;</button><span>Week '+W()+'</span><button type="button" data-d="1"'+(W()>=maxW()?' disabled':'')+'>&rsaquo;</button></div><button type="button" class="chip kdT'+(kdOn()?' on':'')+'">K/DEF</button><button type="button" class="chip mnT'+(FA.mania?' on':'')+'">Mania</button></div>'}
-function banner(){return (!FAKD.asked&&(FA.tab==='roster'||FA.tab==='match'))?'<div class="kdb"><b>Add kicker and defense?</b><span>Most leagues start a K and a D/ST. Turn them on to count them in every total, then edit the numbers for any team.</span><div><button type="button" class="kdY">Yes, add them</button><button type="button" class="kdN">Skip</button></div></div>':''}
+function banner(){return false&&(!FAKD.asked&&(FA.tab==='roster'||FA.tab==='match'))?'<div class="kdb"><b>Add kicker and defense?</b><span>Most leagues start a K and a D/ST. Turn them on to count them in every total, then edit the numbers for any team.</span><div><button type="button" class="kdY">Yes, add them</button><button type="button" class="kdN">Skip</button></div></div>':''}
 function swb(i){return FA.sel&&FA.sel.t===i?'<div class="swb"><span>Swap <b>'+trEsc(VV()[FA.sel.id].p.name)+'</b>: tap a green row</span><button type="button" class="swX">Cancel</button></div>':(FA.msg?'<div class="swb"><span>'+FA.msg+'</span></div>':'')}
 function rosterHTML(i){var ts=teams(),t=ts[i];if(!t)return '<p class="note">Import your league to use this view.</p>';var L=lineup(i,W()),ex=kdSum(i);
  var h=swb(i)+'<div class="sum"><div class="av">'+ini(t.n)+'</div><div><b>'+trEsc(t.n)+'</b><small>'+rec(t)+'</small></div><div class="big"><strong>'+f1(L.tot+ex)+'</strong><small>PROJECTED</small></div></div>'+toolbar();
@@ -6684,7 +6684,7 @@ function rosterHTML(i){var ts=teams(),t=ts[i];if(!t)return '<p class="note">Impo
 function erf(x){var s=x<0?-1:1;x=Math.abs(x);var t=1/(1+.3275911*x),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-x*x);return s*y}
 function half(v,ppg,i,k,side,other,slotMax){var cm=cls(i,v?v.p.id:'',k);
  if(!v)return '<div class="mh '+side+' emp'+cm+'" data-t="'+i+'" data-pid="" data-k="'+k+'"><div class="nm"><small>Empty</small></div></div>';
- var p=v.p,win=ppg>other;return '<div class="mh '+side+cm+'" data-t="'+i+'" data-pid="'+p.id+'" data-k="'+k+'">'+thumb(p)+'<div class="nm"><b>'+trEsc(shortN(p.name))+'</b><small>'+sub(v,i,false)+'</small></div><span class="pt'+(win?' w':'')+'">'+f1(ppg)+'</span><u class="bar" style="width:'+Math.min(100,Math.round(ppg/slotMax*100))+'%"></u></div>'}
+ var p=v.p,win=ppg>other;return '<div class="mh '+side+cm+'" data-t="'+i+'" data-pid="'+p.id+'" data-k="'+k+'">'+thumb(p)+'<div class="nm"><b>'+trEsc(shortN(p.name))+'</b><small>'+sub(v,i,false)+(FA.mania&&p.mania!=null?' &middot; <b class="mp">'+Math.round(p.mania)+'</b>':'')+'</small></div><span class="pt'+(win?' w':'')+'">'+f1(ppg)+'</span><u class="bar" style="width:'+Math.min(100,Math.round(ppg/slotMax*100))+'%"></u></div>'}
 function matchHTML(){var ts=teams(),i=cur();if(!ts[i])return '<p class="note">Import your league to use this view.</p>';
  if(FA.opp==null||FA.opp===i||!ts[FA.opp])FA.opp=ts.findIndex(function(_,k){return k!==i});var o=FA.opp;
  var A=ts[i],B=ts[o],LA=lineup(i,W()),LB=lineup(o,W()),a=LA.tot+kdSum(i),b=LB.tot+kdSum(o),sd=.125*Math.sqrt(a*a+b*b)||1,pA=Math.round(50*(1+erf((a-b)/(sd*Math.SQRT2))));
@@ -6732,16 +6732,16 @@ function sheetHTML(){var S=FA.sheet;if(!S)return '';var V=VV(),v=V[S.id];if(!v)r
  if(c){var cp=c.p,M=[['PROJ',w,pj(c)],['AVG',a,avg(cp)],['TGT',p.m&&p.m.tgt,cp.m&&cp.m.tgt],['CAR',p.m&&p.m.car,cp.m&&cp.m.car],['SNAP%',p.m&&p.m.snap,cp.m&&cp.m.snap],['TD',p.m&&p.m.td,cp.m&&cp.m.td]];
   h+='<div class="cn"><span><b>'+trEsc(p.name)+'</b>available</span><span><b>'+trEsc(cp.name)+'</b>'+(inSt[cp.id]?'starter':'bench')+'</span></div><div class="cg">'+M.filter(function(r){return r[1]!=null||r[2]!=null}).map(function(r){var x=+r[1]||0,y=+r[2]||0,mx=Math.max(x,y,.01);return '<div class="cr"><span class="a'+(x>y?' w':'')+'">'+(r[1]==null?'&mdash;':(+r[1]).toFixed(r[0]==='SNAP%'?0:1))+'</span><div class="tr"><i style="width:'+Math.round(x/mx*100)+'%"></i></div><span class="lbl">'+r[0]+'</span><div class="tr r"><i style="width:'+Math.round(y/mx*100)+'%"></i></div><span class="b'+(y>x?' w':'')+'">'+(r[2]==null?'&mdash;':(+r[2]).toFixed(r[0]==='SNAP%'?0:1))+'</span></div>'}).join('')+'</div>'}
  var isA=(FA.add[i]||[]).indexOf(p.id)>=0,base=ids(i).filter(function(x){return x!==p.id}),B=trLineupW(base,W()),Wt=trLineupW(base.concat(p.id),W()),d=Wt.tot-B.tot,sn=Wt.st.find(function(s){return s.v&&s.v.p.id===p.id}),ex=kdSum(i);
- h+='<div class="cl">On your team</div><div class="fx">'+(sn?'He would start at <b>'+sn.slot+'</b>. Projected total <b>'+f1(B.tot+ex)+'</b> to <b>'+f1(Wt.tot+ex)+'</b> <span class="dl up">('+(d>=0?'+':'')+d.toFixed(1)+')</span> in Week '+W()+'.':'He would sit on your bench. Your starting lineup and projected total (<b>'+f1(B.tot+ex)+'</b>) stay the same in Week '+W()+'.')+'</div>';
- h+='<div class="bt two"><button type="button" class="p" data-a="'+(isA?'rm':'add')+'" data-id="'+p.id+'" data-t="'+i+'">'+(isA?'Remove from my team':'Add to my team')+'</button><button type="button" data-a="prof" data-id="'+p.id+'">View profile</button></div><div class="bt" style="margin-top:8px"><button type="button" data-a="close">Done</button></div>';
+ h+='<div class="cl">On your team</div>'+(isA?'<div class="fx" style="background:#e3f6ea;margin-bottom:8px"><b>Added.</b> He is on your team now. Open the Roster or Matchup tab to see him in your lineup.</div>':'')+'<div class="fx">'+(sn?(isA?'He starts at ':'He would start at')+' <b>'+sn.slot+'</b>. Projected total <b>'+f1(B.tot+ex)+'</b> to <b>'+f1(Wt.tot+ex)+'</b> <span class="dl up">('+(d>=0?'+':'')+d.toFixed(1)+')</span> in Week '+W()+'.':(isA?'He is on your bench. Your starting lineup and projected total (<b>':'He would sit on your bench. Your starting lineup and projected total (<b>')+f1(B.tot+ex)+'</b>) stay the same in Week '+W()+'.')+'</div>';
+ h+='<div class="bt two"><button type="button" class="p" data-a="'+(isA?'rm':'add')+'" data-id="'+p.id+'" data-t="'+i+'">'+(isA?'Remove from my team':'Add to my team')+'</button><button type="button" data-a="'+(isA?'ros':'prof')+'" data-id="'+p.id+'">'+(isA?'View roster':'View profile')+'</button></div><div class="bt" style="margin-top:8px"><button type="button" data-a="close">Done</button></div>';
  return h}
 function renderSheet(){var s=$$('faSheet');if(!s)return;if(!FA.sheet){s.classList.remove('on');s.innerHTML='';return}var y=0,p=s.querySelector('.shp');if(p)y=p.scrollTop;s.innerHTML='<div class="shd" data-a="close"></div><div class="shp">'+sheetHTML()+'</div>';s.classList.add('on');var n=s.querySelector('.shp');if(n)n.scrollTop=y}
 function render(keep){var b=$$('faBody');if(!b)return;var y=keep?b.scrollTop:0,h;
  try{h=banner()+(FA.tab==='roster'?rosterHTML(cur()):FA.tab==='match'?matchHTML():FA.tab==='players'?playersHTML():leagueHTML())}catch(e){h='<p class="note">Something went wrong drawing this screen.</p>';if(window.console)console.error(e)}
  b.innerHTML='<div class="fa2">'+h+'<p class="note">Fantasy App view is Fantasy Mania&rsquo;s own league view, built to feel like a typical fantasy football app. It is not ESPN and is not affiliated with ESPN or any other fantasy platform.</p></div>';b.scrollTop=y;
  document.querySelectorAll('#faApp .faTab').forEach(function(x){x.classList.toggle('on',x.dataset.k===FA.tab)});var wkE=document.querySelector('#faApp .faWk');if(wkE)wkE.textContent='Week '+W();renderSheet()}
-function prof(id){var q=byId(id);if(!q)return;FA.sc=($$('faBody')||{}).scrollTop||0;FA.sheet=null;navStack.push(function(){faBack()});skipPush=true;close(true);openPlayer(q)}
-function faBack(){var ts=teams();if(!ts.length){return}try{showView(FA.prev||'team')}catch(e){}build();render(true);$$('faApp').classList.add('on');document.body.style.overflow='hidden';var b=$$('faBody');if(b)b.scrollTop=FA.sc||0}
+function prof(id){var q=byId(id);if(!q)return;FA.sc=($$('faBody')||{}).scrollTop||0;FA.sheet=null;navStack.push(function(){faBack()});FA.back=true;skipPush=true;close(true,true);openPlayer(q)}
+function faBack(){FA.back=false;var ts=teams();if(!ts.length){return}try{showView(FA.prev||'team')}catch(e){}build();render(true);$$('faApp').classList.add('on');document.body.style.overflow='hidden';var b=$$('faBody');if(b)b.scrollTop=FA.sc||0}
 function build(){if($$('faApp'))return;var d=document.createElement('div');d.innerHTML='<div id="faFx"></div><div id="faApp"><div class="faHd"><button type="button" class="faX" aria-label="Exit">&times;</button><div class="faTn"><small>FANTASY APP</small><select class="faTeamSel"></select></div><span class="faWk"></span></div><div class="faTabs"><button type="button" class="faTab on" data-k="roster">Roster</button><button type="button" class="faTab" data-k="match">Matchup</button><button type="button" class="faTab" data-k="players">Players</button><button type="button" class="faTab" data-k="league">League</button></div><div class="faBody" id="faBody"></div><div id="faSheet"></div></div>';
  while(d.firstChild)document.body.appendChild(d.firstChild);var app=$$('faApp');
  app.addEventListener('click',function(e){var t=e.target;
@@ -6749,6 +6749,7 @@ function build(){if($$('faApp'))return;var d=document.createElement('div');d.inn
    if(a==='close'){FA.sheet=null;renderSheet();return}
    if(a==='prof'){prof(id);return}
    if(a==='swap'){FA.sel={t:+A.dataset.t,id:id};FA.sheet=null;FA.msg='';render(true);return}
+   if(a==='ros'){FA.sheet=null;FA.tab='roster';FA.sel=null;render();return}
    if(a==='cmp'){FA.sheet.cmp=id;renderSheet();return}
    if(a==='add'){var ti=+A.dataset.t;FA.add[ti]=(FA.add[ti]||[]).concat(id);delete FA.ov[ti];FA.wc=null;render(true);return}
    if(a==='rm'){var tj=+A.dataset.t;FA.add[tj]=(FA.add[tj]||[]).filter(function(x){return x!==id});delete FA.ov[tj];FA.wc=null;FA.sheet=FA.sheet&&FA.sheet.type==='act'?null:FA.sheet;render(true);return}}
@@ -6778,13 +6779,15 @@ function build(){if($$('faApp'))return;var d=document.createElement('div');d.inn
   if(t.classList.contains('rtSel')){FA.view=+t.value;render(true)}});
  app.addEventListener('input',function(e){if(e.target.classList.contains('qIn')){FA.q=e.target.value;FA.n=40;var b=$$('faBody'),p=e.target.selectionStart;render(true);var q=b.querySelector('.qIn');if(q){q.focus();try{q.setSelectionRange(p,p)}catch(x){}}}})}
 function open(){var ts=teams();if(!ts.length)return;build();var v=document.querySelector('.view.on');if(v&&v.id!=='profile')FA.prev=v.id;
+ try{if(!(history.state&&history.state.fa)){var hs=history.state||{};history.pushState({fm:typeof hs.fm==='number'?hs.fm:0,fa:1},'')}}catch(e){}
  var sel=document.querySelector('#faApp .faTeamSel');sel.innerHTML=ts.map(function(t,k){return '<option value="'+k+'"'+(k===cur()?' selected':'')+'>'+trEsc(t.n)+' &#9662;</option>'}).join('');
  try{var o=localStorage.getItem('faOpp');if(o!=null&&FA.opp==null&&ts[+o])FA.opp=+o}catch(x){}
  var fx=$$('faFx');document.documentElement.classList.add('faGl');fx.classList.remove('on');void fx.offsetWidth;fx.classList.add('on');
  setTimeout(function(){render();$$('faApp').classList.add('on');document.body.style.overflow='hidden'},340);
  setTimeout(function(){fx.classList.remove('on');document.documentElement.classList.remove('faGl')},820)}
-function close(quiet){var app=$$('faApp');if(!app)return;app.classList.remove('on');document.body.style.overflow='';FA.sheet=null;FA.sel=null;if(!quiet){var fx=$$('faFx');document.documentElement.classList.add('faGl');fx.classList.remove('on');void fx.offsetWidth;fx.classList.add('on');setTimeout(function(){fx.classList.remove('on');document.documentElement.classList.remove('faGl')},700)}}
+function close(quiet,keep){var app=$$('faApp');if(!app)return;var was=app.classList.contains('on');app.classList.remove('on');if(was&&!keep&&history.state&&history.state.fa){try{history.back()}catch(e){}}document.body.style.overflow='';FA.sheet=null;FA.sel=null;if(!quiet){var fx=$$('faFx');document.documentElement.classList.add('faGl');fx.classList.remove('on');void fx.offsetWidth;fx.classList.add('on');setTimeout(function(){fx.classList.remove('on');document.documentElement.classList.remove('faGl')},700)}}
 document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.faOpenB,#homeFa')){e.preventDefault();open()}});
+window.addEventListener('popstate',function(e){var app=$$('faApp');if(!app)return;var on=app.classList.contains('on');if(e.state&&e.state.fa){if(!on&&FA.back){FA.back=false;faBack()}}else if(on){FA.sheet=null;FA.sel=null;close(true,true)}});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
 function homeSync(){var b=$$('homeFa'),e=$$('homeEspn');if(!e)return;var on=teams().length>0,w=e.parentNode;if(!w.classList.contains('homeIm')){var d=document.createElement('div');d.className='homeIm';w.insertBefore(d,e);d.appendChild(e);w=d}
  if(!b){b=document.createElement('button');b.type='button';b.id='homeFa';b.className='newPill faPill';b.innerHTML='Fantasy App<em>&rsaquo;</em>';w.appendChild(b)}b.style.display=on?'':'none'}
