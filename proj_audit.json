@@ -1,37 +1,4 @@
 {
- "week": 7,
- "items": [
-  {
-   "kind": "vegas line cut back",
-   "name": "David Montgomery",
-   "stat": "td",
-   "line": 0.89,
-   "model": 0.26,
-   "used": 0.65
-  },
-  {
-   "kind": "vegas line cut back",
-   "name": "Josh Jacobs",
-   "stat": "ruy",
-   "line": 58.0,
-   "model": 2.68,
-   "used": 32.68
-  },
-  {
-   "kind": "vegas line cut back",
-   "name": "Josh Jacobs",
-   "stat": "td",
-   "line": 0.65,
-   "model": 0.02,
-   "used": 0.32
-  },
-  {
-   "kind": "vegas line cut back",
-   "name": "Jameis Winston",
-   "stat": "ptd",
-   "line": 3.0,
-   "model": 0.97,
-   "used": 2.42
-  }
- ]
+ "week": 8,
+ "items": []
 }
