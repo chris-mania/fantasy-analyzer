@@ -7159,19 +7159,19 @@ function loadLeague(m,us,lg){var B=m.querySelector('.trModalB');B.innerHTML='<b>
  Promise.all([jget('https://api.sleeper.app/v1/league/'+lg.league_id+'/rosters'),jget('https://api.sleeper.app/v1/league/'+lg.league_id+'/users'),pl]).then(function(R){
   var ros=R[0],usr=R[1],P=R[2],ours=Object.values(trCtx().V).map(function(v){return v.p}),idx={};
   ours.forEach(function(p){(idx[trEspnKey(p.name)]=idx[trEspnKey(p.name)]||[]).push(p)});
-  var miss=[],umap={};usr.forEach(function(x){umap[x.user_id]=x});
+  var miss=[],umap={},smap={};usr.forEach(function(x){umap[x.user_id]=x});
   var teams=ros.map(function(r,k){var o=umap[r.owner_id]||{},nm=((o.metadata&&o.metadata.team_name)||o.display_name||('Team '+(k+1))).slice(0,30),ids=[];
-   (r.players||[]).forEach(function(sid){var s=P[sid];if(!s||!/^(QB|RB|WR|TE)$/.test(s.position||''))return;var c=idx[trEspnKey(s.full_name||((s.first_name||'')+' '+(s.last_name||'')))]||[],p=c.find(function(x){return x.pos===s.position})||c[0];if(p){if(ids.indexOf(p.id)<0)ids.push(p.id)}else miss.push(s.full_name)});
+   (r.players||[]).forEach(function(sid){var s=P[sid];if(!s||!/^(QB|RB|WR|TE)$/.test(s.position||''))return;var c=idx[trEspnKey(s.full_name||((s.first_name||'')+' '+(s.last_name||'')))]||[],p=c.find(function(x){return x.pos===s.position})||c[0];if(p){smap[sid]=p.id;if(ids.indexOf(p.id)<0)ids.push(p.id)}else miss.push(s.full_name)});
    var st=r.settings||{},w=+st.wins||0,l=+st.losses||0,t=+st.ties||0;return {n:nm,ids:ids,w:w,l:l,t:t,rec:w+'-'+l+(t?'-'+t:'')}});
   var me=ros.findIndex(function(r){return r.owner_id===us.user_id});
   var rp=lg.roster_positions||[],cnt={};rp.forEach(function(x){cnt[x]=(cnt[x]||0)+1});
   var set={n:teams.length,QB:Math.max(1,cnt.QB||1),RB:cnt.RB||0,WR:cnt.WR||0,TE:cnt.TE||0,FLEX:(cnt.FLEX||0)+(cnt.REC_FLEX||0)+(cnt.WRRB_FLEX||0)+(cnt.SUPER_FLEX||0),sf:(cnt.SUPER_FLEX||0)>0};
   if(set.RB+set.WR<2){set=null}
-  LGIMP.add=true;m.__sl={user:us.username||us.display_name,id:lg.league_id};
+  LGIMP.add=true;m.__sl={user:us.username||us.display_name,id:lg.league_id,uid:us.user_id,map:smap};
   lgPickBody(m,teams,me,miss,set,lg.name||'');
   var B2=m.querySelector('.trModalB');B2.querySelectorAll('p').forEach(function(q){if(q.textContent.indexOf('ESPN shows')>=0)q.textContent='Tap your team. We highlighted the one that matches your Sleeper username.'});var note=document.createElement('p');note.className='lgKeep';note.textContent='From Sleeper: kickers and defenses are skipped.'+(miss.length?' '+miss.length+' players were not matched.':'');B2.appendChild(note);
   /* tag the stored league as Sleeper once the team is picked */
-  var tag=setInterval(function(){if(!document.body.contains(m)){clearInterval(tag);var l=curL();if(l&&!l.sl&&l.id>=Date.now()-60000&&TR.leagues.length){l.sl={user:m.__sl.user,id:m.__sl.id};trSave()}}},400)
+  var tag=setInterval(function(){if(!document.body.contains(m)){clearInterval(tag);var l=curL();if(l&&!l.sl&&l.id>=Date.now()-60000&&TR.leagues.length){l.sl={user:m.__sl.user,id:m.__sl.id,uid:m.__sl.uid,map:m.__sl.map};trSave()}}},400)
  }).catch(function(){B.innerHTML='<b>Could not load that league</b><p>Sleeper did not answer. Close this and try again in a moment.</p><button type="button" class="trAsk lgX">Close</button>';B.querySelector('.lgX').onclick=function(){m.remove()}})}
 /* intercept Add / Re-import */
 document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.lgImp');if(!t)return;
@@ -7186,6 +7186,35 @@ var _lb=lgBox;lgBox=function(cx){var c=curL();if(!c||!c.manual||TR.lgOff)return 
  var LS=TR.leagues||[],sel=LS.length>1?'<label class="lgSwL">Saved <select class="lgLs">'+LS.map(function(l,i){return '<option value="'+i+'"'+(i===TR.lgCur?' selected':'')+'>'+esc(l.name)+'</option>'}).join('')+'</select></label>':'';
  return '<div class="lgBox"><div><b>'+esc(c.name)+'</b><span>A team you entered by hand. League rankings, waivers and trades need an imported league, so they are off here. Switch below to use one.</span></div><div class="lgBtns">'+sel+'<button type="button" class="lgImp" data-add="1">Add league or team</button><button type="button" class="lgRn">Rename</button><button type="button" class="lgDel">Delete</button></div></div>'};
 /* ESPN/Sleeper box: say what kind it is */
+})();
+
+/* ===== v173 Sleeper leagues refresh themselves ===== */
+(function(){var busy=0,last=0;
+function cur(){return (TR.leagues||[])[TR.lgCur]}
+function sig(a){return JSON.stringify((a||[]).map(function(t){return [t.n,(t.ids||[]).slice().sort(),t.w,t.l,t.t]}))}
+function get(u){return fetch(u).then(function(r){if(!r.ok)throw 0;return r.json()})}
+function refresh(force){var l=cur();if(!l||!l.sl||!l.sl.uid||busy||!navigator.onLine)return;if(!force&&Date.now()-last<240000)return;busy=1;last=Date.now();
+ var id=l.sl.id;
+ Promise.all([get('https://api.sleeper.app/v1/league/'+id+'/rosters'),get('https://api.sleeper.app/v1/league/'+id+'/users')]).then(function(R){
+  var ros=R[0],usr=R[1],map=l.sl.map||{},need=[];
+  ros.forEach(function(r){(r.players||[]).forEach(function(s){if(!(s in map))need.push(s)})});
+  var pl=need.length?(SLPG()?Promise.resolve(SLPG()):get('https://api.sleeper.app/v1/players/nfl').then(function(p){SLPG(p);return p})):Promise.resolve(null);
+  return pl.then(function(P){
+   if(P){var idx={};Object.values(trCtx().V).forEach(function(v){var k=trEspnKey(v.p.name);(idx[k]=idx[k]||[]).push(v.p)});
+    need.forEach(function(sid){var s=P[sid],p=null;if(s&&/^(QB|RB|WR|TE)$/.test(s.position||'')){var c=idx[trEspnKey(s.full_name||((s.first_name||'')+' '+(s.last_name||'')))]||[];p=c.find(function(x){return x.pos===s.position})||c[0]}map[sid]=p?p.id:0})}
+   var um={};usr.forEach(function(x){um[x.user_id]=x});
+   var teams=ros.map(function(r,k){var o=um[r.owner_id]||{},st=r.settings||{},w=+st.wins||0,lo=+st.losses||0,t=+st.ties||0,ids=[];(r.players||[]).forEach(function(s){var q=map[s];if(q&&ids.indexOf(q)<0)ids.push(q)});
+    return {n:((o.metadata&&o.metadata.team_name)||o.display_name||('Team '+(k+1))).slice(0,30),ids:ids,w:w,l:lo,t:t,rec:w+'-'+lo+(t?'-'+t:'')}});
+   var me=ros.findIndex(function(r){return r.owner_id===l.sl.uid});if(me<0||!teams.length)return;
+   l.sl.map=map;var c2=cur();if(c2!==l)return;
+   if(sig(teams)!==sig(l.lgAll)){var off=TR.lgOff;lgApply(teams,me,true);TR.lgOff=off;lgSaveCur();lgRefresh()}
+   else{l.lgTs=Date.now();TR.lgTs=l.lgTs;trSave()}})
+ }).catch(function(){}).then(function(){busy=0})}
+var _pg=null;function SLPG(p){if(p)_pg=p;return _pg}
+var _u=lgUseLeague;lgUseLeague=function(i){var r=_u.apply(this,arguments);last=0;setTimeout(refresh,300);return r};
+window.addEventListener('load',function(){setTimeout(refresh,1500)});
+document.addEventListener('visibilitychange',function(){if(!document.hidden)refresh()});
+window.slRefreshNow=function(){refresh(true)};
 })();
 </script></body></html>'''
 
