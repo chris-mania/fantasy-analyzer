@@ -7126,6 +7126,67 @@ if(window.FM_FA){setTimeout(function(){try{
 (function(){function go(){var n=document.getElementById('rankNote'),d=document.querySelector('#rankings .how2');if(n&&d&&n.parentNode!==d)d.appendChild(n);
  var pb=document.getElementById('profileBody');if(pb)new MutationObserver(function(){pb.querySelectorAll(':scope>.stats').forEach(function(e){e.dataset.pfg='adv'})}).observe(pb,{childList:true})}
 try{go()}catch(e){}})();
+
+/* ===== v172 more than one kind of team: ESPN, Sleeper, by hand ===== */
+(function(){
+var SLP={pl:null};
+function esc(s){return trEsc(String(s==null?'':s))}
+function modal(html){var m=document.createElement('div');m.className='trModal';m.innerHTML='<div class="trModalB">'+html+'</div>';m.onclick=function(e){if(e.target===m)m.remove()};document.body.appendChild(m);return m}
+function curL(){return (TR.leagues||[])[TR.lgCur]}
+/* chooser */
+function chooser(){var m=modal('<b>Add a league or team</b><p>Your saved leagues stay saved. Pick a kind to add, then switch between them any time.</p><div class="lgPick"><button type="button" class="lgPk" data-k="espn"><b>ESPN league</b><small>Paste the Rosters page</small></button><button type="button" class="lgPk" data-k="sleeper"><b>Sleeper league</b><small>Type your Sleeper username</small></button><button type="button" class="lgPk" data-k="hand"><b>A team by hand</b><small>Not in a league. You pick the players yourself</small></button></div>');
+ m.querySelectorAll('.lgPk').forEach(function(b){b.onclick=function(){var k=b.dataset.k;m.remove();if(k==='espn'){LGIMP.add=true;trEspnModal()}else if(k==='sleeper')sleeperModal(false);else handModal()}})}
+/* by hand */
+function handModal(){var m=modal('<b>Name this team</b><input class="lgNmI" maxlength="28" placeholder="For example: Work league" value="My team"><p class="lgKeep">It starts empty. Add your players in the team analyzer and they are saved to this team. League rankings, waivers and trades need a real league, so those stay off for a team by hand.</p><div class="lgTb"><button type="button" class="trAsk lgOk">Create team</button><button type="button" class="trAsk lgX">Cancel</button></div>');
+ m.querySelector('.lgX').onclick=function(){m.remove()};m.querySelector('.lgOk').onclick=function(){var nm=(m.querySelector('input').value||'').trim().slice(0,28)||'My team';
+  var rec={id:Date.now(),name:nm,manual:true,lgAll:[{n:nm.slice(0,22),ids:[]}],lgMe:0,lgTs:Date.now(),st:JSON.parse(JSON.stringify(TR.st)),sf:TR.sf,n:TR.n};
+  TR.leagues=TR.leagues||[];TR.leagues.push(rec);m.remove();lgUseLeague(TR.leagues.length-1)}}
+/* sleeper */
+function jget(u){return fetch(u).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})}
+function sleeperModal(re){var m=modal('<b>Add your Sleeper league</b><p>Type your Sleeper username (not your email). We only read public league info.</p><input class="lgNmI slU" autocapitalize="off" autocorrect="off" placeholder="Sleeper username"><p class="trImpE"></p><button type="button" class="trAsk slGo">Find my leagues</button><div class="lgPick slL"></div>'),
+ E=m.querySelector('.trImpE'),L=m.querySelector('.slL'),u=m.querySelector('.slU'),go=m.querySelector('.slGo');
+ var c=curL();if(re&&c&&c.sl)u.value=c.sl.user||'';
+ function fail(t){E.textContent=t;go.disabled=false;go.textContent='Find my leagues'}
+ go.onclick=function(){var name=u.value.trim();if(!name){E.textContent='Type your Sleeper username first.';return}E.textContent='';go.disabled=true;go.textContent='Looking…';L.innerHTML='';
+  jget('https://api.sleeper.app/v1/user/'+encodeURIComponent(name)).then(function(us){if(!us||!us.user_id)throw new Error('nouser');
+   return jget('https://api.sleeper.app/v1/state/nfl').then(function(st){return jget('https://api.sleeper.app/v1/user/'+us.user_id+'/leagues/nfl/'+(st.season||new Date().getFullYear())).then(function(ls){return {us:us,ls:ls||[]}})})})
+  .then(function(r){go.disabled=false;go.textContent='Find my leagues';if(!r.ls.length){E.textContent='No NFL leagues found for that user this season.';return}
+   L.innerHTML=r.ls.map(function(l,i){return '<button type="button" class="lgPk" data-i="'+i+'"><b>'+esc(l.name)+'</b><small>'+esc(l.total_rosters)+' teams</small></button>'}).join('');
+   L.querySelectorAll('.lgPk').forEach(function(b){b.onclick=function(){loadLeague(m,r.us,r.ls[+b.dataset.i])}})})
+  .catch(function(e){fail(String(e&&e.message)==='nouser'||String(e&&e.message)==='404'?'We could not find that username. Check the spelling.':'Could not reach Sleeper. Check your connection and try again.')})}}
+function loadLeague(m,us,lg){var B=m.querySelector('.trModalB');B.innerHTML='<b>Loading '+esc(lg.name)+'…</b><p>Reading rosters. This can take a few seconds.</p>';
+ var pl=SLP.pl?Promise.resolve(SLP.pl):jget('https://api.sleeper.app/v1/players/nfl').then(function(p){SLP.pl=p;return p});
+ Promise.all([jget('https://api.sleeper.app/v1/league/'+lg.league_id+'/rosters'),jget('https://api.sleeper.app/v1/league/'+lg.league_id+'/users'),pl]).then(function(R){
+  var ros=R[0],usr=R[1],P=R[2],ours=Object.values(trCtx().V).map(function(v){return v.p}),idx={};
+  ours.forEach(function(p){(idx[trEspnKey(p.name)]=idx[trEspnKey(p.name)]||[]).push(p)});
+  var miss=[],umap={};usr.forEach(function(x){umap[x.user_id]=x});
+  var teams=ros.map(function(r,k){var o=umap[r.owner_id]||{},nm=((o.metadata&&o.metadata.team_name)||o.display_name||('Team '+(k+1))).slice(0,30),ids=[];
+   (r.players||[]).forEach(function(sid){var s=P[sid];if(!s||!/^(QB|RB|WR|TE)$/.test(s.position||''))return;var c=idx[trEspnKey(s.full_name||((s.first_name||'')+' '+(s.last_name||'')))]||[],p=c.find(function(x){return x.pos===s.position})||c[0];if(p){if(ids.indexOf(p.id)<0)ids.push(p.id)}else miss.push(s.full_name)});
+   var st=r.settings||{},w=+st.wins||0,l=+st.losses||0,t=+st.ties||0;return {n:nm,ids:ids,w:w,l:l,t:t,rec:w+'-'+l+(t?'-'+t:'')}});
+  var me=ros.findIndex(function(r){return r.owner_id===us.user_id});
+  var rp=lg.roster_positions||[],cnt={};rp.forEach(function(x){cnt[x]=(cnt[x]||0)+1});
+  var set={n:teams.length,QB:Math.max(1,cnt.QB||1),RB:cnt.RB||0,WR:cnt.WR||0,TE:cnt.TE||0,FLEX:(cnt.FLEX||0)+(cnt.REC_FLEX||0)+(cnt.WRRB_FLEX||0)+(cnt.SUPER_FLEX||0),sf:(cnt.SUPER_FLEX||0)>0};
+  if(set.RB+set.WR<2){set=null}
+  LGIMP.add=true;m.__sl={user:us.username||us.display_name,id:lg.league_id};
+  lgPickBody(m,teams,me,miss,set,lg.name||'');
+  var B2=m.querySelector('.trModalB');B2.querySelectorAll('p').forEach(function(q){if(q.textContent.indexOf('ESPN shows')>=0)q.textContent='Tap your team. We highlighted the one that matches your Sleeper username.'});var note=document.createElement('p');note.className='lgKeep';note.textContent='From Sleeper: kickers and defenses are skipped.'+(miss.length?' '+miss.length+' players were not matched.':'');B2.appendChild(note);
+  /* tag the stored league as Sleeper once the team is picked */
+  var tag=setInterval(function(){if(!document.body.contains(m)){clearInterval(tag);var l=curL();if(l&&!l.sl&&l.id>=Date.now()-60000&&TR.leagues.length){l.sl={user:m.__sl.user,id:m.__sl.id};trSave()}}},400)
+ }).catch(function(){B.innerHTML='<b>Could not load that league</b><p>Sleeper did not answer. Close this and try again in a moment.</p><button type="button" class="trAsk lgX">Close</button>';B.querySelector('.lgX').onclick=function(){m.remove()}})}
+/* intercept Add / Re-import */
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.lgImp');if(!t)return;
+ var add=t.dataset.add==='1'||!(TR.leagues&&TR.leagues.length),c=curL();
+ if(add){e.stopImmediatePropagation();e.preventDefault();chooser();return}
+ if(c&&c.sl){e.stopImmediatePropagation();e.preventDefault();sleeperModal(true);return}
+ if(c&&c.manual){e.stopImmediatePropagation();e.preventDefault();chooser()}},true);
+/* save by-hand players into their saved team */
+var _ts=trSave;trSave=function(){try{var l=curL();if(l&&l.manual&&!TR.lgOff){l.lgAll=[{n:(TR.tname||l.name).slice(0,22),ids:(TR.my||[]).slice()}];l.lgMe=0;l.st=JSON.parse(JSON.stringify(TR.st));l.sf=TR.sf}}catch(x){}return _ts.apply(this,arguments)};
+/* box for a team by hand */
+var _lb=lgBox;lgBox=function(cx){var c=curL();if(!c||!c.manual||TR.lgOff)return _lb.apply(this,arguments);
+ var LS=TR.leagues||[],sel=LS.length>1?'<label class="lgSwL">Saved <select class="lgLs">'+LS.map(function(l,i){return '<option value="'+i+'"'+(i===TR.lgCur?' selected':'')+'>'+esc(l.name)+'</option>'}).join('')+'</select></label>':'';
+ return '<div class="lgBox"><div><b>'+esc(c.name)+'</b><span>A team you entered by hand. League rankings, waivers and trades need an imported league, so they are off here. Switch below to use one.</span></div><div class="lgBtns">'+sel+'<button type="button" class="lgImp" data-add="1">Add league or team</button><button type="button" class="lgRn">Rename</button><button type="button" class="lgDel">Delete</button></div></div>'};
+/* ESPN/Sleeper box: say what kind it is */
+})();
 </script></body></html>'''
 
 html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("__REFS__", refs_json).replace("__DEPTH__", depth_json).replace("__XTRA__", extra_json)
