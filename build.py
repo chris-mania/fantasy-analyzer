@@ -4390,6 +4390,9 @@ html.faOpen .view{visibility:hidden!important}
 .faNeon.mini{flex:none;width:auto;margin:0;padding:4px 12px 5px;border-radius:12px;flex-direction:column;gap:1px;font-size:12px;line-height:1.15;letter-spacing:.2px;box-shadow:0 0 0 1px rgba(111,176,255,.35),0 0 8px rgba(70,140,255,.7),0 0 18px rgba(60,120,255,.45),inset 0 0 8px rgba(111,176,255,.25)}.faNeon.mini small{font-size:7.5px;letter-spacing:1.7px;color:#8fc4ff;font-weight:850;text-shadow:none}
 .faNeed{position:fixed;inset:0;z-index:950;background:rgba(8,16,34,.55);display:flex;align-items:center;justify-content:center;padding:24px}.faNeed div{background:#fff;border-radius:20px;padding:20px 20px 16px;max-width:340px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.35)}.faNeed small{display:block;font-size:10px;font-weight:850;letter-spacing:1.6px;color:#2563eb;margin-bottom:6px}.faNeed b{display:block;font-size:18px;margin-bottom:8px;color:#0b1830}.faNeed p{font-size:14px;line-height:1.5;color:#51607a;margin:0 0 14px}.faNeed button{border:0;border-radius:12px;padding:12px;font-weight:800;font-size:14px;cursor:pointer;width:100%;background:#2563eb;color:#fff;margin-bottom:8px}.faNeed button.g{background:#eef2f9;color:#0b1830;margin:0}
 @media(min-width:801px){#faApp{max-width:520px;left:50%;right:auto;width:520px;transform:translateX(-50%);box-shadow:0 0 0 100vmax rgba(10,20,40,.55)}}
+html.faPage .view,html.faPage .topbar,html.faPage footer{display:none!important}
+html.faPage #faApp,html.faPage #faApp *{animation:none!important;transition:none!important;filter:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;text-shadow:none!important}
+html.faPage #faApp .fa2>*,html.faPage #faApp .faRow,html.faPage #faApp .pw{content-visibility:auto;contain-intrinsic-size:auto 64px}
 /* ===== v149 layout pass: Compare, Trade, Insights ===== */
 @media(max-width:560px){
 /* Compare: teams */
@@ -7035,11 +7038,13 @@ function sheetHTML(){var S=FA.sheet;if(!S)return '';if(S.type==='flt')return flt
  h+='<div class="cl">On your team</div>'+(isA?'<div class="fx" style="background:#e3f6ea;margin-bottom:8px"><b>Added.</b> He is on your team now. Open the Roster or Matchup tab to see him in your lineup.</div>':'')+'<div class="fx">'+(sn?(isA?'He starts at ':'He would start at')+' <b>'+sn.slot+'</b>. Projected total <b>'+f1(B.tot+ex)+'</b> to <b>'+f1(Wt.tot+ex)+'</b> <span class="dl up">('+(d>=0?'+':'')+d.toFixed(1)+')</span> in Week '+W()+'.':(isA?'He is on your bench. Your starting lineup and projected total (<b>':'He would sit on your bench. Your starting lineup and projected total (<b>')+f1(B.tot+ex)+'</b>) stay the same in Week '+W()+'.')+'</div>';
  h+='<div class="bt two"><button type="button" class="p" data-a="'+(isA?'rm':'add')+'" data-id="'+p.id+'" data-t="'+i+'">'+(isA?'Remove from my team':'Add to my team')+'</button><button type="button" data-a="'+(isA?'ros':'prof')+'" data-id="'+p.id+'">'+(isA?'View roster':'View profile')+'</button></div><div class="bt" style="margin-top:8px"><button type="button" data-a="close">Done</button></div>';
  return h}
-function renderSheet(){var s=$$('faSheet');if(!s)return;if(!FA.sheet){s.classList.remove('on');s.innerHTML='';return}var y=0,p=s.querySelector('.shp');if(p)y=p.scrollTop;s.innerHTML='<div class="shd" data-a="close"></div><div class="shp">'+sheetHTML()+'</div>';s.classList.add('on');var n=s.querySelector('.shp');if(n)n.scrollTop=y}
+function slim(h){return h.replace(/<img\b([^>]*?)src="([^"]+)"/g,function(m,a,u){if(u.indexOf('data:')===0)return m;var n=u;if(u.indexOf('static.www.nfl.com/image/upload/f_auto,q_auto/')>0)n=u.replace('f_auto,q_auto/','f_auto,q_auto,w_120,h_120,c_limit/');else{var q=u.match(/^(https:\/\/a\.espncdn\.com)(\/i\/teamlogos\/nfl\/500(?:-dark)?\/[a-z]+\.png)$/);if(q)n=q[1]+'/combiner/i?img='+q[2]+'&w=72&h=72'}
+ return '<img'+a+'loading="lazy" decoding="async" data-o="'+u+'" onerror="if(!this.dataset.f){this.dataset.f=1;this.src=this.dataset.o}" src="'+n+'"'})}
+function renderSheet(){var s=$$('faSheet');if(!s)return;if(!FA.sheet){s.classList.remove('on');s.innerHTML='';return}var y=0,p=s.querySelector('.shp');if(p)y=p.scrollTop;s.innerHTML=slim('<div class="shd" data-a="close"></div><div class="shp">'+sheetHTML()+'</div>');s.classList.add('on');var n=s.querySelector('.shp');if(n)n.scrollTop=y}
 var rDT=0;function renderD(keep){clearTimeout(rDT);rDT=setTimeout(function(){rDT=0;render(keep)},70)}
 function render(keep){var b=$$('faBody');if(!b)return;faSave();var y=keep?b.scrollTop:0,h;
  try{h=banner()+(FA.tab==='roster'?rosterHTML(cur()):FA.tab==='match'?matchHTML():FA.tab==='players'?playersHTML():leagueHTML())}catch(e){h='<p class="note">Something went wrong drawing this screen.</p>';if(window.console)console.error(e)}
- b.innerHTML='<div class="fa2'+(FA.tab==='match'?' mt':'')+'">'+h+'<p class="note">Fantasy App view is Fantasy Mania&rsquo;s own league view, built to feel like a typical fantasy football app. It is not ESPN and is not affiliated with ESPN or any other fantasy platform.</p>'+(FA_CRASH?'<p class="note" style="color:#b3541e">The page closed unexpectedly last time. Last taps: '+trEsc(FA_CRASH)+'</p>':'')+'</div>';b.scrollTop=y;
+ b.innerHTML=slim('<div class="fa2'+(FA.tab==='match'?' mt':'')+'">'+h+'<p class="note">Fantasy App view is Fantasy Mania&rsquo;s own league view, built to feel like a typical fantasy football app. It is not ESPN and is not affiliated with ESPN or any other fantasy platform.</p>'+(FA_CRASH?'<p class="note" style="color:#b3541e">The page closed unexpectedly last time. Last taps: '+trEsc(FA_CRASH)+'</p>':'')+'</div>');b.scrollTop=y;
  document.querySelectorAll('#faApp .faTab').forEach(function(x){x.classList.toggle('on',x.dataset.k===FA.tab)});var tt=teams()[cur()],sw=document.querySelector('#faApp .faSw');if(sw&&tt){sw.querySelector('.av').textContent=ini(tt.n);sw.querySelector('b').textContent=tt.n;var sl=sw.querySelector('select');if(sl&&+sl.value!==cur())sl.value=cur()}renderSheet()}
 function prof(id){var q=byId(id);if(!q)return;if(window.FM_FA){faSave();FA.sc=($$('faBody')||{}).scrollTop||0;try{sessionStorage.setItem('faSc',FA.sc)}catch(x){}location.href='index.html#p='+encodeURIComponent(id);return}FA.sc=($$('faBody')||{}).scrollTop||0;FA.sheet=null;navStack.push(function(){faBack()});FA.back=true;skipPush=true;close(true,true);openPlayer(q)}
 function faBack(){FA.back=false;var ts=teams();if(!ts.length){return}try{showView(FA.prev||'team')}catch(e){}build();render(true);$$('faApp').classList.add('on');document.documentElement.classList.add('faOpen');document.body.style.overflow='hidden';var b=$$('faBody');if(b)b.scrollTop=FA.sc||0}
@@ -7094,11 +7099,11 @@ var FA_CRASH=null;
 function faLog(t){try{var a=JSON.parse(localStorage.getItem('faLast')||'[]');var c=(t&&t.closest&&t.closest('[class]'));a.push((c?String(c.className).slice(0,18):'?')+'@'+FA.tab+'/'+FA.pos+'/'+FA.key+'/n'+FA.n);localStorage.setItem('faLast',JSON.stringify(a.slice(-8)))}catch(e){}}
 function faAlive(){try{if(localStorage.getItem('faAlive')){FA_CRASH=JSON.parse(localStorage.getItem('faLast')||'[]').join('  ')}localStorage.setItem('faAlive','1');document.addEventListener('visibilitychange',function(){try{if(document.hidden)localStorage.removeItem('faAlive');else localStorage.setItem('faAlive','1')}catch(e){}});window.addEventListener('pagehide',function(){try{localStorage.removeItem('faAlive')}catch(e){}})}catch(e){}}
 function faSig(){return teams().map(function(t){return t.n}).join('|')+'#'+META.next_week}
-function faSave(){try{sessionStorage.setItem('faS',JSON.stringify({tab:FA.tab,pos:FA.pos,key:FA.key,team:FA.team,ts:Date.now()}))}catch(e){}try{localStorage.setItem('faOv1',JSON.stringify({sig:faSig(),ov:FA.ov,add:FA.add}))}catch(e){}}
-function faLoadOv(){try{var z=JSON.parse(localStorage.getItem('faOv1')||'null');if(z&&z.sig===faSig()){FA.ov=z.ov||{};FA.add=z.add||{}}}catch(e){}}
+function faSave(){try{sessionStorage.setItem('faS',JSON.stringify({tab:FA.tab,pos:FA.pos,key:FA.key,team:FA.team,ts:Date.now()}))}catch(e){}}
+function faLoadOv(){return;try{var z=JSON.parse(localStorage.getItem('faOv1')||'null');if(z&&z.sig===faSig()){FA.ov=z.ov||{};FA.add=z.add||{}}}catch(e){}}
 function close(quiet,keep){if(!keep){try{sessionStorage.removeItem('faS')}catch(e){}}var app=$$('faApp');if(!app)return;var was=app.classList.contains('on');app.classList.remove('on');document.documentElement.classList.remove('faOpen');if(was&&!keep&&history.state&&history.state.fa){try{history.back()}catch(e){}}document.body.style.overflow='';FA.sheet=null;FA.sel=null;}
 function needLeague(){if($$('faNeed'))return;var d=document.createElement('div');d.id='faNeed';d.className='faNeed';d.innerHTML='<div><small>SPECIAL FANTASY APP VIEW</small><b>Import your league first</b><p>This special view only works with an ESPN league. Import your league and it turns your whole league into a fantasy app, using our projections.</p><button type="button" class="y">Import my ESPN league</button><button type="button" class="g">Not now</button></div>';d.addEventListener('click',function(e){var t=e.target;if(t.closest('.y')){d.remove();var h=$$('homeEspn');try{if(typeof trEspnModal==='function')trEspnModal();else if(h)h.click()}catch(x){if(h)h.click()}return}if(t.closest('.g')||t===d)d.remove()});document.body.appendChild(d)}
-document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.faOpenB,#homeFa')){e.preventDefault();if(!teams().length){needLeague();return}if(window.FM_FA){open()}else{try{if(typeof trSave==='function')trSave();var vv=document.querySelector('.view.on');sessionStorage.setItem('faFrom',vv&&vv.id!=='profile'?vv.id:'team')}catch(x){}location.href='fantasy.html'}}});
+document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.faOpenB,#homeFa')){e.preventDefault();if(!teams().length){needLeague();return}if(window.FM_FA){open()}else{try{if(typeof trSave==='function')trSave();var vv=document.querySelector('.view.on');sessionStorage.setItem('faFrom',vv&&vv.id!=='profile'?vv.id:'team');sessionStorage.setItem('faGo','1')}catch(x){}location.href='fantasy.html'}}});
 window.addEventListener('popstate',function(e){var app=$$('faApp');if(!app)return;var on=app.classList.contains('on');if(e.state&&e.state.fa){if(!on&&FA.back){FA.back=false;faBack()}}else if(on){e.stopImmediatePropagation();try{var hs=history.state||{};history.pushState({fm:typeof hs.fm==='number'?hs.fm:0,fa:1},'')}catch(x){}}else if(FA.back){e.stopImmediatePropagation();FA.back=false;try{navStack.pop()}catch(x){}try{var h2=history.state||{};history.pushState({fm:typeof h2.fm==='number'?h2.fm:0,fa:1},'')}catch(x){}faBack()}},true);
 document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
 function homeSync(){var b=$$('homeFa'),e=$$('homeEspn');if(!e)return;var on=teams().length>0,w=e.parentNode;if(!w.classList.contains('homeIm')){var d=document.createElement('div');d.className='homeIm';w.insertBefore(d,e);d.appendChild(e);w=d}
@@ -7107,10 +7112,12 @@ setInterval(homeSync,1200);homeSync();
 window.faOpen=open;window.faClose=close;window.faBack=faBack;
 if(window.FM_FA){setTimeout(function(){try{
  if(!teams().length){location.replace('index.html');return}
- var lr=+(localStorage.getItem('faRs')||0);if(Date.now()-lr<120000){location.replace('index.html');return}
+ var go=null;try{go=sessionStorage.getItem('faGo');sessionStorage.removeItem('faGo')}catch(e){}
+ if(go){try{localStorage.removeItem('faOv1');localStorage.removeItem('faRs');sessionStorage.removeItem('faS');sessionStorage.removeItem('faSc')}catch(e){}}
+ else{var lr=+(localStorage.getItem('faRs')||0);if(Date.now()-lr<15000){location.replace('index.html');return}}
  localStorage.setItem('faRs',Date.now());setTimeout(function(){try{localStorage.removeItem('faRs')}catch(e){}},8000);window.addEventListener('pagehide',function(){try{localStorage.removeItem('faRs')}catch(e){}});
  var z=null;try{z=JSON.parse(sessionStorage.getItem('faS')||'null')}catch(e){}
- faAlive();faLoadOv();FA.prev='team';try{['rankings','insights','compare','trade','players','board','profile','home'].forEach(function(id){var e=$$(id);if(e)e.innerHTML=''})}catch(e){}open();
+ document.documentElement.classList.add('faPage');faAlive();faLoadOv();FA.prev='team';try{['rankings','insights','compare','trade','players','board','profile','home'].forEach(function(id){var e=$$(id);if(e)e.innerHTML=''})}catch(e){}open();
  if(z){FA.tab=z.tab||'roster';FA.pos=z.pos||'ALL';FA.key=z.key||'proj';if(z.team!=null&&teams()[z.team])FA.team=z.team}
  try{var sc=+sessionStorage.getItem('faSc');if(sc){FA.sc=sc;setTimeout(function(){var b=$$('faBody');if(b)b.scrollTop=sc},120);sessionStorage.removeItem('faSc')}}catch(e){}
 }catch(e){}},250)}
@@ -7124,7 +7131,13 @@ try{go()}catch(e){}})();
 html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("__REFS__", refs_json).replace("__DEPTH__", depth_json).replace("__XTRA__", extra_json)
 os.makedirs("public", exist_ok=True)
 with open("public/index.html","w",encoding="utf-8") as f:f.write(html)
-_fa = html.replace('<html lang="en"><head>','<html lang="en"><head><script>window.FM_FA=1;</script>',1)
+import json as _js
+_pl=_js.loads(payload);assert isinstance(_pl,list) and len(_pl)>100
+for _r in _pl:
+    for _k in ('room','similar','adv','buckets'):_r.pop(_k,None)
+_slim=_js.dumps(_pl,separators=(',',':'),ensure_ascii=False)
+assert html.count(payload)==1
+_fa = html.replace(payload,_slim,1).replace('<html lang="en"><head>','<html lang="en"><head><script>window.FM_FA=1;</script>',1)
 _fa = _fa.replace("<title>","<title>Fantasy App · ",1) if "<title>" in _fa else _fa
 assert "window.FM_FA=1" in _fa
 with open("public/fantasy.html","w",encoding="utf-8") as f:f.write(_fa)
