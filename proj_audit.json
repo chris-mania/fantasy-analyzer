@@ -2,28 +2,12 @@
  "week": 8,
  "items": [
   {
-   "kind": "vegas line cut back",
-   "name": "Pat Freiermuth",
-   "stat": "td",
-   "line": 0.91,
-   "model": 0.24,
-   "used": 0.6
-  },
-  {
-   "kind": "vegas line cut back",
-   "name": "Harold Fannin Jr.",
-   "stat": "td",
-   "line": 0.93,
-   "model": 0.22,
-   "used": 0.56
-  },
-  {
-   "kind": "vegas line cut back",
-   "name": "Germie Bernard",
-   "stat": "td",
-   "line": 0.93,
-   "model": 0.26,
-   "used": 0.66
+   "kind": "projection capped",
+   "name": "A.J. Brown",
+   "was": 12.9,
+   "now": 12.2,
+   "best_game": 7.8,
+   "avg": 6.8
   }
  ]
 }
