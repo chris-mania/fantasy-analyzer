@@ -2,12 +2,12 @@
  "week": 8,
  "items": [
   {
-   "kind": "projection capped",
-   "name": "Chris Godwin Jr.",
-   "was": 13.8,
-   "now": 13.7,
-   "best_game": 9.1,
-   "avg": 7.6
+   "kind": "vegas line cut back",
+   "name": "RJ Harvey",
+   "stat": "td",
+   "line": 0.77,
+   "model": 0.1,
+   "used": 0.4
   }
  ]
 }
