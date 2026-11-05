@@ -271,6 +271,25 @@ if EARLY_WK and max_week == EARLY_WK:
     max_week = EARLY_WK - 1   # the folded games are extra rows; the league-wide week stays at the last full week
 print(f"   Stats loaded through Week {max_week}.")
 
+def _live_json(name):
+    """Last good copy of a data file from the live site (used when a feed is down)."""
+    import requests as _rq
+    for _b in ("https://fantasymania.org", "https://fantasymania.pages.dev", "https://chris-mania.github.io/fantasy-analyzer"):
+        try:
+            _r = _rq.get(_b + "/" + name, timeout=25)
+            if _r.ok:
+                return _r.json()
+        except Exception:
+            pass
+    return None
+
+def _save_json(name, obj):
+    try:
+        os.makedirs("public", exist_ok=True)
+        json.dump(obj, open(os.path.join("public", name), "w"))
+    except Exception:
+        pass
+
 print("   Loading player headshots...")
 headshot_map = {}
 try:
@@ -282,8 +301,11 @@ try:
             player_info[[id_col, hs_col]].dropna()
             .drop_duplicates(id_col).set_index(id_col)[hs_col].astype(str).to_dict()
         )
+    if headshot_map:
+        _save_json("headshots.json", headshot_map)
 except Exception as e:
-    print("   Headshots unavailable; initials fallback will be used:", e)
+    headshot_map = _live_json("headshots.json") or {}
+    print("   Headshots feed down; using yesterday's photos:", len(headshot_map), e)
 
 
 # ============================================================
@@ -412,6 +434,8 @@ try:
     print(f"   Found {len(inj_game)} in-game injuries from play-by-play.")
 except Exception as e:
     print("   In-game injury detection unavailable:", e)
+    if os.environ.get("REQUIRE_SCHEDULE") == "1":
+        raise SystemExit("In-game injury feed down: keeping the last good page live.")
 
 for pid, idx in merged.groupby("player_id").groups.items():
     ix = list(idx)
@@ -1156,6 +1180,8 @@ if not AS_OF_WEEK:
         print(f"   {inj_meta['n']} skill players flagged, {inj_meta['out']} out/doubtful.")
     except Exception as e:
         print("   Injury report unavailable; ratings use no injury data:", e)
+        if os.environ.get("REQUIRE_SCHEDULE") == "1":
+            raise SystemExit("Injury feed down: keeping the last good page live.")
 
 def inj_why_clean(pid):
     agg = {}
@@ -2109,8 +2135,13 @@ try:
         if str(_t) in FTN_TEAMS:
             FTN_TEAMS[str(_t)]["dbl"] = round(100 * float(v), 1)
     print(f"   FTN play style: {len(FTN_TEAMS)} teams.")
+    if FTN_TEAMS:
+        _save_json("ftn_cache.json", FTN_TEAMS)
 except Exception as _e:
-    print("   FTN play style skipped:", _e)
+    _old = _live_json("ftn_cache.json")
+    if _old and not FTN_TEAMS:
+        FTN_TEAMS.update(_old)
+    print("   FTN play style feed down; using last good copy:", len(FTN_TEAMS), _e)
 
 # ============================================================
 # TEAM LOGOS, RECENT NFL TRADES, SNAP SHARES FOR THE DEPTH CHART
