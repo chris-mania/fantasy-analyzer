@@ -680,12 +680,34 @@ schedule_urls = [
     f"{BASE}/schedules/games.csv",
     f"{BASE}/schedules/games.csv.gz",
 ]
-for u in schedule_urls:
-    try:
-        games = pd.read_csv(u, low_memory=False)
+import time as _t, os as _os
+for _try in range(4):
+    for u in schedule_urls:
+        try:
+            games = pd.read_csv(u, low_memory=False)
+            break
+        except Exception:
+            pass
+    if games is not None:
         break
+    _t.sleep(20)
+if games is not None:
+    try:
+        _os.makedirs("public", exist_ok=True)
+        games.to_csv("public/sched_cache.csv", index=False)
     except Exception:
         pass
+else:
+    # data source down: fall back to the last good schedule we published
+    for _u in ("https://fantasymania.org/sched_cache.csv", "https://fantasymania.pages.dev/sched_cache.csv"):
+        try:
+            games = pd.read_csv(_u, low_memory=False)
+            print("   Schedule source down, using last published schedule.")
+            break
+        except Exception:
+            pass
+if games is None and _os.environ.get("REQUIRE_SCHEDULE") == "1":
+    raise SystemExit("Schedule unavailable: not publishing a degraded page.")
 
 if games is None:
     schedule_ok = False
