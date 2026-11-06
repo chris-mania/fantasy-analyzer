@@ -57,8 +57,14 @@ jobs:
           else
             echo "Not this run's turn; keeping the last player pages."
           fi
-          if [ ! -d public/players ]; then
-            git fetch --depth 1 origin gh-pages && git archive FETCH_HEAD players rankings a sitemap.xml | tar -x -C public || echo "No earlier player pages to keep."
+          keep=""
+          [ -d public/players ] || keep="players rankings a trade compare team insights sitemap.xml"
+          [ -f public/start-data.json ] || keep="$keep start-data.json sitemap-start.xml _worker.js _routes.json"
+          if [ -n "$keep" ]; then
+            git fetch --depth 1 origin gh-pages || true
+            for x in $keep; do
+              git archive FETCH_HEAD "$x" 2>/dev/null | tar -x -C public 2>/dev/null || echo "Nothing earlier to keep for $x"
+            done
           fi
 
       - name: Check the page is real before publishing

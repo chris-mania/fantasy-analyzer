@@ -9,4 +9,8 @@
   Google by opening the built app in a hidden browser and saving each real profile and rankings view. It
   makes no API calls. Keep that workflow step too. Profile or rankings design changes in build.py flow into
   these pages automatically.
+- Start/sit pages (/start/ and /start/<a>-vs-<b>/): seo_pages.py calls start_sit.py, which writes
+  start-data.json, sitemap-start.xml, _routes.json and copies start_worker.js to public/_worker.js. The
+  worker makes each matchup page on request and only runs for /start addresses. Pair rules and nicknames
+  are at the top of start_sit.py.
 - The live site is https://fantasymania.org.

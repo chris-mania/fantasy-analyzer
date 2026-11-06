@@ -173,7 +173,7 @@ def both(desk, phone, assets):
 
 
 def tool_chips(skip=None):
-    return chips([(TOOL_NAMES[t], "/%s/" % t) for t, _, _ in TOOLS if t != skip])
+    return chips([("Who should I start?", "/start/")] + [(TOOL_NAMES[t], "/%s/" % t) for t, _, _ in TOOLS if t != skip])
 
 
 def chips(links):
@@ -231,7 +231,7 @@ def run():
             fonts: [...document.head.querySelectorAll('link[rel=stylesheet],link[rel=preconnect]')].map(l => l.outerHTML).join(''),
             sprite: document.body.firstElementChild.tagName.toLowerCase() === 'svg' ? document.body.firstElementChild.outerHTML : '',
             topbar: (document.querySelector('.topbar') || {outerHTML: ''}).outerHTML,
-            week: META.week, next: META.next_week, season: META.season,
+            week: META.week, next: META.next_week, season: META.season, built: META.built || '',
             players: DB.map(p => [p.id, p.name, p.pos, p.team, p.mania, p.pos_rank, p.proj ? p.proj.pts : null, p.opp || null, p.games])
               .concat((META.qbs || []).map(p => [p.id, p.name, 'QB', p.team, p.mania, p.pos_rank, p.proj ? p.proj.pts : null, p.opp || null, p.games]))
               .concat(((META.kd && META.kd.k) || []).concat((META.kd && META.kd.d) || []).map(x => {
@@ -264,6 +264,18 @@ def run():
 
         names = {p["name"]: "/players/%s/" % p["slug"] for p in players}
         pg.evaluate(LINKER); pg_m.evaluate(LINKER)
+
+        # Start/sit data for the /start/ pages. If this part fails, everything else still gets made.
+        start_links, start_ok = {}, False
+        try:
+            import start_sit
+            rows = pg.evaluate(start_sit.PICK_JS)
+            start_links = start_sit.build(rows, {p["id"]: p["slug"] for p in players},
+                                          {"season": season, "week": week, "next": nxt, "built": shell.get("built")},
+                                          TMP, os.path.dirname(os.path.abspath(__file__)))
+            start_ok = True
+        except Exception as e:
+            print("seo_pages: start/sit data skipped:", repr(e)[:200])
 
         def grab_player(g, pid, own):
             return g.evaluate("""([id, names, own]) => new Promise(res => {
@@ -307,7 +319,9 @@ def run():
             desc = ("%s (%s, %s): %s Mania Rating, %s in Fantasy Mania. %s Free %s PPR stats, game log, matchup and trade value."
                     % (p["name"], pn, p["team"], "%.1f" % p["mania"] if p["mania"] is not None else "—",
                        rank_txt, proj_txt, season)).replace("  ", " ")
-            more = ('<section id="seoMore"><h2>More %s</h2>%s<h2>Rankings</h2>%s'
+            sl = start_links.get(p["id"]) or []
+            start_html = ("<h2>Start/sit this week</h2>" + chips([("%s or %s" % (p["name"], n), u) for n, u in sl])) if sl else ""
+            more = ('<section id="seoMore">' + start_html + '<h2>More %s</h2>%s<h2>Rankings</h2>%s'
                     '<p>Mania Ratings and projections through Week %s of the %s season, updated during the week. '
                     'Tap anything above to open the full interactive profile in Fantasy Mania.</p></section>') % (
                 PLURAL.get(p["pos"], p["pos"]), chips([(q["name"], "/players/%s/" % q["slug"]) for q in near]),
@@ -413,6 +427,9 @@ def run():
         shutil.rmtree(os.path.join(PUB, d), ignore_errors=True)
         if os.path.isdir(os.path.join(TMP, d)):
             shutil.move(os.path.join(TMP, d), os.path.join(PUB, d))
+    if start_ok:
+        for f in ("start-data.json", "sitemap-start.xml", "_worker.js", "_routes.json"):
+            shutil.move(os.path.join(TMP, f), os.path.join(PUB, f))
     shutil.rmtree(TMP, ignore_errors=True)
     urls = ["/"] + sorted(u for u in made if not u.startswith("/players")) + sorted(u for u in made if u.startswith("/players"))
     with open(os.path.join(PUB, "sitemap.xml"), "w") as f:

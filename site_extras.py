@@ -44,6 +44,6 @@ def patch(path, extra_head=""):
 
 patch("public/index.html", GOOGLE)
 patch("public/fantasy.html")
-open("public/robots.txt", "w").write("User-agent: *\nAllow: /\n\nSitemap: https://fantasymania.org/sitemap.xml\n")
+open("public/robots.txt", "w").write("User-agent: *\nAllow: /\n\nSitemap: https://fantasymania.org/sitemap.xml\nSitemap: https://fantasymania.org/sitemap-start.xml\n")
 open("public/sitemap.xml", "w").write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>https://fantasymania.org/</loc></url>\n</urlset>\n')
 print("site_extras: robots.txt and sitemap.xml written")
