@@ -18,7 +18,7 @@ import hashlib, html, json, os, re, shutil, sys, time, unicodedata
 SITE = "https://fantasymania.org"
 PUB = "public"
 TMP = os.path.join(PUB, "_seo_tmp")
-OUT_DIRS = ("players", "rankings", "a")
+OUT_DIRS = ("players", "rankings", "a", "trade", "compare", "team", "insights")
 ONLY = [x for x in os.environ.get("SEO_ONLY", "").split(",") if x]  # testing: limit players
 
 TINY_PNG = bytes.fromhex(
@@ -32,6 +32,19 @@ RANKS = [("ALL", "", "Fantasy Football Rankings"), ("QB", "qb/", "Fantasy Footba
          ("RB", "rb/", "Fantasy Football RB Rankings"), ("WR", "wr/", "Fantasy Football WR Rankings"),
          ("TE", "te/", "Fantasy Football TE Rankings"), ("K", "k/", "Fantasy Football Kicker Rankings"),
          ("DST", "dst/", "Fantasy Football Defense (D/ST) Rankings")]
+
+
+TOOLS = [
+    ("trade", "Free Fantasy Football Trade Analyzer (%s PPR) | Fantasy Mania",
+     "Free fantasy football trade analyzer. See who wins a trade by rest-of-season value, schedule strength and Mania Ratings. Works with ESPN and Sleeper leagues."),
+    ("compare", "Fantasy Football Player Comparison Tool: Compare Two Players (%s) | Fantasy Mania",
+     "Free fantasy football player compare. Put any two players side by side: Mania Ratings, Week projections, usage, game logs and matchups. Compare whole fantasy teams too."),
+    ("team", "Fantasy Football Team Analyzer: Start/Sit Help (%s) | Fantasy Mania",
+     "Enter your fantasy football roster and get your best lineup, weekly projections and where your team is strong or weak. Free, PPR."),
+    ("insights", "Fantasy Football Insights: Injuries, Depth Charts, Matchups (%s) | Fantasy Mania",
+     "Weekly fantasy football reports: injuries, depth charts, team share, defense vs. position, schedule strength and play style. Free."),
+]
+TOOL_NAMES = {"trade": "Trade analyzer", "compare": "Player compare", "team": "Team analyzer", "insights": "Insights"}
 
 
 def slugify(name):
@@ -108,7 +121,14 @@ document.addEventListener('click',function(e){var t=e.target;if(!t.closest)retur
 </script>"""
 
 
+def set_nav(topbar, view):
+    topbar = topbar.replace('class="navb on"', 'class="navb"')
+    return topbar.replace('class="navb" data-v="%s"' % view, 'class="navb on" data-v="%s"' % view)
+
+
 def page(*, title, desc, path, crumbs, body_class, topbar, sprite, main, css_href, fonts, app_url, back, extra=""):
+    view = "players" if path.startswith("/players/") else "rankings" if path.startswith("/rankings/") else path.strip("/")
+    topbar = set_nav(topbar, view)
     ld = {
         "@context": "https://schema.org", "@type": "BreadcrumbList",
         "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": n, "item": SITE + u}
@@ -150,6 +170,10 @@ LINKER = """() => { window.__seoLink = (root, names, own) => {
 def both(desk, phone, assets):
     return ('<div class="seoD">%s</div><div class="seoM">%s</div>'
             % (clean(desk["html"], assets), clean(phone["html"], assets)))
+
+
+def tool_chips(skip=None):
+    return chips([(TOOL_NAMES[t], "/%s/" % t) for t, _, _ in TOOLS if t != skip])
 
 
 def chips(links):
@@ -288,7 +312,7 @@ def run():
                     'Tap anything above to open the full interactive profile in Fantasy Mania.</p></section>') % (
                 PLURAL.get(p["pos"], p["pos"]), chips([(q["name"], "/players/%s/" % q["slug"]) for q in near]),
                 chips([("%s rankings" % pn, "/rankings/%s/" % posl), ("All rankings", "/rankings/"),
-                       ("Open Fantasy Mania", "/")]), week, season)
+                       ("Open Fantasy Mania", "/")]) + "<h2>Tools</h2>" + tool_chips(), week, season)
             html_out = page(
                 title=title, desc=desc, path="/players/%s/" % p["slug"],
                 crumbs=[("Fantasy Mania", "/"), ("%s Rankings" % pn, "/rankings/%s/" % posl),
@@ -333,13 +357,46 @@ def run():
                     "Updated through Week %s. Tap any player for the full profile." % (season, pos_word, nxt, week))
             others = [("All rankings", "/rankings/")] + [("%s rankings" % POSN.get(k, k), "/rankings/" + sb)
                                                         for k, sb, _ in RANKS if sb]
-            more = '<section id="seoMore"><h2>More rankings</h2>%s<p>%s</p></section>' % (
-                chips([o for o in others if o[1] != path] + [("Open Fantasy Mania", "/")]), esc(desc))
+            more = '<section id="seoMore"><h2>More rankings</h2>%s<h2>Tools</h2>%s<p>%s</p></section>' % (
+                chips([o for o in others if o[1] != path] + [("Open Fantasy Mania", "/")]), tool_chips(), esc(desc))
             crumbs = [("Fantasy Mania", "/"), ("Rankings", "/rankings/")] + ([] if key == "ALL" else [("%s Rankings" % POSN.get(key, key), path)])
             html_out = page(title=title, desc=desc, path=path, crumbs=crumbs, body_class=snap["body"], topbar=topbar,
                             sprite=sprite, main=both(snap, snap_m, assets), css_href=css_href, fonts=fonts,
                             app_url="/#v=rankings", back="/", extra=more)
             d = os.path.join(TMP, "rankings", sub.strip("/")) if sub else os.path.join(TMP, "rankings")
+            os.makedirs(d, exist_ok=True)
+            open(os.path.join(d, "index.html"), "w", encoding="utf-8").write(html_out)
+            made.append(path)
+
+        def grab_view(g, view):
+            g.goto(SITE + "/", wait_until="load")
+            g.wait_for_function("typeof DB!=='undefined' && typeof showView==='function'", timeout=60000)
+            g.wait_for_timeout(800)
+            g.evaluate(LINKER)
+            return g.evaluate("""([view, names]) => new Promise(res => {
+                showView(view);
+                setTimeout(() => {
+                    const v = document.getElementById(view); if (!v || !v.classList.contains('on')) return res(null);
+                    const c = v.cloneNode(true); window.__seoLink(c, names, '');
+                    res({html: c.outerHTML, body: document.body.className});
+                }, 700);
+            })""", [view, names])
+
+        for view, title_t, desc in TOOLS:
+            try:
+                snap, snap_m = grab_view(pg, view), grab_view(pg_m, view)
+            except Exception as e:
+                print("seo_pages: tool", view, "skipped", str(e)[:120]); continue
+            if not snap or not snap_m:
+                continue
+            path = "/%s/" % view
+            more = ('<section id="seoMore"><h2>More tools</h2>%s<h2>Rankings</h2>%s<p>%s Tap anything above to use it in Fantasy Mania.</p></section>'
+                    % (tool_chips(view), chips([("All rankings", "/rankings/")] + [("%s rankings" % POSN.get(k, k), "/rankings/" + sb) for k, sb, _ in RANKS if sb]), esc(desc)))
+            html_out = page(title=title_t % season, desc=desc, path=path,
+                            crumbs=[("Fantasy Mania", "/"), (TOOL_NAMES[view], path)], body_class=snap["body"],
+                            topbar=topbar, sprite=sprite, main=both(snap, snap_m, assets), css_href=css_href,
+                            fonts=fonts, app_url="/#v=" + view, back="/", extra=more)
+            d = os.path.join(TMP, view)
             os.makedirs(d, exist_ok=True)
             open(os.path.join(d, "index.html"), "w", encoding="utf-8").write(html_out)
             made.append(path)
@@ -357,7 +414,7 @@ def run():
         if os.path.isdir(os.path.join(TMP, d)):
             shutil.move(os.path.join(TMP, d), os.path.join(PUB, d))
     shutil.rmtree(TMP, ignore_errors=True)
-    urls = ["/"] + sorted(u for u in made if u.startswith("/rankings")) + sorted(u for u in made if u.startswith("/players"))
+    urls = ["/"] + sorted(u for u in made if not u.startswith("/players")) + sorted(u for u in made if u.startswith("/players"))
     with open(os.path.join(PUB, "sitemap.xml"), "w") as f:
         f.write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
         for u in urls:
