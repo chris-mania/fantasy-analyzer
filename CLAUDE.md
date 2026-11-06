@@ -5,4 +5,8 @@
 - `site_extras.py` runs after build.py in `.github/workflows/update.yml`. It adds the move from
   fantasymania.pages.dev to fantasymania.org (carries saved data, skips home-screen apps), the canonical
   and site-name tags, robots.txt and sitemap.xml. Keep that workflow step and don't add these to build.py.
+- `seo_pages.py` runs after that (about once an hour) and makes /players/<name>/ and /rankings/ pages for
+  Google by opening the built app in a hidden browser and saving each real profile and rankings view. It
+  makes no API calls. Keep that workflow step too. Profile or rankings design changes in build.py flow into
+  these pages automatically.
 - The live site is https://fantasymania.org.
