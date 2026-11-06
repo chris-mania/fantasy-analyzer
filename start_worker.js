@@ -1,10 +1,18 @@
 // Fantasy Mania start/sit pages: /start/ and /start/<player>-vs-<player>/
 // Runs on Cloudflare Pages only for /start addresses (see _routes.json). Everything else on the
-// site is served exactly as before. Numbers come from /start-data.json, rebuilt about once an hour.
+// site is served exactly as before.
+//
+// A matchup page is the real Fantasy Mania app (index.html), opened straight to Compare with the
+// two players picked, so photos, rings, badges (and their pop-ups), tabs, menus and profiles all work
+// as normal. On top of that: its own title/description/canonical for Google, the winner's card
+// outlined with "Start <name>", the Week projection as the big number with the Mania Rating as an
+// "overall" badge on the ring, and a written answer + common questions below for search engines.
+// Numbers for the written part come from /start-data.json (rebuilt about once an hour). The pick
+// uses the app's own rule: higher projected points, unless one player is on bye, out or already played.
 // Source lives in the repo as start_worker.js; seo_pages.py copies it to public/_worker.js.
 
 const SITE = "https://fantasymania.org";
-let CACHE = { at: 0, data: null, by: null };
+let CACHE = { at: 0, data: null };
 
 export default {
   async fetch(request, env) {
@@ -22,7 +30,7 @@ export default {
       if (!a || !b || a === b) return html(notFound(data), 404);
       const canon = [a.s, b.s].sort().join("-vs-");
       if (canon !== rest) return Response.redirect(url.origin + "/start/" + canon + "/", 301);
-      return html(matchup(data, a, b), 200);
+      return await matchupApp(env, url, data, a, b);
     } catch (e) {
       return new Response("Start/sit pages are updating. Try again in a minute.", { status: 503, headers: { "content-type": "text/plain; charset=utf-8", "retry-after": "60" } });
     }
@@ -48,10 +56,6 @@ function html(body, status) {
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const f1 = (v) => (v == null || isNaN(v) ? "—" : (+v).toFixed(1));
 const posName = (p) => (p === "DST" ? "D/ST" : p);
-const ring = (v) => (v == null ? "#9aa3ad" : v >= 80 ? "#22a45d" : v >= 60 ? "#e3a21a" : "#e2505b");
-const ink = (v) => (v == null ? "#40474f" : v >= 80 ? "#16803f" : v >= 60 ? "#9a6700" : "#c0303c");
-const tier = (v) => (v >= 90 ? "Elite" : v >= 82 ? "Excellent" : v >= 74 ? "Strong" : v >= 65 ? "Starter" : "Depth");
-const initials = (p) => (p.pos === "DST" ? p.tm : p.n.replace(/\b(Jr\.|Sr\.|II|III|IV)\b/g, "").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase());
 function short(p) {
   if (p.pos === "DST") return p.n.replace(/\s*D\/ST$/, "");
   const w = p.n.replace(/,?\s+(Jr\.|Sr\.|II|III|IV)$/, "").split(/\s+/);
@@ -59,7 +63,7 @@ function short(p) {
 }
 const withNick = (p) => (p.nk && p.nk.length ? `${p.n} (${p.nk[0]})` : p.n);
 const pts = (p) => (p.pj ? p.pj.p : null);
-const playing = (p) => !p.bye && !p.out;
+const unavailable = (p) => p.bye || p.out || !!p.pl;
 const START_AT = { QB: 12, RB: 24, WR: 30, TE: 12, K: 12, DST: 12 };
 
 function listed(d, a, b) {
@@ -70,63 +74,32 @@ function listed(d, a, b) {
   return pts(a) != null && pts(b) != null && Math.abs(pts(a) - pts(b)) < d.gap;
 }
 
+// Same rule as the app's Compare "Our pick".
 function verdict(d, a, b) {
-  const wk = d.next;
-  if (!playing(a) && !playing(b)) return { w: null, l: null, tag: "Neither", line: `Neither ${a.n} nor ${b.n} is expected to play in Week ${wk}. Look for another option.` };
-  for (const [x, y] of [[a, b], [b, a]]) {
-    if (!playing(x) && playing(y)) {
-      const why = x.bye ? "is on bye" : "is ruled out";
-      return { w: y, l: x, tag: "Easy call", line: `Start ${y.n}. ${x.n} ${why} in Week ${wk}.` };
-    }
+  const wk = d.next, why = (p) => (p.bye ? "is on bye" : p.out ? "is ruled out" : "has already played");
+  if (unavailable(a) && unavailable(b)) return { w: null, tag: "Neither", line: `Neither ${a.n} nor ${b.n} is available to start in Week ${wk}. ${a.n} ${why(a)} and ${b.n} ${why(b)}.` };
+  if (unavailable(a) !== unavailable(b)) {
+    const w = unavailable(a) ? b : a, l = w === a ? b : a;
+    return { w, tag: "Easy call", line: `Start ${w.n}. ${l.n} ${why(l)} in Week ${wk}.` };
   }
-  let w = a, l = b;
-  const sa = a.wr == null ? -1 : a.wr, sb = b.wr == null ? -1 : b.wr;
-  if (sb > sa || (sb === sa && (pts(b) || 0) > (pts(a) || 0))) { w = b; l = a; }
-  const gap = Math.abs(sa - sb), pgap = Math.abs((pts(a) || 0) - (pts(b) || 0));
-  const tag = gap < 1.5 && pgap < 1 ? "Coin flip" : gap < 4 && pgap < 2.5 ? "Slight edge" : gap < 8 && pgap < 5 ? "Lean" : "Clear start";
-  const vsTxt = (p) => (p.opp ? ` against ${p.opp}` : "");
-  let line = `Start ${w.n} over ${l.n} in Week ${wk}. Fantasy Mania projects ${short(w)} for ${f1(pts(w))} points${vsTxt(w)}, versus ${f1(pts(l))} for ${short(l)}${vsTxt(l)}.`;
-  line += ` Week ${wk} Rating: ${f1(w.wr)} to ${f1(l.wr)}.`;
-  if (pts(l) != null && pts(w) != null && pts(l) > pts(w)) line += ` ${short(l)} projects slightly higher, but ${short(w)} rates better once matchup and role are counted.`;
-  return { w, l, tag, line };
+  const pa = pts(a), pb = pts(b);
+  const w = pa != null && pb != null ? (pa >= pb ? a : b) : ((a.wr || 0) >= (b.wr || 0) ? a : b), l = w === a ? b : a;
+  const vs = (p) => (p.opp ? ` against ${p.opp}` : "");
+  return { w, line: `Start ${w.n} over ${l.n} in Week ${wk}. Fantasy Mania projects ${short(w)} for ${f1(pts(w))} points${vs(w)}, versus ${f1(pts(l))} for ${short(l)}${vs(l)}.` };
 }
 
 function startTake(d, p) {
   const wk = d.next, pn = posName(p.pos);
   if (p.bye) return `${p.n} is on bye in Week ${wk}.`;
   if (p.out) return `${p.n} is ruled out for Week ${wk}.`;
+  if (p.pl) return `${p.n} already played in Week ${wk} and scored ${f1(p.pl.f)} points (${p.pl.s}).`;
   const at = START_AT[p.pos] || 12;
   const call = p.wk == null ? "a deep-league option" : p.wk <= at ? "a solid start" : p.wk <= at * 2 ? (p.pos === "RB" || p.pos === "WR" ? "a flex option" : "a streaming option") : "a bench or deep-league play";
-  let s = `${p.n} is ${call} in Week ${wk}: ${pn}${p.wk || "—"} by Fantasy Mania's Week ${wk} Rating (${f1(p.wr)}), projected for ${f1(pts(p))} points${p.opp ? " against " + p.opp : ""}`;
+  let s = `${p.n} is ${call} in Week ${wk}, projected for ${f1(pts(p))} points${p.opp ? " against " + p.opp : ""} (${pn}${p.wk || "—"} this week)`;
   if (p.pj && p.pj.lo != null && p.pj.hi != null) s += `, with a range of ${f1(p.pj.lo)} to ${f1(p.pj.hi)}`;
   s += ".";
   if (p.inj && p.inj.l) s += ` Injury report: ${p.inj.l}${p.inj.t ? " (" + p.inj.t + ")" : ""}.`;
   return s;
-}
-
-function reasons(d, w, l) {
-  if (!w || !l) return [];
-  const out = [], a = w, b = l;
-  if (pts(a) != null && pts(b) != null) out.push(`<b>Projection:</b> ${esc(short(a))} ${f1(pts(a))} vs ${esc(short(b))} ${f1(pts(b))} points.`);
-  if (a.ma != null && b.ma != null && Math.abs(a.ma - b.ma) >= 0.5) {
-    const m = a.ma > b.ma ? a : b, o = m === a ? b : a;
-    out.push(`<b>Better matchup:</b> ${esc(short(m))}${m.opp ? " vs " + esc(m.opp) : ""} (${m.ma > 0 ? "+" : ""}${f1(m.ma)} to his Week ${d.next} Rating, vs ${o.ma > 0 ? "+" : ""}${f1(o.ma)} for ${esc(short(o))}).`.replace("his Week", a.pos === "DST" ? "its Week" : "his Week"));
-  }
-  if (a.pj && b.pj && a.pj.hi != null && b.pj.hi != null) {
-    const c = a.pj.hi >= b.pj.hi ? a : b, f = (a.pj.lo || 0) >= (b.pj.lo || 0) ? a : b;
-    out.push(c === f
-      ? `<b>Ceiling and floor:</b> ${esc(short(c))} has both the higher ceiling (up to ${f1(c.pj.hi)}) and the safer floor (${f1(c.pj.lo)}).`
-      : `<b>Ceiling and floor:</b> ${esc(short(c))} has the higher ceiling (up to ${f1(c.pj.hi)}); ${esc(short(f))} has the safer floor (${f1(f.pj.lo)}). Need a big week? Lean ${esc(short(c))}.`);
-  }
-  if (a.sh != null && b.sh != null && (a.pos === b.pos) && (a.pos === "RB" || a.pos === "WR" || a.pos === "TE")) {
-    const what = a.pos === "RB" ? "of team touches" : "of team targets";
-    out.push(`<b>Role:</b> ${esc(short(a))} gets ${f1(a.sh)}% ${what}, ${esc(short(b))} ${f1(b.sh)}%.`);
-  }
-  const avg = (x) => { const v = (x.l3 || []).filter((n) => n != null); return v.length ? v.reduce((s, n) => s + n, 0) / v.length : null; };
-  if (avg(a) != null && avg(b) != null) out.push(`<b>Last 3 games:</b> ${esc(short(a))} ${f1(avg(a))} a game, ${esc(short(b))} ${f1(avg(b))}.`);
-  [a, b].forEach((p) => { if (p.inj && p.inj.l) out.push(`<b>Injury report:</b> ${esc(p.n)}, ${esc(p.inj.l)}${p.inj.t ? " (" + esc(p.inj.t) + ")" : ""}.`); });
-  [a, b].forEach((p) => { if (p.pl && p.pl.f != null) out.push(`<b>Already played:</b> ${esc(p.n)} scored ${f1(p.pl.f)} (${esc(p.pl.s)}).`); });
-  return out;
 }
 
 function partners(d, p, skip) {
@@ -135,6 +108,110 @@ function partners(d, p, skip) {
     .filter((q) => q !== p && q !== skip && q.pos === p.pos && listed(d, p, q))
     .sort((x, y) => (Math.abs((x.wk || 999) - (p.wk || 999)) + Math.abs((pts(x) || 0) - at) / 10) - (Math.abs((y.wk || 999) - (p.wk || 999)) + Math.abs((pts(y) || 0) - at) / 10))
     .slice(0, 6);
+}
+
+// ---------- matchup page: the real app, opened to Compare ----------
+const APP_CSS = `
+#fmSeo{max-width:1240px;margin:8px auto 48px;padding:0 20px}#fmSeo[hidden]{display:none}
+#fmSeo h2{font-size:22px;font-weight:800;letter-spacing:-.3px;margin:30px 0 12px}
+#fmSeo .fmCard{background:#fff;border-radius:20px;padding:20px 22px;border:1px solid #e4eaf3;box-shadow:0 10px 26px -20px rgba(20,40,80,.5)}
+#fmSeo h3{font-size:16px;margin:16px 0 4px}#fmSeo h3:first-child{margin-top:0}#fmSeo p{margin:0;color:#272c33;line-height:1.55}
+#fmSeo .fmChips{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:0}#fmSeo .fmChips a{display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;border-radius:99px;background:#fff;border:1px solid #d9dfe7;color:#0b1830;text-decoration:none;font-weight:700;font-size:14px}#fmSeo .fmChips a:hover{border-color:#2563eb;color:#1d4ed8}
+#fmSeo .fmGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}#fmSeo .fmGrid h3{margin-top:0}
+.fmPpr{display:inline-block;margin:2px 0 6px;font-size:12px;font-weight:700;color:#40474f;background:#fff;border:1px solid #d9dfe7;border-radius:99px;padding:3px 10px}
+.comparePlayer.fmWin{outline:3px solid #22a45d;outline-offset:-3px;border-radius:24px;position:relative}
+.fmStart{display:inline-block;background:#22a45d;color:#fff;font-weight:800;font-size:13px;letter-spacing:.3px;border-radius:99px;padding:5px 14px;margin:0 auto 10px}
+.cmpPortrait{position:relative}
+.fmOvr{position:absolute;right:-6px;bottom:-4px;width:66px;height:66px;border-radius:50%;background:#fff;border:0;box-shadow:0 6px 18px -6px rgba(10,30,60,.45);display:grid;place-content:center;cursor:pointer;padding:0;z-index:2;font:inherit}
+.fmOvr b{font-size:19px;font-weight:900;line-height:1;letter-spacing:-.5px}.fmOvr small{font-size:7.5px;font-weight:800;letter-spacing:.6px;color:#40474f;margin-top:2px}
+.fmProjLab{font-weight:700}
+#fmMHelp{max-width:760px;margin:12px auto 0;text-align:left;background:#f3f6fb;border:1px solid #d9e2f1;border-radius:14px;padding:14px 16px;font-size:14.5px;line-height:1.55;color:#272c33}#fmMHelp[hidden]{display:none}#fmMHelp b{color:#0b1830}
+@media(max-width:800px){.fmOvr{width:52px;height:52px;right:-8px;bottom:-6px}.fmOvr b{font-size:15px}.fmOvr small{font-size:6px}#fmSeo{padding:0 14px}.fmStart{font-size:12px;padding:4px 12px}}
+`;
+
+function seoSection(d, a, b, v) {
+  const wk = d.next;
+  const more = (p, o) => { const ps = partners(d, p, o); return ps.length ? `<div class="fmCard"><h3>More ${esc(short(p))} start/sit</h3><ul class="fmChips">${ps.map((q) => `<li><a href="/start/${[p.s, q.s].sort().join("-vs-")}/">${esc(short(p))} or ${esc(q.n)}</a></li>`).join("")}</ul></div>` : ""; };
+  const better = a.ma != null && b.ma != null ? (a.ma >= b.ma ? a : b) : null;
+  return `<section id="fmSeo" aria-labelledby="fmSeoH">
+<h2 id="fmSeoH">Who should I start: ${esc(withNick(a))} or ${esc(withNick(b))}?</h2>
+<div class="fmCard"><p><b data-fmv="head">${v.w ? "Start " + esc(v.w.n) + "." : "Neither is available."}</b> <span data-fmv="line">${esc(v.line)}</span> ${esc(short(a))} or ${esc(short(b))}, ${esc(short(b))} or ${esc(short(a))}: this is Fantasy Mania's pick for Week ${wk}.</p></div>
+<h2>Common questions</h2><div class="fmCard">
+<h3>Who should I start in Week ${wk}, ${esc(a.n)} or ${esc(b.n)}?</h3><p data-fmv="line">${esc(v.line)}</p>
+<h3>${esc(b.n)} or ${esc(a.n)}: who has the better matchup?</h3><p>${better ? esc(`${better.n} has the better Week ${wk} matchup by Fantasy Mania's numbers (${f1(Math.max(a.ma, b.ma))} vs ${f1(Math.min(a.ma, b.ma))} points of rating boost)${better.opp ? ", facing " + better.opp : ""}.`) : esc(`${a.n} faces ${a.opp || "no one (bye)"} and ${b.n} faces ${b.opp || "no one (bye)"} in Week ${wk}.`)}</p>
+<h3>Is ${esc(a.n)} a good start in Week ${wk}?</h3><p>${esc(startTake(d, a))}</p>
+<h3>Is ${esc(b.n)} a good start in Week ${wk}?</h3><p>${esc(startTake(d, b))}</p></div>
+<h2>More start/sit questions</h2><div class="fmGrid">${more(a, b)}${more(b, a)}</div>
+<p style="margin-top:14px"><a href="/start/">Compare any two players →</a></p>
+</section>`;
+}
+
+function opener(d, a, b, v) {
+  const cfg = { a: a.id, b: b.id, wk: d.next, win: v.w ? v.w.id : null };
+  return `<script>(function(){var C=${JSON.stringify(cfg).replace(/</g, "\\u003c")},touched=false,tries=0;
+var POSW={QB:'quarterback',RB:'running back',WR:'wide receiver',TE:'tight end',K:'kicker',DST:'defense'};
+['pointerdown','keydown'].forEach(function(t){addEventListener(t,function(){touched=true},{capture:true,once:true})});
+function ready(){return typeof renderCompare==='function'&&typeof byId==='function'&&typeof showView==='function'&&typeof DB!=='undefined'}
+function seoShow(){var s=document.getElementById('fmSeo'),v=document.getElementById('compare');if(s)s.hidden=!(v&&v.classList.contains('on'))}
+function tweak(){var hero=document.querySelector('#compare .compareHero');if(!hero||!A||!B)return;
+ var cards=hero.querySelectorAll('.comparePlayer');if(cards.length<2)return;
+ var pick=document.querySelector('#compare .cwin strong, #compare .kdVerdict strong'),pn=pick?pick.textContent.trim():null;
+ [[cards[0],A],[cards[1],B]].forEach(function(x){var el=x[0],p=x[1];if(el.dataset.fm==='1')return;el.dataset.fm='1';
+  var big=el.querySelector('.scorebig'),lab=el.querySelector('.scorelab'),mr=big?big.textContent.trim():'';
+  var pj=p.proj&&p.proj.pts!=null?p.proj.pts:null,bye=p.opp==='BYE'||(p.r&&p.r.bye);
+  if(big){big.className='scorebig';big.style.color='#0b1830';big.textContent=bye?'BYE':p.out?'OUT':pj!=null?(+pj).toFixed(1):'—'}
+  if(lab){lab.textContent='Week '+C.wk+' projection';lab.classList.add('fmProjLab')}
+  var por=el.querySelector('.cmpPortrait');
+  if(mr&&mr!=='—'){var bt=document.createElement('button');bt.type='button';bt.className='fmOvr';bt.setAttribute('aria-label','Mania Rating '+mr+' overall. Tap for what it means.');
+   var col=+mr>=80?'#16803f':+mr>=60?'#9a6700':'#c0303c';bt.innerHTML='<b style="color:'+col+'">'+mr+'</b><small>MANIA OVERALL</small>';
+   bt.addEventListener('click',function(e){e.stopPropagation();var h=document.getElementById('fmMHelp');if(h){h.hidden=!h.hidden;if(!h.hidden)h.scrollIntoView({block:'nearest',behavior:'smooth'})}});
+   if(por)por.appendChild(bt);else el.insertBefore(bt,el.firstChild)}
+  var name=p.name||(p.r&&p.r.name);el.dataset.fmName=name;el.dataset.fmPj=pj==null?'':pj;el.dataset.fmOpp=p.opp||'';
+  if((pn&&name===pn)||(!pn&&p.id===C.win)){el.classList.add('fmWin');var s=document.createElement('div');s.className='fmStart';s.textContent='Start '+name;el.insertBefore(s,el.firstChild)}
+ });
+ fixAnswer(cards,pn);
+ if(!document.getElementById('fmMHelp')){var h=document.createElement('div');h.id='fmMHelp';h.hidden=true;
+  h.innerHTML='<b>What is the Mania Rating?</b> It is a player\\'s overall grade from 0 to 100, kind of like a Madden overall. Fantasy Mania combines how much he produces, how much he is used, his role, his high-value chances (like red-zone looks) and his efficiency, each compared with every other '+(POSW[A.pos]||'player')+', into one number. 90+ is Elite, 82+ Excellent, 74+ Strong, 65+ Starter.<br><br>The big number is the <b>Week '+C.wk+' projection</b>: the points we expect this week after the matchup and the injury report. That is the number to use for start/sit.';
+  hero.parentNode.insertBefore(h,hero.nextSibling)}
+}
+function last(n){if(n.slice(-4)==='D/ST')return n.slice(0,-4).trim();var w=n.split(' '),suf=['Jr.','Sr.','II','III','IV'];if(w.length>2&&suf.indexOf(w[w.length-1])>=0)w.pop();return w.length>1?w.slice(1).join(' '):n}
+function fixAnswer(cards,pn){if(!pn)return;var h=document.querySelector('#fmSeo [data-fmv="head"]');if(!h||h.textContent==='Start '+pn+'.')return;
+ var w=[].find.call(cards,function(c){return c.dataset.fmName===pn}),l=[].find.call(cards,function(c){return c!==w});if(!w||!l)return;
+ var vs=function(c){return c.dataset.fmOpp&&c.dataset.fmOpp!=='BYE'?' against '+c.dataset.fmOpp:''},f=function(c){return c.dataset.fmPj===''?'—':(+c.dataset.fmPj).toFixed(1)};
+ var line='Start '+pn+' over '+l.dataset.fmName+' in Week '+C.wk+'. Fantasy Mania projects '+last(pn)+' for '+f(w)+' points'+vs(w)+', versus '+f(l)+' for '+last(l.dataset.fmName)+vs(l)+'.';
+ h.textContent='Start '+pn+'.';document.querySelectorAll('#fmSeo [data-fmv="line"]').forEach(function(e){e.textContent=line})}
+function hook(){if(window.__fmHooked)return;window.__fmHooked=1;var r=renderCompare;renderCompare=function(){var o=r.apply(this,arguments);try{tweak()}catch(e){}return o};
+ var sv=showView;showView=function(){var o=sv.apply(this,arguments);try{seoShow()}catch(e){}return o}}
+function open(){if(!ready()){if(++tries<200)setTimeout(open,40);return}hook();
+ var a=byId(C.a),b=byId(C.b);if(!a||!b){seoShow();return}A=a;B=b;selA=null;selB=null;try{cmpOpen.start=true}catch(e){}
+ showView('compare');renderCompare();seoShow();try{scrollTo(0,0)}catch(e){}}
+open();
+addEventListener('load',function(){[300,900].forEach(function(t){setTimeout(function(){var v=document.getElementById('compare');if(!touched&&v&&!v.classList.contains('on'))open()},t)})});
+})();</script>`;
+}
+
+async function matchupApp(env, url, d, a, b) {
+  const wk = d.next, v = verdict(d, a, b);
+  const both = `${a.n} or ${b.n}`;
+  const title = `${both}? Who to Start in Week ${wk} (PPR) | Fantasy Mania`;
+  const desc = v.w ? `${v.line.replace(` in Week ${wk}.`, ` in Week ${wk} (PPR).`)} Projections, Mania Ratings, matchups, game logs and boom/bust. Free.` : v.line;
+  const path = `/start/${[a.s, b.s].sort().join("-vs-")}/`;
+  const ld = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [["Fantasy Mania", "/"], ["Start/Sit", "/start/"], [both, path]].map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c[0], item: SITE + c[1] })) };
+  const headExtra = `${listed(d, a, b) ? "" : '<meta name="robots" content="noindex,follow">'}<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}${path}"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script><style>${APP_CSS}</style>`;
+  const app = await env.ASSETS.fetch(new Request(url.origin + "/index.html"));
+  if (!app.ok) throw new Error("no app");
+  const res = new HTMLRewriter()
+    .on("head", { element(e) { e.prepend('<base href="/">', { html: true }); e.append(headExtra, { html: true }); } })
+    .on("head > title", { element(e) { e.setInnerContent(title); } })
+    .on('meta[name="description"]', { element(e) { e.setAttribute("content", desc); } })
+    .on('link[rel="canonical"]', { element(e) { e.setAttribute("href", SITE + path); } })
+    .on("#compare h1.title", { element(e) { e.setInnerContent(`${both}?`); e.after(`<p class="fmPpr">Week ${wk} start/sit · PPR scoring</p>`, { html: true }); } })
+    .on("body", { element(e) { e.append(seoSection(d, a, b, v) + opener(d, a, b, v), { html: true }); } })
+    .transform(app);
+  const h = new Headers(res.headers);
+  h.set("content-type", "text/html; charset=utf-8");
+  h.set("cache-control", "public, max-age=300");
+  return new Response(res.body, { status: 200, headers: h });
 }
 
 // ---------- page pieces ----------
@@ -218,181 +295,6 @@ function picker(d, a, b) {
   const map = {}; d.players.forEach((p) => { map[p.n.toLowerCase()] = p.s; (p.nk || []).forEach((k) => { map[k.toLowerCase()] = p.s; }); });
   return `<form class="pick" id="pick" autocomplete="off"><input list="fmNames" id="pa" placeholder="First player" aria-label="First player" value="${a ? esc(a.n) : ""}"><span class="vs">or</span><input list="fmNames" id="pb" placeholder="Second player" aria-label="Second player" value="${b ? esc(b.n) : ""}"><button>Who do I start?</button></form><div class="err" id="perr" role="status"></div><datalist id="fmNames">${opts}</datalist>
 <script>(function(){var M=${JSON.stringify(map).replace(/</g, "\\u003c")};document.getElementById('pick').addEventListener('submit',function(e){e.preventDefault();var a=M[document.getElementById('pa').value.trim().toLowerCase()],b=M[document.getElementById('pb').value.trim().toLowerCase()];var er=document.getElementById('perr');if(!a||!b){er.textContent='Pick two players from the list.';return}if(a===b){er.textContent='Pick two different players.';return}location.href='/start/'+[a,b].sort().join('-vs-')+'/'})})();</script>`;
-}
-
-function maniaInfo(d, p) {
-  const cats = (p.bk || []).map((b) => b[0]);
-  const list = cats.length ? cats.slice(0, -1).join(", ") + (cats.length > 1 ? " and " : "") + cats[cats.length - 1] : "production, usage, role and efficiency";
-  return `<details class="mHelp" id="maniaHelp"><summary>What's the Mania Rating?</summary><p>It's a player's overall grade from 0 to 100, kind of like a Madden overall. Fantasy Mania combines ${esc(list.toLowerCase())}, each compared with every other ${esc(POSW[p.pos] ? POSW[p.pos].replace(/s$/, "") : "player")}, into one number. 90+ is Elite, 82+ Excellent, 74+ Strong, 65+ Starter.</p><p>The <b>Week ${d.next} projection</b> is different: it's how many points we expect this week, after the matchup and the injury report. That's the number to use for start/sit.</p></details>`;
-}
-
-function card(d, p, isWin) {
-  const proj = playing(p) ? f1(pts(p)) : p.bye ? "BYE" : "OUT";
-  return `<div class="card pl${isWin ? " win" : ""}">${isWin ? `<span class="winB">START</span>` : ""}<div class="av" style="--r:${ring(p.mr)}">${esc(initials(p))}</div>
-<a class="nm" href="/players/${p.s}/">${esc(p.n)}</a><div class="meta">${esc(p.tm)} · ${posName(p.pos)}${p.bye ? " · Bye" : p.opp ? " · vs " + esc(p.opp) : ""}</div>
-<div class="big">${proj}</div><div class="lbl">Week ${d.next} projection</div>
-<div class="mr">Mania Rating <b style="color:${ink(p.mr)}">${f1(p.mr)}</b><a class="iBtn" href="#maniaHelp" aria-controls="maniaHelp" aria-label="What is the Mania Rating?">ⓘ</a></div></div>`;
-}
-
-function rng(p, lo, hi, color) {
-  if (!p.pj || p.pj.lo == null || p.pj.hi == null || hi <= lo) return "";
-  const L = ((p.pj.lo - lo) / (hi - lo)) * 100, W = ((p.pj.hi - p.pj.lo) / (hi - lo)) * 100, P = ((p.pj.p - lo) / (hi - lo)) * 100;
-  return `<div class="rng" aria-hidden="true"><i style="left:${L.toFixed(1)}%;width:${W.toFixed(1)}%;background:${color}55"></i><b style="left:calc(${P.toFixed(1)}% - 2px)"></b></div>`;
-}
-
-function lineChart(d, a, b) {
-  const ga = (a.gl || []).filter((x) => x[2] != null), gb = (b.gl || []).filter((x) => x[2] != null);
-  if (!ga.length && !gb.length) return "";
-  const weeks = [...new Set(ga.concat(gb).map((x) => x[0]))].sort((x, y) => x - y);
-  const maxW = Math.max(...weeks), minW = Math.min(...weeks);
-  const vals = ga.concat(gb).map((x) => x[2]);
-  const top = Math.max(10, Math.ceil(Math.max(...vals) / 5) * 5), bot = Math.min(0, Math.floor(Math.min(...vals) / 5) * 5);
-  const W = 520, H = 250, L = 34, R = 12, T = 14, B = 32;
-  const x = (w) => L + (maxW === minW ? (W - L - R) / 2 : ((w - minW) / (maxW - minW)) * (W - L - R));
-  const y = (v) => T + (1 - (v - bot) / (top - bot)) * (H - T - B);
-  let g = "";
-  for (let v = bot; v <= top; v += top - bot > 30 ? 10 : 5) g += `<line x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#e4e9f0"/><text x="${L - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" font-size="13" fill="#5a616a">${v}</text>`;
-  for (let w = minW; w <= maxW; w++) g += `<text x="${x(w).toFixed(1)}" y="${H - 10}" text-anchor="middle" font-size="13" fill="#5a616a">W${w}</text>`;
-  const line = (arr, c) => {
-    const s = arr.slice().sort((p, q) => p[0] - q[0]);
-    let path = "", prev = null;
-    s.forEach(([w, , v]) => { path += (prev != null && w === prev + 1 ? "L" : "M") + x(w).toFixed(1) + "," + y(v).toFixed(1); prev = w; });
-    return `<path d="${path}" fill="none" stroke="${c}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>` + s.map(([w, , v]) => `<circle cx="${x(w).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4.5" fill="#fff" stroke="${c}" stroke-width="2.5"><title>Week ${w}: ${f1(v)}</title></circle>`).join("");
-  };
-  return `<div class="legend"><span><i style="background:${CA}"></i>${esc(a.n)}</span><span><i style="background:${CB}"></i>${esc(b.n)}</span></div>
-<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Fantasy points by week for ${esc(a.n)} and ${esc(b.n)}">${g}${line(ga, CA)}${line(gb, CB)}</svg>`;
-}
-
-function gameLog(d, a, b) {
-  const map = (p) => { const m = {}; (p.gl || []).forEach(([w, o, v]) => { m[w] = [o, v]; }); return m; };
-  const ma = map(a), mb = map(b);
-  const weeks = [...new Set(Object.keys(ma).concat(Object.keys(mb)).map(Number))].sort((x, y) => y - x);
-  const cell = (e) => (e ? `${f1(e[1])}${e[0] ? ` <span class="small">${esc(e[0])}</span>` : ""}` : `<span class="small">—</span>`);
-  const rows = weeks.map((w) => { const A = ma[w], B = mb[w], wa = A && B && A[1] > B[1], wb = A && B && B[1] > A[1];
-    return `<tr><th>Week ${w}</th><td class="${wa ? "w" : ""}">${cell(A)}</td><td class="${wb ? "w" : ""}">${cell(B)}</td></tr>`; }).join("");
-  return `${lineChart(d, a, b)}<div style="overflow-x:auto;margin-top:8px"><table><thead><tr><th></th><td>${esc(short(a))}</td><td>${esc(short(b))}</td></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-
-function matchupTab(d, a, b) {
-  const one = (p, c) => {
-    const dv = d.dvp && p.opp && d.dvp[p.opp] ? d.dvp[p.opp][p.pos] : null;
-    let s = `<div class="card mini"><h3 style="color:${c}">${esc(p.n)}</h3>`;
-    if (p.bye) return s + `<p>On bye in Week ${d.next}.</p></div>`;
-    s += `<div class="stat"><span>Opponent</span><b>${esc(p.opp || "—")}</b></div>`;
-    if (p.ma != null) s += `<div class="stat"><span>Matchup boost to his Week ${d.next} Rating</span><b style="color:${p.ma > 0 ? "#16803f" : p.ma < 0 ? "#c0303c" : "inherit"}">${p.ma > 0 ? "+" : ""}${f1(p.ma)}</b></div>`;
-    if (dv) s += `<div class="stat"><span>${esc(p.opp)} allows to ${POSW[p.pos]}</span><b>${f1(dv[0])} a game</b></div><div class="stat"><span>Rank (1 = gives up the most)</span><b>#${dv[1]} of ${dv[2]}</b></div>`;
-    if (p.fx && p.fx.s != null) s += `<div class="stat"><span>Game script effect on projection</span><b>${p.fx.s > 0 ? "+" : ""}${f1(p.fx.s)}</b></div>`;
-    const easy = dv ? (dv[1] <= 10 ? "a good matchup" : dv[1] >= 23 ? "a tough matchup" : "an average matchup") : null;
-    if (easy) s += `<p class="small" style="margin:8px 0 0">${esc(p.opp)} gives up the ${ord(dv[1])} most points to ${POSW[p.pos]}: ${easy}.</p>`;
-    return s + "</div>";
-  };
-  return `<div class="two">${one(a, CA)}${one(b, CB)}</div>`;
-}
-const ord = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
-
-function boomTab(d, a, b) {
-  const lo = Math.min(0, (a.pj && a.pj.lo) || 0, (b.pj && b.pj.lo) || 0), hi = Math.max((a.pj && a.pj.hi) || 0, (b.pj && b.pj.hi) || 0);
-  const one = (p, c) => {
-    const [bm, bs] = BOOM[p.pos] || [20, 8];
-    const v = (p.gl || []).map((x) => x[2]).filter((x) => x != null);
-    const nb = v.filter((x) => x >= bm).length, nd = v.filter((x) => x < bs).length;
-    const best = v.length ? Math.max(...v) : null, worst = v.length ? Math.min(...v) : null;
-    return `<div class="card mini"><h3 style="color:${c}">${esc(p.n)}</h3>
-<div class="stat"><span>Boom games (${bm}+ points)</span><b>${nb} of ${v.length}</b></div>
-<div class="stat"><span>Bust games (under ${bs})</span><b>${nd} of ${v.length}</b></div>
-<div class="stat"><span>Best game</span><b>${f1(best)}</b></div><div class="stat"><span>Worst game</span><b>${f1(worst)}</b></div>
-${p.pj && p.pj.lo != null ? `<div class="stat"><span>Week ${d.next} floor to ceiling</span><b>${f1(p.pj.lo)} to ${f1(p.pj.hi)}</b></div>${rng(p, lo, hi, c)}` : ""}</div>`;
-  };
-  return `<div class="two">${one(a, CA)}${one(b, CB)}</div><p class="small" style="margin-top:10px">Floor and ceiling are the low and high ends of what Fantasy Mania expects this week. The dark mark is the projection.</p>`;
-}
-
-function projTab(d, a, b) {
-  const one = (p, c) => {
-    if (!playing(p)) return `<div class="card mini"><h3 style="color:${c}">${esc(p.n)}</h3><p>${p.bye ? "On bye" : "Ruled out"} in Week ${d.next}.</p></div>`;
-    const j = p.pj || {}, rows = [];
-    const add = (l, v, fmt = f1) => { if (v != null) rows.push(`<div class="stat"><span>${l}</span><b>${fmt(v)}</b></div>`); };
-    add(`Projected points`, j.p);
-    if (p.pos === "QB") { add("Pass yards", j.pyd, Math.round); add("Pass TDs", j.ptd); add("Interceptions", j.int); add("Rush yards", j.ruy, Math.round); }
-    else if (p.pos === "RB") { add("Carries", j.car); add("Rush yards", j.ruy, Math.round); add("Targets", j.tgt); add("Receptions", j.rec); add("Receiving yards", j.ryd, Math.round); add("Touchdowns", j.td); }
-    else if (p.pos === "WR" || p.pos === "TE") { add("Targets", j.tgt); add("Receptions", j.rec); add("Receiving yards", j.ryd, Math.round); add("Touchdowns", j.td); }
-    if (p.fx) { const sg = (v) => (v > 0 ? "+" : "") + f1(v); if (p.fx.m) add("Matchup adjustment", p.fx.m, sg); if (p.fx.s) add("Game script adjustment", p.fx.s, sg); if (p.fx.i) add("Injury adjustment", p.fx.i, sg); }
-    if (p.inj && p.inj.l) rows.push(`<div class="stat"><span>Injury report</span><b>${esc(p.inj.l)}${p.inj.t ? " (" + esc(p.inj.t) + ")" : ""}</b></div>`);
-    return `<div class="card mini"><h3 style="color:${c}">${esc(p.n)}</h3>${rows.join("")}</div>`;
-  };
-  return `<div class="two">${one(a, CA)}${one(b, CB)}</div>`;
-}
-
-function breakdown(d, a, b) {
-  if (!(a.bk && a.bk.length) || !(b.bk && b.bk.length)) return "";
-  const help = (h) => (h ? `<details class="info"><summary aria-label="What does this mean?">ⓘ</summary><div class="pop">${esc(h)}</div></details>` : "");
-  const bar = (v, c, side) => `<div class="bar ${side}"><i style="width:${Math.max(2, Math.min(100, v || 0))}%;background:${c}"></i></div>`;
-  if (a.pos === b.pos) {
-    const rows = a.bk.map(([l, va, h], i) => { const m = b.bk.find((x) => x[0] === l) || b.bk[i] || []; const vb = m[1];
-      return `<div><div class="bkL">${esc(l)}${help(h)}</div><div class="bkRow"><span class="bkN${va > vb ? " w" : ""}">${Math.round(va)}</span><div class="bars">${bar(va, CA, "l")}${bar(vb, CB, "r")}</div><span class="bkN${vb > va ? " w" : ""}">${vb == null ? "—" : Math.round(vb)}</span></div></div>`; }).join("");
-    return `<div class="card"><div class="legend" style="justify-content:space-between"><span><i style="background:${CA}"></i>${esc(short(a))}</span><span><i style="background:${CB}"></i>${esc(short(b))}</span></div><p class="small" style="margin:0 0 6px">Percentile among ${POSW[a.pos]}. 100 is the best, 50 is average.</p>${rows}</div>`;
-  }
-  const one = (p, c) => `<div class="card mini"><h3 style="color:${c}">${esc(p.n)}</h3>${p.bk.map(([l, v, h]) => `<div class="stat"><span>${esc(l)}${help(h)}</span><b>${Math.round(v)}</b></div>`).join("")}</div>`;
-  return `<div class="two">${one(a, CA)}${one(b, CB)}</div>`;
-}
-
-const STATS = {
-  QB: [["ppr", "Points per game"], ["pyd", "Pass yards"], ["ptd", "Pass TDs"], ["int", "Interceptions", 1], ["att", "Attempts"], ["cmp", "Completion %"], ["ypa", "Yards per attempt"], ["ruy", "Rush yards"], ["rtd", "Rush TDs"]],
-  RB: [["ppr", "Points per game"], ["car", "Carries"], ["rushy", "Rush yards"], ["tgt", "Targets"], ["rec", "Receptions"], ["recy", "Receiving yards"], ["td", "Touchdowns"], ["touch", "Touch share %"], ["snap", "Snap %"]],
-  WR: [["ppr", "Points per game"], ["tgt", "Targets"], ["rec", "Receptions"], ["recy", "Receiving yards"], ["td", "Touchdowns"], ["tshare", "Target share %"], ["ashare", "Air yards share %"], ["snap", "Snap %"]],
-  K: [["fgp", "FG %"], ["fgm", "FG made per game"], ["fga", "FG tries per game"], ["xpg", "Extra points per game"], ["lg", "Longest FG"]],
-};
-STATS.TE = STATS.WR;
-function statVals(p) {
-  if (p.pos === "DST") {
-    const k = p.kl || [], n = k.length || 1, av = (i) => (k.length ? k.reduce((s, r) => s + (r[i] || 0), 0) / n : null);
-    return { ppg: p.ppg, pa: av(0), ya: av(1), sk: av(2), to: av(3), dtd: av(4) };
-  }
-  const m = Object.assign({}, p.ms || {}); if (p.pos === "K") m.ppg = p.ppg; return m;
-}
-function statTable(d, a, b) {
-  const defs = a.pos === "DST" || b.pos === "DST" ? [["ppg", "Points per game"], ["pa", "Points allowed", 1], ["ya", "Yards allowed", 1], ["sk", "Sacks"], ["to", "Takeaways"], ["dtd", "Defensive TDs"]]
-    : a.pos === "K" ? [["ppg", "Points per game"]].concat(STATS.K)
-    : a.pos === b.pos ? STATS[a.pos] : [["ppr", "Points per game"], ["tgt", "Targets"], ["rec", "Receptions"], ["recy", "Receiving yards"], ["car", "Carries"], ["rushy", "Rush yards"], ["td", "Touchdowns"], ["snap", "Snap %"]];
-  const va = statVals(a), vb = statVals(b);
-  const rows = (defs || []).map(([k, l, low]) => { const x = va[k], y = vb[k]; if (x == null && y == null) return "";
-    const wa = x != null && y != null && (low ? x < y : x > y), wb = x != null && y != null && (low ? y < x : y > x);
-    return `<tr><td class="${wa ? "w" : ""}">${x == null ? "—" : f1(x)}</td><th>${l}</th><td class="${wb ? "w" : ""}">${y == null ? "—" : f1(y)}</td></tr>`; }).join("");
-  return `<div class="card" style="padding:8px 12px;overflow-x:auto"><table><thead><tr><td>${esc(a.n)}</td><th>Per game, this season</th><td>${esc(b.n)}</td></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-
-function matchup(d, a, b) {
-  const wk = d.next, v = verdict(d, a, b);
-  const both = `${a.n} or ${b.n}`;
-  const title = `${both}? Who to Start in Week ${wk} (PPR) | Fantasy Mania`;
-  const desc = v.w ? `${v.line.split(". Week")[0].replace(` in Week ${wk}.`, ` in Week ${wk} (PPR).`)}. Week ${wk} projections, ratings, matchups, game logs, floor and ceiling. Free.` : v.line;
-  const path = `/start/${[a.s, b.s].sort().join("-vs-")}/`;
-  const idx = listed(d, a, b);
-  const why = reasons(d, v.w, v.l);
-  const more = (p, o) => { const ps = partners(d, p, o); return ps.length ? `<h3>More ${esc(short(p))} start/sit</h3><ul class="chips">${ps.map((q) => `<li><a href="/start/${[p.s, q.s].sort().join("-vs-")}/">${esc(short(p))} or ${esc(q.n)}</a></li>`).join("")}</ul>` : ""; };
-  const tabs = [["ss", "Start/Sit", "Start/Sit"], ["gl", "Game log", "Games"], ["mu", "Matchup", "Matchup"], ["bb", "Boom/Bust", "Boom/Bust"], ["pj", "Projection", "Proj."]];
-  const panel = (id, name, inner) => `<section class="tp${id === "ss" ? " on" : ""}" id="tp-${id}" role="tabpanel" aria-labelledby="tb-${id}"><h2 class="tpH">${name}</h2>${inner}</section>`;
-  const body = `<div class="kicker"><span>Week ${wk} start/sit · Updated ${esc(d.built)}</span><span class="ppr">PPR scoring</span></div>
-<h1>${esc(withNick(a))} or ${esc(withNick(b))}?</h1>
-<p class="sub">${esc(short(a))} or ${esc(short(b))}, ${esc(short(b))} or ${esc(short(a))}: here's who Fantasy Mania would start this week.</p>
-<div class="vsWrap">${card(d, a, v.w === a)}<div class="vsMid" aria-hidden="true">VS</div>${card(d, b, v.w === b)}</div>${maniaInfo(d, a)}
-<div class="tabs" role="tablist">${tabs.map(([id, n, sn], i) => `<button type="button" role="tab" id="tb-${id}" aria-controls="tp-${id}" aria-selected="${i === 0}"><span class="tl">${n}</span><span class="ts" aria-hidden="true">${sn}</span></button>`).join("")}</div>
-${panel("ss", "Who should you start?", `<div class="card verdict"><span class="vTag">${esc(v.tag)}</span><p class="vHead">${v.w ? `Start <span>${esc(v.w.n)}</span>` : "Neither is playing"}</p><p class="vLine">${esc(v.line)}</p>${why.length ? `<ul class="why">${why.map((x) => `<li>${x}</li>`).join("")}</ul>` : ""}</div>`)}
-${panel("gl", "Game log", `<div class="card">${gameLog(d, a, b)}</div>`)}
-${panel("mu", "Matchup", matchupTab(d, a, b))}
-${panel("bb", "Boom/Bust", boomTab(d, a, b))}
-${panel("pj", `Week ${wk} projection`, projTab(d, a, b))}
-<script>document.documentElement.classList.add('js');(function(){document.querySelectorAll('.iBtn').forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();var h=document.getElementById('maniaHelp');h.open=!h.open;if(h.open)h.scrollIntoView({block:'nearest',behavior:'smooth'})})});var bs=document.querySelectorAll('.tabs button');bs.forEach(function(b){b.addEventListener('click',function(){bs.forEach(function(x){var on=x===b;x.setAttribute('aria-selected',on);document.getElementById(x.getAttribute('aria-controls')).classList.toggle('on',on)})})})})();</script>
-${a.bk && b.bk ? `<h2>Compare the Mania breakdown</h2>${breakdown(d, a, b)}` : ""}
-<h2>Stat by stat</h2>${statTable(d, a, b)}
-<h2>Common questions</h2><div class="card faq">
-<h3>Who should I start in Week ${wk}, ${esc(a.n)} or ${esc(b.n)}?</h3><p>${esc(v.line)}</p>
-<h3>${esc(b.n)} or ${esc(a.n)}: who has the better matchup?</h3><p>${a.ma != null && b.ma != null ? esc(`${(a.ma >= b.ma ? a : b).n} has the better Week ${wk} matchup by Fantasy Mania's numbers (${f1(Math.max(a.ma, b.ma))} vs ${f1(Math.min(a.ma, b.ma))} points of rating boost)${(a.ma >= b.ma ? a : b).opp ? ", facing " + (a.ma >= b.ma ? a : b).opp : ""}.`) : esc(`${a.n} faces ${a.opp || "no one (bye)"} and ${b.n} faces ${b.opp || "no one (bye)"} in Week ${wk}.`)}</p>
-<h3>Is ${esc(a.n)} a good start in Week ${wk}?</h3><p>${esc(startTake(d, a))}</p>
-<h3>Is ${esc(b.n)} a good start in Week ${wk}?</h3><p>${esc(startTake(d, b))}</p></div>
-<div class="btns"><a class="btn" href="/players/${a.s}/">${esc(short(a))}'s full profile</a><a class="btn" href="/players/${b.s}/">${esc(short(b))}'s full profile</a><a class="btn alt" href="/compare/">Compare in the app</a></div>
-<h2>More start/sit questions</h2><div class="grid2"><div class="card">${more(a, b) || "<p class='small'>No other close calls this week.</p>"}</div><div class="card">${more(b, a) || "<p class='small'>No other close calls this week.</p>"}</div></div>
-<h2>Check another matchup</h2><div class="card">${picker(d, null, null)}</div>`;
-  return shell({ title, desc, path, crumbs: [["Fantasy Mania", "/"], ["Start/Sit", "/start/"], [both, path]], body, robots: idx ? "" : "noindex,follow", nav: "/start/" });
 }
 
 function hub(d) {

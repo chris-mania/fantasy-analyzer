@@ -22,7 +22,7 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -46,17 +46,24 @@ jobs:
       - name: Add the domain move, Google tags, robots.txt and sitemap (keep this step)
         run: python site_extras.py
 
-      - name: Player and rankings pages for Google (about once an hour; keep this step)
-        # Makes no API calls: it only reads the page build.py just made. If it fails or it isn't
-        # its turn, the last published pages are kept and the site still publishes normally.
+      - name: Player, rankings and start/sit pages for Google (about once an hour; keep these steps)
+        # Makes no API calls: it only reads the page build.py just made. If it fails, runs long or it isn't
+        # its turn, the next step keeps the last published pages and the site still publishes normally.
         continue-on-error: true
-        timeout-minutes: 12
+        timeout-minutes: 18
         run: |
           if [ "$(date -u +%M)" -lt 15 ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            pip install playwright==1.63.0 && python -m playwright install --with-deps chromium && python seo_pages.py
+            pip install playwright==1.63.0
+            python -m playwright install chromium || python -m playwright install --with-deps chromium
+            python seo_pages.py
           else
             echo "Not this run's turn; keeping the last player pages."
           fi
+
+      - name: Keep the last good Google pages if this run didn't make new ones (keep this step)
+        if: always()
+        run: |
+          rm -rf public/_seo_tmp
           keep=""
           [ -d public/players ] || keep="players rankings a trade compare team insights sitemap.xml"
           [ -f public/start-data.json ] || keep="$keep start-data.json sitemap-start.xml _worker.js _routes.json"
@@ -66,6 +73,7 @@ jobs:
               git archive FETCH_HEAD "$x" 2>/dev/null | tar -x -C public 2>/dev/null || echo "Nothing earlier to keep for $x"
             done
           fi
+          ls public | head -40
 
       - name: Check the page is real before publishing
         run: |

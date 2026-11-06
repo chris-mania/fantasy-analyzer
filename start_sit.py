@@ -54,7 +54,7 @@ PICK_JS = """() => {
       bye: kd ? !!kd.bye : !p.opp,
       inj: p.inj ? {l: p.inj.label || '', t: p.inj.note || '', a: p.inj.avail} : null,
       pl: pl ? {s: pl.score || '', r: pl.res || '', f: n(pl.ppr != null ? pl.ppr : pl.pts)} : null,
-      pj: pr ? {p: n(pr.pts), lo: n(pr.lo), hi: n(pr.hi), rec: n(pr.rec), ryd: n(pr.ryd), ruy: n(pr.ruy),
+      pj: pr ? {p: pr.pts == null ? null : Math.round(+pr.pts * 1000) / 1000, lo: n(pr.lo), hi: n(pr.hi), rec: n(pr.rec), ryd: n(pr.ryd), ruy: n(pr.ruy),
                 td: n(pr.td), tgt: n(pr.tgt), car: n(pr.car), pyd: n(pr.pyd), ptd: n(pr.ptd), int: n(pr.int)} : null,
       ma: n(p.matchup_adj), tr: n(p.trend_pct), ppg: n(m.ppr != null ? m.ppr : p.ppr_pg),
       sh: n(p.pos === 'RB' ? m.touch : m.tshare), sn: n(m.snap), l3: last,
@@ -162,10 +162,13 @@ def build(rows, slugs, meta, out_dir, here):
         partners.setdefault(b["id"], []).append((near, a["n"], slug))
     links = {pid: [(n, "/start/%s/" % s) for _, n, s in sorted(v)[:6]] for pid, v in partners.items()}
 
+    for r in players:  # the app draws charts, stats and breakdowns itself; keep the file small
+        for k in ("gl", "ms", "kl", "bk", "fx", "sh", "sn", "dp"):
+            r.pop(k, None)
     now = datetime.now(timezone.utc)
     data = {"v": 1, "season": meta["season"], "week": meta["week"], "next": meta["next"],
             "built": meta.get("built") or now.strftime("%a %b %-d"), "date": now.strftime("%Y-%m-%d"),
-            "gap": GAP, "dvp": dvp, "players": players}
+            "gap": GAP, "players": players}
     with open(os.path.join(out_dir, "start-data.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
     with open(os.path.join(out_dir, "sitemap-start.xml"), "w") as f:

@@ -436,11 +436,6 @@ def run():
         if os.path.isdir(os.path.join(TMP, d)):
             shutil.move(os.path.join(TMP, d), os.path.join(PUB, d))
     if start_ok:
-        try:
-            import start_sit
-            start_sit.add_breakdowns(TMP, breakdowns)
-        except Exception as e:
-            print("seo_pages: breakdowns skipped:", repr(e)[:200])
         for f in ("start-data.json", "sitemap-start.xml", "_worker.js", "_routes.json"):
             shutil.move(os.path.join(TMP, f), os.path.join(PUB, f))
     shutil.rmtree(TMP, ignore_errors=True)
