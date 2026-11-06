@@ -58,7 +58,12 @@ PICK_JS = """() => {
                 td: n(pr.td), tgt: n(pr.tgt), car: n(pr.car), pyd: n(pr.pyd), ptd: n(pr.ptd), int: n(pr.int)} : null,
       ma: n(p.matchup_adj), tr: n(p.trend_pct), ppg: n(m.ppr != null ? m.ppr : p.ppr_pg),
       sh: n(p.pos === 'RB' ? m.touch : m.tshare), sn: n(m.snap), l3: last,
-      dp: p.depth && p.depth.rank || null
+      dp: p.depth && p.depth.rank || null,
+      fx: pr && pr.fx ? {s: n(pr.fx.script), m: n(pr.fx.matchup), i: n(pr.fx.inj)} : null,
+      gl: (kd ? (kd.log || []).map(l => [l.w, l.opp || null, n(l.pts)])
+              : (p.logs || []).map(l => [l.w, l.opp || ((META.opps || {})[p.team] || {})[l.w] || null, n(l.ppr)])),
+      ms: kd ? (p.pos === 'K' ? kd.st || null : null) : m,
+      kl: (kd && p.pos === 'DST') ? (kd.log || []).map(l => [l.pa, l.ya, l.sk, (l.int || 0) + (l.fr || 0), l.td || 0]) : null
     });
   });
   return out;
@@ -84,8 +89,41 @@ def listed(a, b):
     return pa is not None and pb is not None and abs(pa - pb) < GAP
 
 
+def add_breakdowns(out_dir, bk):
+    """Put each player's Mania breakdown (read from his profile in the app) into start-data.json."""
+    path = os.path.join(out_dir, "start-data.json")
+    data = json.load(open(path, encoding="utf-8"))
+    n = 0
+    for p in data["players"]:
+        if p["id"] in bk:
+            p["bk"] = bk[p["id"]]
+            n += 1
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+    print("start_sit: Mania breakdown added for %d players" % n)
+
+
 def build(rows, slugs, meta, out_dir, here):
     """rows: from PICK_JS; slugs: id -> page slug. Returns {id: [(partner_name, url), ...]} for player pages."""
+    for r in rows:
+        if isinstance(r.get("ms"), dict):
+            r["ms"] = {k: (round(v, 1) if isinstance(v, float) else v) for k, v in r["ms"].items()
+                       if isinstance(v, (int, float)) and not isinstance(v, bool)}
+    # How many PPR points each defense allows to each position (for the Matchup tab).
+    tot = {}
+    for r in rows:
+        if r["pos"] in ("K", "DST"):
+            continue
+        for w, opp, f in r.get("gl") or []:
+            if opp and f is not None:
+                t = tot.setdefault(opp, {}).setdefault(r["pos"], {})
+                t[w] = t.get(w, 0) + f
+    dvp = {}
+    for pos in ("QB", "RB", "WR", "TE"):
+        avg = {tm: sum(v[pos].values()) / len(v[pos]) for tm, v in tot.items() if v.get(pos)}
+        order = sorted(avg, key=lambda tm: -avg[tm])
+        for i, tm in enumerate(order):
+            dvp.setdefault(tm, {})[pos] = [round(avg[tm], 1), i + 1, len(order)]
     players = []
     for r in rows:
         if r["id"] not in slugs:
@@ -127,7 +165,7 @@ def build(rows, slugs, meta, out_dir, here):
     now = datetime.now(timezone.utc)
     data = {"v": 1, "season": meta["season"], "week": meta["week"], "next": meta["next"],
             "built": meta.get("built") or now.strftime("%a %b %-d"), "date": now.strftime("%Y-%m-%d"),
-            "gap": GAP, "players": players}
+            "gap": GAP, "dvp": dvp, "players": players}
     with open(os.path.join(out_dir, "start-data.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
     with open(os.path.join(out_dir, "sitemap-start.xml"), "w") as f:

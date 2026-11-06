@@ -289,8 +289,14 @@ def run():
                     same = (t === last) ? same + 1 : 0; last = t;
                     if ((same >= 2 && tries >= 2) || tries > 60) {
                         if (!v.classList.contains('on')) return res(null);
+                        const bk = [...v.querySelectorAll('.maniaPanel .barrow')].map(r => {
+                            const l = r.querySelector('.lblBtn') || r.querySelector('button') || r.querySelector('span'), num = r.querySelector('.pctNum') || r.querySelector('b');
+                            const hid = l && l.dataset ? l.dataset.help : null, h = hid ? v.querySelector('#' + CSS.escape(hid)) : null;
+                            return [(l ? l.textContent : '').replace('ⓘ', '').replace(/\\s*\\d+%\\s*$/, '').trim(), num ? +num.textContent : null,
+                                    h ? h.textContent.trim().slice(0, 260) : ''];
+                        }).filter(x => x[0] && x[1] != null);
                         const c = v.cloneNode(true); window.__seoLink(c, names, own);
-                        return res({html: c.outerHTML, body: document.body.className});
+                        return res({html: c.outerHTML, body: document.body.className, bk: bk});
                     }
                     tries++; setTimeout(tick, 60);
                 };
@@ -298,7 +304,7 @@ def run():
             })""", [pid, names, own])
 
         todo = [p for p in players if not ONLY or p["slug"] in ONLY or p["id"] in ONLY]
-        made = []
+        made, breakdowns = [], {}
         for i, p in enumerate(todo):
             try:
                 own = "/players/%s/" % p["slug"]
@@ -308,6 +314,8 @@ def run():
                 print("seo_pages: skipped", p["name"], str(e)[:120]); continue
             if not snap or not snap_m:
                 print("seo_pages: no profile for", p["name"]); continue
+            if snap.get("bk"):
+                breakdowns[p["id"]] = snap["bk"]
             peers = by_pos[p["pos"]]
             k = peers.index(p)
             near = [q for q in peers[max(0, k - 3):k + 4] if q is not p][:6]
@@ -428,6 +436,11 @@ def run():
         if os.path.isdir(os.path.join(TMP, d)):
             shutil.move(os.path.join(TMP, d), os.path.join(PUB, d))
     if start_ok:
+        try:
+            import start_sit
+            start_sit.add_breakdowns(TMP, breakdowns)
+        except Exception as e:
+            print("seo_pages: breakdowns skipped:", repr(e)[:200])
         for f in ("start-data.json", "sitemap-start.xml", "_worker.js", "_routes.json"):
             shutil.move(os.path.join(TMP, f), os.path.join(PUB, f))
     shutil.rmtree(TMP, ignore_errors=True)
