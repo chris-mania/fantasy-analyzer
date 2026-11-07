@@ -47,3 +47,88 @@ patch("public/fantasy.html")
 open("public/robots.txt", "w").write("User-agent: *\nAllow: /\n\nSitemap: https://fantasymania.org/sitemap.xml\nSitemap: https://fantasymania.org/sitemap-start.xml\n")
 open("public/sitemap.xml", "w").write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>https://fantasymania.org/</loc></url>\n</urlset>\n')
 print("site_extras: robots.txt and sitemap.xml written")
+
+# ---- Discovery helpers (each one is optional: if it fails, the site still publishes) ----
+import html as _html, re as _re, shutil as _shutil
+SITE = "https://fantasymania.org"
+from site_extras_key import KEY as INDEXNOW_KEY  # public by design: Bing checks it at /<key>.txt
+
+HOME_CSS = ('<style id="fmHomeLinks">.homeActions a.cta{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}'
+            '.fmExplore{margin:28px 0 8px}.fmExplore .maH{margin-bottom:10px}'
+            '.fmExplore ul{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-wrap:wrap;gap:8px}'
+            '.fmExplore a{display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;border-radius:99px;background:#fff;'
+            'border:1px solid #d9dfe7;color:#0b1830;text-decoration:none;font-weight:700;font-size:14px}'
+            '.fmExplore a:hover{border-color:#2563eb;color:#1d4ed8}.fmExplore h3{font-size:12px;letter-spacing:1px;text-transform:uppercase;'
+            'color:#5a6882;margin:14px 0 8px;font-weight:800}</style>')
+EXPLORE = ('<nav class="fmExplore" aria-label="Explore Fantasy Mania"><div class="maH">Explore Fantasy Mania</div>'
+           '<h3>Start/sit</h3><ul><li><a href="/start/">Who should I start this week?</a></li></ul>'
+           '<h3>Rankings</h3><ul>' + "".join('<li><a href="/rankings/%s">%s</a></li>' % (u, n) for u, n in (
+               ("", "All rankings"), ("qb/", "QB rankings"), ("rb/", "RB rankings"), ("wr/", "WR rankings"),
+               ("te/", "TE rankings"), ("k/", "Kicker rankings"), ("dst/", "Defense rankings"))) + '</ul>'
+           '<h3>Tools</h3><ul>' + "".join('<li><a href="/%s/">%s</a></li>' % (u, n) for u, n in (
+               ("trade", "Trade analyzer"), ("compare", "Player compare"), ("team", "Team analyzer"), ("insights", "Insights"))) +
+           '</ul></nav>')
+
+
+def share_tags(title, desc, url):
+    e = lambda s: _html.escape(s, quote=True)
+    return ('<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania">'
+            '<meta property="og:title" content="%s"><meta property="og:description" content="%s">'
+            '<meta property="og:url" content="%s"><meta property="og:image" content="%s/og.png">'
+            '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">'
+            '<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="%s/og.png">'
+            % (e(title), e(desc), url, SITE, SITE))
+
+
+def home_extras(path="public/index.html"):
+    s = open(path, encoding="utf-8").read()
+    if 'id="fmHomeLinks"' in s:
+        return
+    t = _re.search(r"<title>([^<]*)</title>", s)
+    dsc = _re.search(r'<meta name="description" content="([^"]*)"', s)
+    title = _html.unescape(t.group(1)) if t else "Fantasy Mania"
+    desc = _html.unescape(dsc.group(1)) if dsc else "Free fantasy football ratings, projections and start/sit help."
+    head = HOME_CSS + ("" if 'property="og:image"' in s else share_tags(title, desc, SITE + "/"))
+    i = s.find("</head>")
+    s = s[:i] + head + s[i:]
+    btn = '<button class="cta" id="homeInsights">Insights</button>'
+    if s.count(btn) == 1:
+        s = s.replace(btn, btn + '<a class="cta" href="/start/">Who should I start?</a>')
+    disc = '<p class="tinyDisc">'
+    hs = s.find('<section id="home"')
+    j = s.find(disc, hs)
+    if hs >= 0 and j > hs:
+        s = s[:j] + EXPLORE + s[j:]
+    open(path, "w", encoding="utf-8").write(s)
+    print("site_extras: homepage links and share preview added")
+
+
+LLMS = """# Fantasy Mania
+
+> Free fantasy football ratings, weekly projections, start/sit answers and trade help (PPR). Every player gets a 0-100 Mania Rating, an overall grade like a Madden overall, built from production, usage, role, high-value chances and efficiency, plus a projection for this week.
+
+## Main pages
+- [Home](https://fantasymania.org/): ratings, projections and tools
+- [Who should I start?](https://fantasymania.org/start/): pick any two players for a start/sit answer; matchup pages live at /start/<player>-vs-<player>/
+- [Rankings](https://fantasymania.org/rankings/): overall plus [QB](https://fantasymania.org/rankings/qb/), [RB](https://fantasymania.org/rankings/rb/), [WR](https://fantasymania.org/rankings/wr/), [TE](https://fantasymania.org/rankings/te/), [K](https://fantasymania.org/rankings/k/), [D/ST](https://fantasymania.org/rankings/dst/)
+- Player pages: /players/<player-name>/ (for example https://fantasymania.org/players/jahmyr-gibbs/)
+- [Trade analyzer](https://fantasymania.org/trade/), [Player compare](https://fantasymania.org/compare/), [Team analyzer](https://fantasymania.org/team/), [Insights](https://fantasymania.org/insights/)
+
+## Notes
+- Scoring is PPR. Numbers update during the week; projections are estimates, not guarantees.
+- Full page lists: https://fantasymania.org/sitemap.xml and https://fantasymania.org/sitemap-start.xml
+"""
+
+for step in (home_extras,):
+    try:
+        step()
+    except Exception as e:
+        print("site_extras: skipped", step.__name__, repr(e)[:200])
+try:
+    if os.path.exists("og.png"):
+        _shutil.copyfile("og.png", "public/og.png")
+    open("public/llms.txt", "w").write(LLMS)
+    open("public/%s.txt" % INDEXNOW_KEY, "w").write(INDEXNOW_KEY)
+    print("site_extras: og.png, llms.txt and Bing key written")
+except Exception as e:
+    print("site_extras: extras skipped", repr(e)[:200])

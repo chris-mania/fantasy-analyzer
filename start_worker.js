@@ -197,12 +197,14 @@ async function matchupApp(env, url, d, a, b) {
   const desc = v.w ? `${v.line.replace(` in Week ${wk}.`, ` in Week ${wk} (PPR).`)} Projections, Mania Ratings, matchups, game logs and boom/bust. Free.` : v.line;
   const path = `/start/${[a.s, b.s].sort().join("-vs-")}/`;
   const ld = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [["Fantasy Mania", "/"], ["Start/Sit", "/start/"], [both, path]].map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c[0], item: SITE + c[1] })) };
-  const headExtra = `${listed(d, a, b) ? "" : '<meta name="robots" content="noindex,follow">'}<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}${path}"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script><style>${APP_CSS}</style>`;
+  const headExtra = `${listed(d, a, b) ? "" : '<meta name="robots" content="noindex,follow">'}<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}${path}"><meta property="og:image" content="https://fantasymania.org/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/og.png"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script><style>${APP_CSS}</style>`;
   const app = await env.ASSETS.fetch(new Request(url.origin + "/index.html"));
   if (!app.ok) throw new Error("no app");
   const res = new HTMLRewriter()
     .on("head", { element(e) { e.prepend('<base href="/">', { html: true }); e.append(headExtra, { html: true }); } })
     .on("head > title", { element(e) { e.setInnerContent(title); } })
+    .on('head > meta[property^="og:"]', { element(e) { e.remove(); } })
+    .on('head > meta[name^="twitter:"]', { element(e) { e.remove(); } })
     .on('meta[name="description"]', { element(e) { e.setAttribute("content", desc); } })
     .on('link[rel="canonical"]', { element(e) { e.setAttribute("href", SITE + path); } })
     .on("#compare h1.title", { element(e) { e.setInnerContent(`${both}?`); e.after(`<p class="fmPpr">Week ${wk} start/sit · PPR scoring</p>`, { html: true }); } })
@@ -282,7 +284,7 @@ function shell({ title, desc, path, crumbs, body, robots, nav }) {
   const links = [["Rankings", "/rankings/"], ["Start/Sit", "/start/"], ["Compare", "/compare/"], ["Trade", "/trade/"], ["Team", "/team/"], ["Insights", "/insights/"]];
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${SITE}${path}">${robots ? `<meta name="robots" content="${robots}">` : ""}
-<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}${path}">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}${path}"><meta property="og:image" content="https://fantasymania.org/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/og.png">
 <meta name="theme-color" content="#e7edf3"><link rel="icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>${CSS}</style><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script></head><body>
 <header class="top"><div class="nav"><a class="brand" href="/">FANTASY <b>MANIA</b></a><nav class="links">${links.map(([n, u]) => `<a href="${u}"${nav === u ? ' class="on"' : ""}>${n}</a>`).join("")}</nav></div></header>

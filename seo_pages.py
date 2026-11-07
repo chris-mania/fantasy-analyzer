@@ -140,7 +140,8 @@ def page(*, title, desc, path, crumbs, body_class, topbar, sprite, main, css_hre
         '<link rel="canonical" href="%s%s">'
         '<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania">'
         '<meta property="og:title" content="%s"><meta property="og:description" content="%s">'
-        '<meta property="og:url" content="%s%s"><meta name="theme-color" content="#ffffff">'
+        '<meta property="og:url" content="%s%s">'
+        '<meta property="og:image" content="https://fantasymania.org/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/og.png"><meta name="theme-color" content="#ffffff">'
         '<link rel="icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">'
         "%s"
         '<link rel="stylesheet" href="%s">'
@@ -443,7 +444,7 @@ def run():
     with open(os.path.join(PUB, "sitemap.xml"), "w") as f:
         f.write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
         for u in urls:
-            f.write("  <url><loc>%s%s</loc></url>\n" % (SITE, u))
+            f.write("  <url><loc>%s%s</loc><lastmod>%s</lastmod></url>\n" % (SITE, u, time.strftime("%Y-%m-%d", time.gmtime())))
         f.write("</urlset>\n")
     print("seo_pages: %d pages in %.0fs" % (len(made), time.time() - t0))
 

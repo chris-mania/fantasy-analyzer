@@ -13,4 +13,7 @@
   start-data.json, sitemap-start.xml, _routes.json and copies start_worker.js to public/_worker.js. The
   worker makes each matchup page on request and only runs for /start addresses. Pair rules and nicknames
   are at the top of start_sit.py.
+- site_extras.py also adds the homepage "Who should I start?" button and "Explore Fantasy Mania" links, the
+  share preview (og.png + og/twitter tags), llms.txt and the Bing IndexNow key file (key in site_extras_key.py).
+  indexnow.py runs after deploy once a day and sends the sitemap pages to Bing.
 - The live site is https://fantasymania.org.

@@ -88,3 +88,13 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
           force_orphan: true   # keep only the latest published copy so the branch doesn't grow with every update
+
+      - name: Tell Bing about the pages (once a day; never blocks anything)
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          if [ "$(date -u +%H)" = "13" ] && [ "$(date -u +%M)" -lt 15 ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            python indexnow.py
+          else
+            echo "Not this run's turn."
+          fi
