@@ -2448,13 +2448,15 @@ def _pack(players):
     return out, rooms
 
 
-_packed, _rooms = _pack(players)
-payload = ("(function(P,R){function U(x){if(!x||!x.$k)return x;var k=x.$k;return x.$v.map(function(r){var o={};"
-           "for(var i=0;i<k.length;i++)o[k[i]]=r[i];return o})}"
-           "R=R.map(function(m){return m.map(function(e){if(e&&e.weekly&&e.weekly.$k){var o={};for(var j in e)o[j]=j==='weekly'?U(e.weekly):e[j];return o}return e})});"
-           "P.forEach(function(p){if(p.logs&&p.logs.$k)p.logs=U(p.logs);if(p.similar&&p.similar.$k)p.similar=U(p.similar);"
-           "if(p.room&&p.room.$r!=null)p.room=R[p.room.$r]});return P})("
-           + json.dumps(_packed, separators=(",", ":")) + "," + json.dumps(_rooms, separators=(",", ":")) + ")")
+def _payload_for(pl):
+    _packed, _rooms = _pack(pl)
+    return ("(function(P,R){function U(x){if(!x||!x.$k)return x;var k=x.$k;return x.$v.map(function(r){var o={};"
+            "for(var i=0;i<k.length;i++)o[k[i]]=r[i];return o})}"
+            "R=R.map(function(m){return m.map(function(e){if(e&&e.weekly&&e.weekly.$k){var o={};for(var j in e)o[j]=j==='weekly'?U(e.weekly):e[j];return o}return e})});"
+            "P.forEach(function(p){if(p.logs&&p.logs.$k)p.logs=U(p.logs);if(p.similar&&p.similar.$k)p.similar=U(p.similar);"
+            "if(p.room&&p.room.$r!=null)p.room=R[p.room.$r]});return P})("
+            + json.dumps(_packed, separators=(",", ":")) + "," + json.dumps(_rooms, separators=(",", ":")) + ")")
+payload = _payload_for(players)
 depth_json = "null"
 extra_json = json.dumps({"board": ADV_BOARD, "ftn": FTN_TEAMS, "logos": TEAM_LOGOS, "trades": TRADES, "lg": ADV_LG, "min": [round(float(globals().get("_minT", 0))), round(float(globals().get("_minC", 0)))]}, separators=(",", ":"))
 try:
@@ -9212,10 +9214,8 @@ html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("_
 os.makedirs("public", exist_ok=True)
 with open("public/index.html","w",encoding="utf-8") as f:f.write(html)
 import json as _js
-_pl=_js.loads(payload);assert isinstance(_pl,list) and len(_pl)>100
-for _r in _pl:
-    for _k in ('room','similar','adv','buckets'):_r.pop(_k,None)
-_slim=_js.dumps(_pl,separators=(',',':'),ensure_ascii=False)
+_pl=[{_k:_v for _k,_v in _r.items() if _k not in ('room','similar','adv','buckets')} for _r in players];assert len(_pl)>100
+_slim=_payload_for(_pl)
 assert html.count(payload)==1
 _fa = html.replace(payload,_slim,1).replace('<html lang="en"><head>','<html lang="en"><head><script>window.FM_FA=1;</script>',1)
 _fa = _fa.replace("<title>","<title>Fantasy App · ",1) if "<title>" in _fa else _fa
