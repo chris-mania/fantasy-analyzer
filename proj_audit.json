@@ -1,0 +1,85 @@
+{
+ "week": 9,
+ "items": [
+  {
+   "kind": "vegas line cut back",
+   "name": "Hunter Henry",
+   "stat": "td",
+   "line": 1.14,
+   "model": 0.3,
+   "used": 0.74
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "David Montgomery",
+   "stat": "td",
+   "line": 0.75,
+   "model": 0.29,
+   "used": 0.72
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Deebo Samuel Sr.",
+   "stat": "td",
+   "line": 0.69,
+   "model": 0.27,
+   "used": 0.67
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Dyami Brown",
+   "stat": "td",
+   "line": 0.6,
+   "model": 0.0,
+   "used": 0.3
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Treylon Burks",
+   "stat": "ryd",
+   "line": 271.0,
+   "model": 29.64,
+   "used": 74.1
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Luke Schoonmaker",
+   "stat": "td",
+   "line": 0.69,
+   "model": 0.03,
+   "used": 0.33
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Ke'Shawn Williams",
+   "stat": "td",
+   "line": 0.65,
+   "model": 0.0,
+   "used": 0.3
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "TreVeyon Henderson",
+   "stat": "td",
+   "line": 1.03,
+   "model": 0.15,
+   "used": 0.45
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Carsen Ryan",
+   "stat": "td",
+   "line": 0.65,
+   "model": 0.01,
+   "used": 0.31
+  },
+  {
+   "kind": "projection capped",
+   "name": "Jadarian Price",
+   "was": 10.1,
+   "now": 9.4,
+   "best_game": 7.8,
+   "avg": 4.9
+  }
+ ]
+}

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fantasymania.org/sitemap.xml
+Sitemap: https://fantasymania.org/sitemap-start.xml
