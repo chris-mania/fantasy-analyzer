@@ -202,7 +202,7 @@ addEventListener('load',function(){[300,900].forEach(function(t){setTimeout(func
 async function matchupApp(env, url, d, a, b) {
   const wk = d.next, v = verdict(d, a, b);
   const both = `${a.n} or ${b.n}`;
-  const title = `${both}? Who to Start in Week ${wk} (PPR) | Fantasy Mania`;
+  const title = `${both} | Who Should I Start? Week ${wk} | Fantasy Mania`;
   const desc = v.w ? `${v.line.replace(` in Week ${wk}.`, ` in Week ${wk} (PPR).`)} Projections, Mania Ratings, matchups, game logs and boom/bust. Free.` : v.line;
   const path = `/start/${[a.s, b.s].sort().join("-vs-")}/`;
   const ld = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [["Fantasy Mania", "/"], ["Start/Sit", "/start/"], [both, path]].map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c[0], item: SITE + c[1] })) };
@@ -216,7 +216,10 @@ async function matchupApp(env, url, d, a, b) {
     .on('head > meta[name^="twitter:"]', { element(e) { e.remove(); } })
     .on('meta[name="description"]', { element(e) { e.setAttribute("content", desc); } })
     .on('link[rel="canonical"]', { element(e) { e.setAttribute("href", SITE + path); } })
-    .on("#compare h1.title", { element(e) { e.setInnerContent(`${both}?`); e.after(`<p class="fmPpr">Week ${wk} start/sit · PPR scoring</p>`, { html: true }); } })
+    // Send the page with Compare already showing (not the homepage), so search engines see the matchup first.
+    .on("section#home", { element(e) { e.setAttribute("class", (e.getAttribute("class") || "").replace(/\bon\b/, "").trim()); } })
+    .on("section#compare", { element(e) { const c = e.getAttribute("class") || "view"; if (!/\bon\b/.test(c)) e.setAttribute("class", c + " on"); } })
+    .on("#compare h1.title", { element(e) { e.setInnerContent(`${both}: Who Should I Start?`); e.after(`<p class="fmPpr">Week ${wk} start/sit · PPR scoring</p>`, { html: true }); } })
     .on("body", { element(e) { e.append(seoSection(d, a, b, v) + opener(d, a, b, v), { html: true }); } })
     .transform(app);
   const h = new Headers(res.headers);
