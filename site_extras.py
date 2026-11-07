@@ -119,7 +119,35 @@ LLMS = """# Fantasy Mania
 - Full page lists: https://fantasymania.org/sitemap.xml and https://fantasymania.org/sitemap-start.xml
 """
 
-for step in (home_extras,):
+def app_view_extras(path="public/fantasy.html"):
+    """fantasy.html is the same app in a special view: point Google at the homepage and add the share preview."""
+    s = open(path, encoding="utf-8").read()
+    if 'rel="canonical"' in s:
+        return
+    i = s.find("</head>")
+    t = _re.search(r"<title>([^<]*)</title>", s)
+    s = s[:i] + '<link rel="canonical" href="%s/">' % SITE + share_tags(_html.unescape(t.group(1)) if t else "Fantasy Mania",
+        "Free fantasy football ratings, projections and start/sit help.", SITE + "/") + s[i:]
+    open(path, "w", encoding="utf-8").write(s)
+    print("site_extras: fantasy.html points to the homepage")
+
+
+NOT_FOUND = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Page not found | Fantasy Mania</title><meta name="robots" content="noindex"><link rel="icon" href="/apple-touch-icon.png">
+<style>body{margin:0;background:#e9edf2;color:#0b1830;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:12vh auto;padding:0 20px}.card{background:#fff;border-radius:20px;padding:28px;border:1px solid #e4eaf3}
+.brand{font-weight:900;font-style:italic;font-size:22px;letter-spacing:-.6px;text-decoration:none;color:#060709}.brand b{color:#1d4ed8}
+h1{font-size:30px;letter-spacing:-.6px;margin:18px 0 8px}p{color:#40474f;line-height:1.55;margin:0 0 18px}
+ul{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px}a.c{display:inline-flex;align-items:center;min-height:44px;padding:8px 16px;border-radius:99px;background:#fff;border:1px solid #d9dfe7;color:#0b1830;text-decoration:none;font-weight:700}
+a.c.p{background:#0b1830;color:#fff;border-color:#0b1830}</style></head><body><main><div class="card">
+<a class="brand" href="/">FANTASY <b>MANIA</b></a><h1>We couldn't find that page</h1>
+<p>The link may be old or mistyped. Here's where to go instead.</p>
+<ul><li><a class="c p" href="/">Open Fantasy Mania</a></li><li><a class="c" href="/start/">Who should I start?</a></li>
+<li><a class="c" href="/rankings/">Rankings</a></li><li><a class="c" href="/compare/">Player compare</a></li><li><a class="c" href="/trade/">Trade analyzer</a></li></ul>
+</div></main></body></html>
+"""
+
+for step in (home_extras, app_view_extras):
     try:
         step()
     except Exception as e:
@@ -128,6 +156,7 @@ try:
     if os.path.exists("og.png"):
         _shutil.copyfile("og.png", "public/og.png")
     open("public/llms.txt", "w").write(LLMS)
+    open("public/404.html", "w").write(NOT_FOUND)
     open("public/%s.txt" % INDEXNOW_KEY, "w").write(INDEXNOW_KEY)
     print("site_extras: og.png, llms.txt and Bing key written")
 except Exception as e:

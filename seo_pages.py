@@ -37,11 +37,11 @@ RANKS = [("ALL", "", "Fantasy Football Rankings"), ("QB", "qb/", "Fantasy Footba
 TOOLS = [
     ("trade", "Free Fantasy Football Trade Analyzer (%s PPR) | Fantasy Mania",
      "Free fantasy football trade analyzer. See who wins a trade by rest-of-season value, schedule strength and Mania Ratings. Works with ESPN and Sleeper leagues."),
-    ("compare", "Fantasy Football Player Comparison Tool: Compare Two Players (%s) | Fantasy Mania",
+    ("compare", "Fantasy Football Player Compare: Any Two Players (%s) | Fantasy Mania",
      "Free fantasy football player compare. Put any two players side by side: Mania Ratings, Week projections, usage, game logs and matchups. Compare whole fantasy teams too."),
     ("team", "Fantasy Football Team Analyzer: Start/Sit Help (%s) | Fantasy Mania",
      "Enter your fantasy football roster and get your best lineup, weekly projections and where your team is strong or weak. Free, PPR."),
-    ("insights", "Fantasy Football Insights: Injuries, Depth Charts, Matchups (%s) | Fantasy Mania",
+    ("insights", "Fantasy Football Injuries, Depth Charts & Matchups (%s) | Fantasy Mania",
      "Weekly fantasy football reports: injuries, depth charts, team share, defense vs. position, schedule strength and play style. Free."),
 ]
 TOOL_NAMES = {"trade": "Trade analyzer", "compare": "Player compare", "team": "Team analyzer", "insights": "Insights"}
@@ -324,7 +324,7 @@ def run():
             pn = POSN.get(p["pos"], p["pos"])
             rank_txt = ("%s%s" % (pn, p["prank"])) if p["prank"] else pn
             proj_txt = ("Week %s vs %s: %.1f PPR projected." % (nxt, p["opp"], p["pts"])) if p["pts"] is not None and p["opp"] else ""
-            title = "%s Fantasy Rating & Week %s Projection (%s) | Fantasy Mania" % (p["name"], nxt, season)
+            title = "%s Fantasy Rating & Week %s Projection | Fantasy Mania" % (p["name"], nxt)
             desc = ("%s (%s, %s): %s Mania Rating, %s in Fantasy Mania. %s Free %s PPR stats, game log, matchup and trade value."
                     % (p["name"], pn, p["team"], "%.1f" % p["mania"] if p["mania"] is not None else "—",
                        rank_txt, proj_txt, season)).replace("  ", " ")
