@@ -9151,12 +9151,12 @@ document.addEventListener('click',function(e){var c=e.target.closest&&e.target.c
  // if the typed name matches exactly one player, accept it
  function fill(k,i){if(P[k])return;var v=document.getElementById(i).value.toLowerCase().trim();if(!v)return;var m=allPlayers().concat(kdAllP()).filter(function(p){return p.name.toLowerCase()===v});if(m.length===1)P[k]=m[0]}
  window.fmOpenStart=function(a,b){showView('compare');A=a;B=b;selA=dflC(a);selB=dflC(b);var x=document.getElementById('aQ'),y=document.getElementById('bQ');if(x)x.value=a.name;if(y)y.value=b.name;renderCompare()};
- document.getElementById('hsGo').onclick=function(){fill('A','hsA');fill('B','hsB');var m=document.getElementById('hsMsg');if(!P.A||!P.B||P.A===P.B){m.textContent=(!P.A||!P.B)?'Pick two players first.':'Pick two different players.';m.classList.add('on');return}m.classList.remove('on');fmOpenStart(P.A,P.B)};
+ document.getElementById('hsGo').onclick=function(){fill('A','hsA');fill('B','hsB');var m=document.getElementById('hsMsg');if(!P.A||!P.B||P.A===P.B){m.textContent=(!P.A||!P.B)?'Pick two players first.':'Pick two different players.';m.classList.add('on');return}m.classList.remove('on');location.href='/start/?a='+encodeURIComponent(P.A.id)+'&b='+encodeURIComponent(P.B.id)};
  // Copy link on the answer
  var rc=renderCompare;renderCompare=function(){var r=rc.apply(this,arguments);try{addCopy()}catch(e){}return r};
  function addCopy(){var c=document.getElementById('compare');if(!c.classList.contains('cmpRes')||!A||!B||A.kd||B.kd&&0)return;var cb=document.getElementById('compareBody');if(!cb||cb.querySelector('.hmCp'))return;
   var b=document.createElement('button');b.type='button';b.className='hmCp';b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><span>Copy link to this answer</span>';
-  b.onclick=function(){var u=location.origin+location.pathname+'#c='+encodeURIComponent(A.id)+','+encodeURIComponent(B.id),t=b.querySelector('span'),ok=function(){t.textContent='Link copied';setTimeout(function(){t.textContent='Copy link to this answer'},1800)};
+  b.onclick=function(){var u=location.origin+'/start/?a='+encodeURIComponent(A.id)+'&b='+encodeURIComponent(B.id),t=b.querySelector('span'),ok=function(){t.textContent='Link copied';setTimeout(function(){t.textContent='Copy link to this answer'},1800)};
    var fb=function(){var x=document.createElement('textarea');x.value=u;x.style.position='fixed';x.style.opacity='0';document.body.appendChild(x);x.select();try{document.execCommand('copy');ok()}catch(e){t.textContent=u}document.body.removeChild(x)};
    try{navigator.clipboard.writeText(u).then(ok,fb)}catch(e){fb()}};
   cb.insertBefore(b,cb.firstChild)}

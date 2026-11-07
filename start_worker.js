@@ -23,7 +23,16 @@ export default {
     try {
       const data = await load(env, url);
       const rest = url.pathname.slice("/start/".length).replace(/\/+$/, "");
-      if (!rest) return html(hub(data), 200);
+      if (!rest) {
+        // /start/?a=<id>&b=<id> (homepage box, copied links): go to that pair's page, or the app's Compare if unknown
+        const ia = url.searchParams.get("a"), ib = url.searchParams.get("b");
+        if (ia && ib) {
+          const pa = data.byId[ia], pb = data.byId[ib];
+          if (pa && pb && pa !== pb) return Response.redirect(url.origin + "/start/" + [pa.s, pb.s].sort().join("-vs-") + "/", 302);
+          return Response.redirect(url.origin + "/#c=" + encodeURIComponent(ia) + "," + encodeURIComponent(ib), 302);
+        }
+        return html(hub(data), 200);
+      }
       if (!url.pathname.endsWith("/")) return Response.redirect(url.origin + url.pathname + "/" + url.search, 301);
       const i = rest.indexOf("-vs-");
       const a = i > 0 ? data.by[rest.slice(0, i)] : null, b = i > 0 ? data.by[rest.slice(i + 4)] : null;
@@ -42,8 +51,8 @@ async function load(env, url) {
   const r = await env.ASSETS.fetch(new Request(url.origin + "/start-data.json"));
   if (!r.ok) throw new Error("no data");
   const d = await r.json();
-  d.by = {};
-  d.players.forEach((p) => { d.by[p.s] = p; });
+  d.by = {}; d.byId = {};
+  d.players.forEach((p) => { d.by[p.s] = p; d.byId[p.id] = p; });
   CACHE = { at: Date.now(), data: d };
   return d;
 }
