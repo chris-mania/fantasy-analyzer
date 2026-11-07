@@ -199,11 +199,22 @@ addEventListener('load',function(){[300,900].forEach(function(t){setTimeout(func
 })();</script>`;
 }
 
+// What Google shows under the title: the pick, both projections, both position ranks and how big the edge is.
+function snippet(d, v, a, b) {
+  const wk = d.next, w = v.w, l = w === a ? b : a;
+  if (v.tag === "Easy call") return `${v.line} Week ${wk} PPR start/sit from Fantasy Mania.`;
+  const gap = Math.abs((pts(w) || 0) - (pts(l) || 0));
+  const call = gap < 1 ? "It's a close call" : gap < 3 ? "A solid edge" : "An easy call";
+  const rk = (p) => (p.wk ? `${posName(p.pos)}${p.wk}` : null);
+  const ranks = rk(w) && rk(l) ? ` (${rk(w)} vs ${rk(l)} this week)` : "";
+  return `Start ${w.n} over ${l.n} in Week ${wk} (PPR). ${call}: ${short(w)} projects ${f1(pts(w))} points vs ${f1(pts(l))} for ${short(l)}${ranks}. Matchups, game logs and boom/bust inside.`;
+}
+
 async function matchupApp(env, url, d, a, b) {
   const wk = d.next, v = verdict(d, a, b);
   const both = `${a.n} or ${b.n}`;
   const title = `${both} | Who Should I Start? Week ${wk} | Fantasy Mania`;
-  const desc = v.w ? `${v.line.replace(` in Week ${wk}.`, ` in Week ${wk} (PPR).`)} Projections, Mania Ratings, matchups, game logs and boom/bust. Free.` : v.line;
+  const desc = v.w ? snippet(d, v, a, b) : v.line;
   const path = `/start/${[a.s, b.s].sort().join("-vs-")}/`;
   const ld = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [["Fantasy Mania", "/"], ["Start/Sit", "/start/"], [both, path]].map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c[0], item: SITE + c[1] })) };
   const headExtra = `${listed(d, a, b) ? "" : '<meta name="robots" content="noindex,follow">'}<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}${path}"><meta property="og:image" content="https://fantasymania.org/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/og.png"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script><style>${APP_CSS}</style>`;
