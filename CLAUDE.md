@@ -16,4 +16,8 @@
 - site_extras.py also adds the homepage "Who should I start?" button and "Explore Fantasy Mania" links, the
   share preview (og.png + og/twitter tags), llms.txt and the Bing IndexNow key file (key in site_extras_key.py).
   indexnow.py runs after deploy once a day and sends the sitemap pages to Bing.
+- Page size: build.py packs the player data before writing the page (`_pack` near `payload =`): each team's
+  position group ("room") is stored once, and game logs / similar players / weekly room rows store field
+  names once. A small function in the payload rebuilds the exact same DB before the app runs. Keep that
+  step when editing the payload; new per-player fields work as usual.
 - The live site is https://fantasymania.org.

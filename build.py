@@ -2417,7 +2417,44 @@ if schedule_ok and {"week", "home_team", "away_team"}.issubset(games.columns):
         opps.setdefault(h, {})[wk] = a
         opps.setdefault(a, {})[wk] = h
 
-payload = json.dumps(players, separators=(",", ":"))
+# ---- Smaller page, same data (see CLAUDE.md) ----
+# Each team's position group ("room") is stored once and shared, and lists of same-shaped rows (game logs,
+# similar players, weekly room usage) store their field names once. The page rebuilds the exact same DB
+# before any app code runs, so nothing else changes.
+def _cols(lst):
+    if not isinstance(lst, list) or len(lst) < 2 or not all(isinstance(x, dict) for x in lst):
+        return lst
+    keys = list(lst[0].keys())
+    if any(list(x.keys()) != keys for x in lst):
+        return lst
+    return {"$k": keys, "$v": [[x[k] for k in keys] for x in lst]}
+
+
+def _pack(players):
+    rooms, room_ix, out = [], {}, []
+    for pl in players:
+        q = dict(pl)
+        for k in ("logs", "similar"):
+            if k in q:
+                q[k] = _cols(q[k])
+        if isinstance(q.get("room"), list):
+            key = json.dumps(q["room"], separators=(",", ":"), sort_keys=False)
+            if key not in room_ix:
+                room_ix[key] = len(rooms)
+                rooms.append([dict(m, weekly=_cols(m["weekly"])) if isinstance(m, dict) and isinstance(m.get("weekly"), list) else m
+                              for m in q["room"]])
+            q["room"] = {"$r": room_ix[key]}
+        out.append(q)
+    return out, rooms
+
+
+_packed, _rooms = _pack(players)
+payload = ("(function(P,R){function U(x){if(!x||!x.$k)return x;var k=x.$k;return x.$v.map(function(r){var o={};"
+           "for(var i=0;i<k.length;i++)o[k[i]]=r[i];return o})}"
+           "R=R.map(function(m){return m.map(function(e){if(e&&e.weekly&&e.weekly.$k){var o={};for(var j in e)o[j]=j==='weekly'?U(e.weekly):e[j];return o}return e})});"
+           "P.forEach(function(p){if(p.logs&&p.logs.$k)p.logs=U(p.logs);if(p.similar&&p.similar.$k)p.similar=U(p.similar);"
+           "if(p.room&&p.room.$r!=null)p.room=R[p.room.$r]});return P})("
+           + json.dumps(_packed, separators=(",", ":")) + "," + json.dumps(_rooms, separators=(",", ":")) + ")")
 depth_json = "null"
 extra_json = json.dumps({"board": ADV_BOARD, "ftn": FTN_TEAMS, "logos": TEAM_LOGOS, "trades": TRADES, "lg": ADV_LG, "min": [round(float(globals().get("_minT", 0))), round(float(globals().get("_minC", 0)))]}, separators=(",", ":"))
 try:
