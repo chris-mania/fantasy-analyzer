@@ -37,16 +37,28 @@ jobs:
           pip install pandas requests
 
       - name: Run Build Script (retries if the data source hiccups)
+        id: b
         env:
           SGO_KEY: ${{ secrets.SGO_KEY }}
           REQUIRE_SCHEDULE: '1'
+        # If the free data source is down (it was for about 2 hours on Nov 8), don't fail and send alert emails:
+        # skip this round, keep the last published site, and the next run tries again in 15 minutes.
         run: |
-          python build.py || (sleep 45 && python build.py) || (sleep 90 && python build.py)
+          if python build.py 2>&1 | tee /tmp/b.log; [ "${PIPESTATUS[0]}" = 0 ] || (sleep 45 && python build.py 2>&1 | tee /tmp/b.log; [ "${PIPESTATUS[0]}" = 0 ]) || (sleep 90 && python build.py 2>&1 | tee /tmp/b.log; [ "${PIPESTATUS[0]}" = 0 ]); then
+            echo "ok=1" >> "$GITHUB_OUTPUT"
+          elif grep -qE "HTTP Error 5[0-9][0-9]|Gateway Time-out|timed out|Connection reset|RemoteDisconnected" /tmp/b.log; then
+            echo "Data source is down right now. Keeping the last published site; the next run will try again."
+          else
+            echo "Build failed for a reason other than the data source being down."
+            exit 1
+          fi
 
       - name: Add the domain move, Google tags, robots.txt and sitemap (keep this step)
+        if: steps.b.outputs.ok == '1'
         run: python site_extras.py
 
       - name: Player, rankings and start/sit pages for Google (about once an hour; keep these steps)
+        if: steps.b.outputs.ok == '1'
         # Makes no API calls: it only reads the page build.py just made. If it fails, runs long or it isn't
         # its turn, the next step keeps the last published pages and the site still publishes normally.
         continue-on-error: true
@@ -61,7 +73,7 @@ jobs:
           fi
 
       - name: Keep the last good Google pages if this run didn't make new ones (keep this step)
-        if: always()
+        if: always() && steps.b.outputs.ok == '1'
         run: |
           rm -rf public/_seo_tmp
           keep=""
@@ -76,6 +88,7 @@ jobs:
           ls public | head -40
 
       - name: Check the page is real before publishing
+        if: steps.b.outputs.ok == '1'
         run: |
           test -s public/index.html
           size=$(wc -c < public/index.html)
@@ -83,6 +96,7 @@ jobs:
           test "$size" -gt 300000
 
       - name: Deploy to GitHub Pages
+        if: steps.b.outputs.ok == '1'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -90,6 +104,7 @@ jobs:
           force_orphan: true   # keep only the latest published copy so the branch doesn't grow with every update
 
       - name: Tell Bing about the pages (once a day; never blocks anything)
+        if: steps.b.outputs.ok == '1'
         continue-on-error: true
         timeout-minutes: 3
         run: |
