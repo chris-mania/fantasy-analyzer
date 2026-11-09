@@ -9185,7 +9185,7 @@ document.addEventListener('click',function(e){var c=e.target.closest&&e.target.c
   if(id==='hsOpen'){ss.dataset.open=1;ss.classList.remove('deskHid');ss.scrollIntoView({behavior:'smooth',block:'center'});var i=document.getElementById('hsA');if(i)i.focus();return}
   var t=document.getElementById(id);if(t)t.click()});
  var P={A:null,B:null};
- function mk(i,d,k){searchBox(i,d,function(p){P[k]=p});document.getElementById(i).addEventListener('input',function(){P[k]=null})}
+ function mk(i,d,k){searchBox(i,d,function(p){P[k]=p},true);document.getElementById(i).addEventListener('input',function(){P[k]=null})}
  mk('hsA','hsAD','A');mk('hsB','hsBD','B');
  // if the typed name matches exactly one player, accept it
  function fill(k,i){if(P[k])return;var v=document.getElementById(i).value.toLowerCase().trim();if(!v)return;var m=allPlayers().concat(kdAllP()).filter(function(p){return p.name.toLowerCase()===v});if(m.length===1)P[k]=m[0]}
