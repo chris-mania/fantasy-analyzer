@@ -6602,10 +6602,10 @@ function trRoomScore(a,fn,pos,c,k){let r=c.repl[pos],x=i=>a[i]?fn(a[i]):r,kk=(po
  if(kk<2)return x(0)+(pos==='TE'?.2*Math.max(0,x(1)-r):0);
  let w=[];for(let i=0;i<kk;i++)w.push(1.2-.2*i);let sw=w.reduce((s,y)=>s+y,0),t=0;for(let i=0;i<kk;i++)t+=w[i]*x(i);let m=t/sw;
  if(pos==='RB'||pos==='WR')m+=(.3*Math.max(0,x(kk)-r)+.1*Math.max(0,x(kk+1)-r))/kk;else if(pos==='TE')m+=.2*Math.max(0,x(kk)-r)/kk;return m}
-function trPosMine(ids,key,pos,c){let V=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone),fn=v=>key==='now'?v.nowAvg:v.later,k=Math.max(1,Math.round(c.S[pos])),a=V.filter(v=>v.p.pos===pos&&fn(v)!=null).sort((x,y)=>fn(y)-fn(x)),top=a.slice(0,k);return trRoomScore(a,fn,pos,c,k)}
+function trPosMine(ids,key,pos,c){let V=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone),fn=v=>key==='now'?v.nowAvg:(v.pl.R>=3&&v.later!=null?v.later*.55:v.later),k=Math.max(1,Math.round(c.S[pos])),a=V.filter(v=>v.p.pos===pos&&fn(v)!=null).sort((x,y)=>fn(y)-fn(x)),top=a.slice(0,k);return trRoomScore(a,fn,pos,c,k)}
 let TRPR={};
 function trPosRef(key,pos,c){if(typeof lgOn!=='function'||!lgOn()||!TR.lgAll||TR.lgAll.length<3)return null;let ck=c.key+'|'+key+'|'+pos+'|'+TR.lgAll.map(t=>t.ids.join(',')).join(';');if(TRPR.k===ck+'')return TRPR.v;TRPR={k:ck,v:TR.lgAll.map(t=>trPosMine(t.ids,key,pos,c))};return TRPR.v}
-function trNeeds(ids,key){let c=trCtx(),V=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone),fn=v=>key==='now'?v.nowAvg:v.later;
+function trNeeds(ids,key){let c=trCtx(),V=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone),fn=v=>key==='now'?v.nowAvg:(v.pl.R>=3&&v.later!=null?v.later*.55:v.later);
  return TRPOS.map(pos=>{let k=Math.max(1,Math.round(c.S[pos])),a=V.filter(v=>v.p.pos===pos&&fn(v)!=null).sort((x,y)=>fn(y)-fn(x)),top=a.slice(0,k),sum=top.reduce((s,v)=>s+fn(v),0)+(k-top.length)*c.repl[pos],mine=trRoomScore(a,fn,pos,c,k),lg=c.avg[pos],pct=lg?(mine-lg)/lg:0,gap=pct,
   ideal=pos==='QB'&&TR.sf?2:TRIDEAL[pos];
   let ref=null;try{ref=trPosRef(key,pos,c)}catch(e){ref=null}
