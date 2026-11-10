@@ -18,6 +18,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.hostname === "fantasymania.pages.dev") return Response.redirect(SITE + url.pathname + url.search, 301);
+    if (url.pathname.startsWith("/trade/") && url.pathname.includes("-for-")) {
+      try { return await tradeRoute(env, url); } catch (e) { return env.ASSETS.fetch(new Request(url.origin + "/trade/")); }
+    }
     if (!url.pathname.startsWith("/start")) return env.ASSETS.fetch(request);
     if (url.pathname === "/start") return Response.redirect(url.origin + "/start/", 301);
     try {
@@ -45,6 +48,93 @@ export default {
     }
   },
 };
+
+// ---------- shared trade links: /trade/<a>-and-<b>-for-<c>/ (any players, any size, made on request) ----------
+const TR_DEF = { n: 10, sf: false, hz: "ros", st: "1-2-2-1-1" };
+function parseSide(d, s) {
+  const parts = s.split("-and-"), memo = {};
+  const go = (i) => {
+    if (i === parts.length) return [];
+    if (i in memo) return memo[i];
+    for (let j = i + 1; j <= parts.length; j++) {
+      const p = d.by[parts.slice(i, j).join("-and-")];
+      if (p) { const r = go(j); if (r) return (memo[i] = [p].concat(r)); }
+    }
+    return (memo[i] = null);
+  };
+  return go(0);
+}
+function parseTrade(d, rest) {
+  let i = -1;
+  while ((i = rest.indexOf("-for-", i + 1)) > 0) {
+    const g = parseSide(d, rest.slice(0, i)), t = parseSide(d, rest.slice(i + 5));
+    if (g && t) {
+      const uniq = (a) => a.filter((p, k) => a.indexOf(p) === k);
+      const G = uniq(g), T = uniq(t).filter((p) => !G.includes(p));
+      if (G.length && T.length && G.length <= 8 && T.length <= 8) return { g: G, t: T };
+    }
+  }
+  return null;
+}
+function tradeOpts(url) {
+  const q = url.searchParams, o = {}, out = [];
+  const n = parseInt(q.get("n"), 10);
+  if (n >= 4 && n <= 32 && n !== TR_DEF.n) { o.n = n; out.push("n=" + n); }
+  if (q.get("sf") === "1") { o.sf = true; out.push("sf=1"); }
+  const hz = q.get("hz");
+  if (hz && /^[a-z0-9]{2,8}$/.test(hz) && hz !== TR_DEF.hz) { o.hz = hz; out.push("hz=" + hz); }
+  const st = q.get("st");
+  if (st && /^\d-\d-\d-\d-\d$/.test(st) && st !== TR_DEF.st) {
+    const v = st.split("-").map(Number); o.st = { QB: v[0], RB: v[1], WR: v[2], TE: v[3], FLEX: v[4] }; out.push("st=" + st);
+  }
+  return { o, qs: out.length ? "?" + out.join("&") : "" };
+}
+async function tradeRoute(env, url) {
+  const d = await load(env, url);
+  const rest = url.pathname.slice("/trade/".length).replace(/\/+$/, "");
+  const tr = parseTrade(d, rest);
+  if (!tr) return env.ASSETS.fetch(new Request(url.origin + "/trade/"));
+  const { o, qs } = tradeOpts(url);
+  const slug = (a) => a.map((p) => p.s).sort().join("-and-");
+  const path = `/trade/${slug(tr.g)}-for-${slug(tr.t)}/`;
+  if (url.pathname !== path || url.search !== qs) return Response.redirect(url.origin + path + qs, 301);
+  return tradeApp(env, url, d, tr, o, path + qs);
+}
+async function tradeApp(env, url, d, tr, o, path) {
+  const list = (a) => a.length === 1 ? a[0].n : a.length === 2 ? `${a[0].n} + ${a[1].n}` : a.slice(0, -1).map((p) => p.n).join(", ") + " + " + a[a.length - 1].n;
+  const G = list(tr.g), T = list(tr.t);
+  const title = `${G} for ${T}: Who Wins the Trade? | Fantasy Mania`;
+  const fact = (p) => `${p.n} (${posName(p.pos)}, ${p.tm}${p.out ? ", out" : p.inj ? ", " + String(p.inj).toLowerCase() : ""})`;
+  const lg = `${o.n || 10}-team${o.sf ? " superflex" : ""} PPR`;
+  const desc = `Trade check: ${tr.g.map(fact).join(", ")} for ${tr.t.map(fact).join(", ")}. Fantasy Mania compares rest-of-season value, injuries and byes for a ${lg} league and tells you which side wins. Free.`;
+  const ld = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [["Fantasy Mania", "/"], ["Trade Analyzer", "/trade/"], [`${G} for ${T}`, path]].map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c[0], item: SITE + c[1] })) };
+  const headExtra = `<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(`${G} for ${T}: who wins the trade?`)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${esc(SITE + path)}"><meta property="og:image" content="https://fantasymania.org/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/og.png"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`;
+  const ids = (a) => a.map((p) => p.id);
+  const open = `<script>(function(){var G=${JSON.stringify(ids(tr.g))},T=${JSON.stringify(ids(tr.t))},O=${JSON.stringify(o).replace(/</g, "\\u003c")},touched=false,tries=0;
+['pointerdown','keydown'].forEach(function(e){addEventListener(e,function(){touched=true},{capture:true,once:true})});
+function ready(){return typeof TR!=='undefined'&&typeof trRenderAll==='function'&&typeof showView==='function'&&typeof DB!=='undefined'}
+function go(){if(!ready()){if(++tries<250)setTimeout(go,40);return}if(touched)return;TR.mode='quick';TR.give=G.slice();TR.get=T.slice();TR.n=O.n||10;TR.sf=!!O.sf;TR.hz=O.hz||'ros';if(O.st)TR.st=O.st;else TR.st={QB:1,RB:2,WR:2,TE:1,FLEX:1};
+try{showView('trade');var bk=document.querySelector('#trHub .thBack');if(bk)bk.click();var ck=document.querySelector('#trHub .thCard[data-go="check"]');if(ck)ck.click()}catch(e){}TR.mode='quick';TR.give=G.slice();TR.get=T.slice();try{trRenderAll()}catch(e){}}
+go();addEventListener('load',function(){setTimeout(go,300);setTimeout(go,900)})})();</script>`;
+  const app = await env.ASSETS.fetch(new Request(url.origin + "/index.html"));
+  if (!app.ok) throw new Error("no app");
+  const res = new HTMLRewriter()
+    .on("head", { element(e) { e.prepend('<base href="/">', { html: true }); e.append(headExtra, { html: true }); } })
+    .on("head > title", { element(e) { e.setInnerContent(title); } })
+    .on('head > meta[property^="og:"]', { element(e) { e.remove(); } })
+    .on('head > meta[name^="twitter:"]', { element(e) { e.remove(); } })
+    .on('meta[name="description"]', { element(e) { e.setAttribute("content", desc); } })
+    .on('link[rel="canonical"]', { element(e) { e.setAttribute("href", SITE + path); } })
+    .on("section#home", { element(e) { e.setAttribute("class", (e.getAttribute("class") || "").replace(/\bon\b/, "").trim()); } })
+    .on("section#trade", { element(e) { const c = e.getAttribute("class") || "view"; if (!/\bon\b/.test(c)) e.setAttribute("class", c + " on"); } })
+    .on("#trade h1.title", { element(e) { e.setInnerContent(`${G} for ${T}: Who Wins?`); e.after(`<p class="fmPpr">Trade check · ${esc(lg)} · rest of season</p>`, { html: true }); } })
+    .on("body", { element(e) { e.append(`<style>${APP_CSS}</style>` + open, { html: true }); } })
+    .transform(app);
+  const h = new Headers(res.headers);
+  h.set("content-type", "text/html; charset=utf-8");
+  h.set("cache-control", "public, max-age=300");
+  return new Response(res.body, { status: 200, headers: h });
+}
 
 async function load(env, url) {
   if (CACHE.data && Date.now() - CACHE.at < 120000) return CACHE.data;

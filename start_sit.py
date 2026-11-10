@@ -179,6 +179,6 @@ def build(rows, slugs, meta, out_dir, here):
         f.write("</urlset>\n")
     shutil.copyfile(os.path.join(here, "start_worker.js"), os.path.join(out_dir, "_worker.js"))
     with open(os.path.join(out_dir, "_routes.json"), "w") as f:
-        json.dump({"version": 1, "include": ["/start", "/start/*"], "exclude": []}, f)
+        json.dump({"version": 1, "include": ["/start", "/start/*", "/trade/*"], "exclude": []}, f)
     print("start_sit: %d players, %d pairs listed for Google" % (len(players), len(pairs)))
     return links

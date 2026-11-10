@@ -17,6 +17,9 @@
   start-data.json, sitemap-start.xml, _routes.json and copies start_worker.js to public/_worker.js. The
   worker makes each matchup page on request and only runs for /start addresses. Pair rules and nicknames
   are at the top of start_sit.py.
+- Shared trade links (/trade/<a>-and-<b>-for-<c>/, optional ?n=&sf=1&hz=&st=): the same worker (start_worker.js,
+  routes in start_sit.py) opens the app's Quick Trade with those players; the app's "Copy trade link" button
+  (fmTradeLink in build.py) makes them. Not in any sitemap.
 - site_extras.py also adds the homepage "Who should I start?" button and "Explore Fantasy Mania" links, the
   share preview (og.png + og/twitter tags), llms.txt and the Bing IndexNow key file (key in site_extras_key.py).
   indexnow.py runs after deploy once a day and sends the sitemap pages to Bing.
