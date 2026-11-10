@@ -664,6 +664,11 @@ def _qb_rows_played(S):
     return r
 
 
+QB_START = {}   # team -> player_id of the quarterback known to start (set by build.py)
+QB_OUT = set()   # player_ids of quarterbacks ruled out for the year (set by build.py)
+QB_MOVES = {}   # player_id -> new team, for quarterbacks traded after their last game (set by build.py)
+
+
 def qb_project(S, inj, ctx, season, next_week, opp_map, names):
     """Project the starting QB of every team that plays in next_week. Returns DataFrame indexed by player_id."""
     Sq = _qb_numeric(S[S.position == "QB"])
@@ -671,11 +676,21 @@ def qb_project(S, inj, ctx, season, next_week, opp_map, names):
     cw["attempts"] = cw.attempts * (STARTER_DECAY ** (next_week - 1 - cw.week).clip(lower=0))
     cur = cw.groupby(["team", "player_id"]).attempts.sum().reset_index()
     prv = Sq[(Sq.season == season - 1)].groupby(["team", "player_id"]).attempts.sum().reset_index()
+    for _pid, _tm in QB_MOVES.items():
+        cur.loc[cur.player_id == _pid, "team"] = _tm
+        prv.loc[prv.player_id == _pid, "team"] = _tm
+    cur = cur[~cur.player_id.isin(QB_OUT)]
+    prv = prv[~prv.player_id.isin(QB_OUT)]
+    cur = cur.groupby(["team", "player_id"], as_index=False).attempts.sum()
+    prv = prv.groupby(["team", "player_id"], as_index=False).attempts.sum()
+    _played_now = set(cur.player_id)   # last year's passers who already played this season (maybe for another team) are not this team's fallback
     rows, meta = [], {}
     for team, opp in opp_map.items():
         c = cur[cur.team == team].sort_values("attempts", ascending=False)
         p = prv[prv.team == team].sort_values("attempts", ascending=False)
-        cands = list(c.player_id) + [x for x in p.player_id if x not in set(c.player_id)]
+        cands = list(c.player_id) + [x for x in p.player_id if x not in set(c.player_id) and x not in _played_now]
+        if QB_START.get(team):
+            cands = [QB_START[team]] + [x for x in cands if x != QB_START[team]]
         if not cands:
             continue
         starter = cands[0]

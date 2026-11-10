@@ -873,6 +873,12 @@ inj_boost = {}       # player_id -> total rating change from teammates' injuries
 inj_why = {}         # player_id -> list of teammates driving that change
 depth_info = {}
 TRADED = {}
+MANUAL_MOVES = {"Kirk Cousins": "MIN", "Keenan Allen": "SF", "Josh Downs": "KC", "Jacoby Brissett": "BAL"}   # trade deadline Nov 6-10
+QB_MOVES_B = {}
+MANUAL_OUT_QB = ["Gardner Minshew", "Lamar Jackson"]   # out for the year (same as FMOUT in the page script)
+QB_OUT_B = set()
+MANUAL_QB_START = {"BAL": "Jacoby Brissett"}   # Fagnano struggled in his one start; Brissett arrived Nov 6 (confirm Wednesday)
+QB_START_B = {}
 DEPTH_RAW = None
 DEPTH_REF = None
 inj_repl = {}
@@ -992,6 +998,21 @@ if not AS_OF_WEEK:
                 _nm_t, _to_t = _kv.split(":", 1)
                 for _pid_t in g.loc[g["player_name"] == _nm_t.strip(), "player_id"]:
                     TRADED[_pid_t] = {"from": str(_last_t.get(_pid_t, "")), "to": _to_t.strip()}
+            # Trades the roster file has not picked up yet (checked by hand against the trackers). Safe to leave in once the roster catches up.
+            for _nm_m, _to_m in MANUAL_MOVES.items():
+                _pids_m = set(g.loc[g["player_name"] == _nm_m, "player_id"])
+                _qb_m = set(stats.loc[(stats["position"] == "QB") & (stats["player_display_name"] == _nm_m), "player_id"]) if "player_display_name" in stats.columns else set()
+                for _pid_t in _pids_m | _qb_m:
+                    _f_m = str(_last_t.get(_pid_t, ""))
+                    if _f_m != _to_m:
+                        TRADED[_pid_t] = {"from": _f_m, "to": _to_m}
+                for _pid_t in _qb_m:
+                    QB_MOVES_B[_pid_t] = _to_m
+            for _tm_s, _nm_s in MANUAL_QB_START.items():
+                for _pid_t in stats.loc[(stats["position"] == "QB") & (stats["player_display_name"] == _nm_s), "player_id"].unique()[:1]:
+                    QB_START_B[_tm_s] = _pid_t
+            if "player_display_name" in stats.columns:
+                QB_OUT_B.update(stats.loc[(stats["position"] == "QB") & stats["player_display_name"].isin(MANUAL_OUT_QB), "player_id"])
             print(f"   {len(TRADED)} players changed teams since their last game; they use our own projection until Vegas posts lines.")
         except Exception as e:
             print("   Roster team check unavailable:", e)
@@ -1543,6 +1564,9 @@ if not AS_OF_WEEK and schedule_ok and week_has_games:
     try:
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         import proj_engine
+        proj_engine.QB_MOVES = dict(QB_MOVES_B)
+        proj_engine.QB_OUT = set(QB_OUT_B)
+        proj_engine.QB_START = dict(QB_START_B)
         _ros = g[["player_id", "position", "team", "opponent"]].rename(columns={"opponent": "opponent_team"}).copy()
         _ros["opponent_team"] = _ros["opponent_team"].astype(str)
         _ros["team"] = [TRADED.get(a_, {}).get("to", t_) for a_, t_ in zip(_ros["player_id"], _ros["team"])]
@@ -1723,6 +1747,7 @@ if not AS_OF_WEEK and schedule_ok and week_has_games:
                 if pid_ in _have:
                     continue
                 _tm_ = str(_nmq.loc[pid_, _tcq])
+                _tm_ = QB_MOVES_B.get(pid_, _tm_)
                 x_ = _qrow(pid_, str(_nmq.loc[pid_, _dnq]), _tm_)
                 x_.update({"opp": str(dict(opp_map).get(_tm_, "BYE")), "sub": False, "proj": None, "inj": None, "played": PLAYED_QB.get(pid_)})
                 QBS.append(x_)
