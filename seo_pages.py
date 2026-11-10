@@ -130,6 +130,9 @@ var APP=%(app)s;
 try{var nv0=performance.getEntriesByType('navigation')[0];if(nv0&&nv0.type==='reload'){location.replace(APP);return}}catch(e){}
 document.addEventListener('click',function(e){var t=e.target;if(!t.closest)return;
  if(t.closest('a[href]'))return;
+ if(t.closest('#profCopy')){e.preventDefault();e.stopPropagation();var cu=location.origin+location.pathname,cb=t.closest('#profCopy');
+  if(navigator.share&&matchMedia('(pointer:coarse)').matches){navigator.share({title:document.title,url:cu}).catch(function(){});return}
+  if(navigator.clipboard)navigator.clipboard.writeText(cu).then(function(){cb.textContent='Copied!'},function(){prompt('Copy this link',cu)});else prompt('Copy this link',cu);return}
  var nv=t.closest('.topbar [data-v]');if(nv){e.preventDefault();e.stopPropagation();location.href='/#v='+nv.dataset.v;return}
  if(t.closest('.topbar .logo,.topbar .brand')){location.href='/';return}
  var hit=t.closest('#seoMain button,#seoMain [data-k],#seoMain [data-board],#seoMain [role=button],#seoMain summary,#seoMain select,#seoMain input,#seoMain .backBtn');
