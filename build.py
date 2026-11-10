@@ -6549,7 +6549,9 @@ function trSave(){if(TR.lg[TR.lgi])TR.lg[TR.lgi].ids=TR.their.slice();try{localS
 const trSoft=x=>1.4*Math.log(1+Math.exp(x/1.4)),trN=v=>v==null||isNaN(v)?'—':Math.abs(v)>=10?String(Math.round(v)):(Math.round(v*10)/10).toFixed(1).replace(/\.0$/,'');
 function trGameWeeks(team){let o=(META.opps||{})[team]||{},a=[];for(let w=META.next_week;w<=TRLAST;w++)if(o[w])a.push(w);return a}
 function trBye(team){let o=(META.opps||{})[team]||{};for(let w=1;w<=18;w++)if(!o[w])return w;return 0}
-function trPlan(p){let i=p.inj,lab=((i&&i.label)||''),l=lab.toLowerCase(),out=!!p.out||(i&&i.avail!=null&&i.avail<=.1),R=0,gone=false,lw=0,missed=0;(p.logs||[]).forEach(x=>{if(x.w>lw&&x.snap>0)lw=x.w});if(lw>0)missed=Math.max(0,(META.week||0)-lw);
+var FMOUT={"Michael Wilson":{gone:1,label:"Out for the year"},"De'Von Achane":{gone:1,label:"Out for the year"},"Gardner Minshew":{gone:1,label:"Out for the year"},"Josh Jacobs":{back:14,label:"Out at least 4 weeks"},"Puka Nacua":{back:14,label:"Out at least 4 weeks"}};
+function fmManual(p){var m=p&&FMOUT[p.name];if(!m)return null;if(m.gone)return {out:true,R:99,gone:true,label:m.label,missed:0};var R=Math.max(0,m.back-(META.next_week||0));return R>0?{out:true,R:R,gone:false,label:m.label,missed:0}:null}
+function trPlan(p){let mo=fmManual(p);if(mo)return mo;let i=p.inj,lab=((i&&i.label)||''),l=lab.toLowerCase(),out=!!p.out||(i&&i.avail!=null&&i.avail<=.1),R=0,gone=false,lw=0,missed=0;(p.logs||[]).forEach(x=>{if(x.w>lw&&x.snap>0)lw=x.w});if(lw>0)missed=Math.max(0,(META.week||0)-lw);
  if(out){R=/injured/.test(l)?Math.max(1,5-missed):/doubtful/.test(l)?1:Math.max(1,2-missed);if(/released|retired|inactive|exempt/.test(l)){gone=true;R=99}}
  return {out,R,gone,label:lab,missed}}
 function trScale(x){let P=[[0,0],[2,5],[5,20],[10,45],[14,65],[17,77],[20,88],[25,100]];if(x<=0)return 0;for(let i=1;i<P.length;i++)if(x<=P[i][0]){let a=P[i-1],b=P[i];return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])}return 100}
@@ -9235,6 +9237,8 @@ document.addEventListener('click',function(e){var c=e.target.closest&&e.target.c
  function top5(){var a=heroTop||[];var el=document.getElementById('hmT5');if(!el||!a.length)return;el.innerHTML=a.map(function(p,i){return '<div class="hmT" data-i="'+i+'">'+thumb(p)+'<div class="hn">'+p.name.split(' ').slice(-1)[0]+'</div><div class="hs '+grade(p.mania)+'">'+Number(p.mania).toFixed(1)+'</div><div class="hr">#'+(i+1)+'</div></div>'}).join('');el.onclick=function(e){var c=e.target.closest('.hmT');if(c)openPlayer(heroTop[+c.dataset.i])}}
  var rh=renderHome;renderHome=function(){var r=rh.apply(this,arguments);try{top5()}catch(e){}return r};try{top5()}catch(e){}
 })();
+/* ===== v230 manual injuries ===== */
+(function(){try{allPlayers().forEach(function(p){var m=fmManual(p);if(!m)return;p.out=true;p.inj=Object.assign({},p.inj||{},{label:m.label,avail:0})})}catch(e){}})();
 </script></body></html>'''
 
 html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("__REFS__", refs_json).replace("__DEPTH__", depth_json).replace("__XTRA__", extra_json)
