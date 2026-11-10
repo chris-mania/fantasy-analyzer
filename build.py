@@ -9350,7 +9350,12 @@ function qcGames(a,b){var q=document.getElementById('compareBody'),t=q&&q.queryS
  t.parentNode.insertBefore(d,t);
  [].forEach.call(d.querySelectorAll('.cqChip'),function(c){c.onchange=function(){var id=c.dataset.id,p=byId(id),chips=[].slice.call(d.querySelectorAll('.cqChip[data-id="'+id+'"]')),idx=chips.filter(function(x){return x.checked}).map(function(x){return +x.dataset.i});if(!idx.length){c.checked=true;return}window.selQ[id]=idx.length>=chips.length?null:idx;renderCmpQB()}});
  [].forEach.call(d.querySelectorAll('.cqR'),function(r){r.onclick=function(){window.selQ[r.dataset.id]=null;renderCmpQB()}})}
-(function(){var o=renderCmpQB;renderCmpQB=function(){var oA=A,oB=B;try{if(oA&&oB&&oA.pos==='QB'&&oB.pos==='QB'&&oA.mania!=null&&oB.mania!=null){A=qbAdjP(oA);B=qbAdjP(oB)}o()}finally{A=oA;B=oB}try{qcGames(oA,oB)}catch(e){}}})();
+function qcBars(a,b){if(window.cmpQTab!=='bk'||!a||!b||a.pos!=='QB'||b.pos!=='QB')return;var t=document.querySelector('#compareBody .qcTbl table');if(!t||!a.buckets||!b.buckets)return;
+ var ks=Object.keys(a.buckets),h='<div class="cbhead"><span>'+a.name+'</span><span>'+b.name+'</span></div>'+ks.map(function(k){var pa=Math.round(a.buckets[k]),pb=Math.round(b.buckets[k]);
+  var bub=function(v){return '<b class="pctNum '+barGrade(v)+'" style="--s:'+v+'">'+v+'</b>'};
+  return '<div class="cbrow"><div class="cbl" style="cursor:default">'+k+'</div><div class="cbbars">'+bub(pa)+'<div class="cbt l"><div style="width:'+Math.max(3,pa)+'%;background:'+barColor(pa)+'"></div></div><div class="cbt r"><div style="width:'+Math.max(3,pb)+'%;background:'+barColor(pb)+'"></div></div>'+bub(pb)+'</div></div>'}).join('')+'<div class="cexp">Each bubble is a percentile among quarterbacks. 100 is the best, 50 is average.</div>';
+ var d=document.createElement('div');d.className='cmpBars';d.innerHTML=h;t.parentNode.replaceChild(d,t)}
+(function(){var o=renderCmpQB;renderCmpQB=function(){var oA=A,oB=B;try{if(oA&&oB&&oA.pos==='QB'&&oB.pos==='QB'&&oA.mania!=null&&oB.mania!=null){A=qbAdjP(oA);B=qbAdjP(oB)}o();try{qcBars(A,B)}catch(e){}}finally{A=oA;B=oB}try{qcGames(oA,oB)}catch(e){}}})();
 </script></body></html>'''
 
 html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("__REFS__", refs_json).replace("__DEPTH__", depth_json).replace("__XTRA__", extra_json)
