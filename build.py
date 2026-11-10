@@ -6576,7 +6576,7 @@ function trCtx(){let key=[TR.n,TR.sf?1:0,JSON.stringify(TR.st),META.next_week].j
   v.arr=arr;v.arrW=arr.map((x,ci)=>{if(x==null)return null;let w=v.gw[ci];if(ci===0&&w===META.next_week&&v.wk!=null&&R===0)return v.wk;let vs=trDvp(v.p.pos)[oppOf(v.p.team,w)];return x*(1+Math.max(-.08,Math.min(.08,(vs||0)*.003)))});v.G=G;v.retW=v.gw[R]||99;v.raw=qbb*arr.reduce((s,x)=>s+pt(x),0);if(v.pl.R>=4&&G<=6)v.raw*=.65;v.raw4=qbb*arr.slice(0,4).reduce((s,x)=>s+pt(x),0);if(v.bye!=null&&v.bye>=META.next_week&&G>0&&!v.pl.gone){v.raw*=(G+1)/G;if(v.bye<META.next_week+4)v.raw4*=4/3}
   let pl=arr.filter(x=>x!=null);v.avgRest=pl.length?pl.reduce((s,x)=>s+x,0)/pl.length:0;let f4=arr.slice(0,4).filter(x=>x!=null);v.nowAvg=f4.length?f4.reduce((s,x)=>s+x,0)/f4.length:null;
   v.nowP=(v.pl.R>0||v.gw[0]!==META.next_week||v.pl.gone)?null:(v.wk!=null?v.wk:(arr[0]!=null?arr[0]:null));
-  let a0=arr.length?arr.map(x=>x==null?0:x):[],ros=a0.length?a0.reduce((s,x)=>s+x,0)/a0.length:0,thisW=v.pl.gone?0:(v.pl.R>0?0:(v.wk!=null?v.wk:(arr[0]!=null?arr[0]:v.later))),lvl=v.mp!=null?v.mp:v.base,eff=v.pl.gone?0:.35*lvl+.25*thisW+.40*ros;if(v.p.pos==='QB')eff-=TR.sf?1:2.5;v.eff=eff;v.q=v.pl.gone?0:(.4*(v.wk!=null?v.wk:v.base)+.3*v.base+.3*(v.mp!=null?v.mp:v.base))*(v.pl.R>0?.5:1);v.outlook=trScale(eff)});
+  let a0=arr.length?arr.map(x=>x==null?0:x):[],ros=a0.length?a0.reduce((s,x)=>s+x,0)/a0.length:0,thisW=v.pl.gone?0:(v.pl.R>0?0:(v.wk!=null?v.wk:(arr[0]!=null?arr[0]:v.later))),lvl=v.mp!=null?v.mp:v.base,eff=v.pl.gone?0:.35*lvl+.25*thisW+.40*ros;if(v.p.pos==='QB')eff-=TR.sf?1:2.5;v.eff=eff;v.q=v.pl.gone?0:(.2*(v.wk!=null?v.wk:v.base)+.35*v.sh+.45*(v.mp!=null?v.mp:v.base))*(v.pl.R>0?.5:1);v.outlook=trScale(eff)});
  vs.forEach(v=>{v.tv=Math.pow(v.raw,1.3);v.tv4=Math.pow(v.raw4,1.3)});let mx=Math.max(1,...vs.map(v=>v.tv));vs.forEach(v=>{v.val=trDisp(100*v.tv/mx);v.val4=trDisp(100*v.tv4/mx)});
  return TRC={key,V,repl,waiv,avg,start,S,mx,vs}}
 function trWeekPpg(v,w){let i=v.gw.indexOf(w);if(i<0)return null;if(w===META.next_week&&v.p.played&&v.p.played.ppr!=null)return +v.p.played.ppr;if(w===META.next_week&&v.p.proj&&v.p.proj.pts!=null&&!v.p.out)return +v.p.proj.pts;return v.arr[i]}
@@ -7134,11 +7134,14 @@ function trRepData(sa,sb){let myAfter=TR.my.filter(i=>!sa.includes(i)).concat(sb
    else if(sm<=-E&&st<=-E){ov='Hurts both teams';ovC='lose';ovT='Neither lineup improves. Look for a different deal.'}
    else if(mnD>=-E){if(gap<=.5){ov='Fair trade';ovC='even';ovT='Works for both sides. Nobody is getting taken.'}else if(gap<=1.2){ov='Fair, leans toward '+lean;ovC='even';ovT=`Neither team gets worse, but ${lean==='you'?'you gain':'they gain'} a little more.`}else{ov='Favors '+lean;ovC=lean==='you'?'win':'lose';ovT=`Neither team gets worse, but ${lean==='you'?'you gain':'they gain'} a lot more than ${lean==='you'?'they do':'you do'}.`}}
    else{let hurt=sm<st?'you':'they',hd=Math.abs(mnD);if(hd<.7){ov='Close, tilts toward '+lean;ovC='even';ovT=`${hurt==='you'?'You give':'They give'} up a little, so it is close to fair but not perfectly even.`}else{ov='Favors '+lean;ovC=lean==='you'?'win':'lose';ovT=`${hurt==='you'?'You get':'They get'} worse here, so ${hurt==='you'?'you should ask for more':'they will probably want more'}.`}}
-   {let Vq=trCtx().V,q=i=>Vq[i]?Vq[i].q:0,srt=a=>a.map(q).sort((x,y)=>y-x),out=srt(sa),inn=srt(sb),n=Math.min(out.length,inn.length),dm=0,dt=0;
-    for(let k=0;k<n;k++){if(inn[k]<out[k]-.3)dm++;else if(inn[k]>out[k]+.3)dt++}
-    let qLean=n>=1&&dm===n?'them':(n>=1&&dt===n?'you':null),vLean=Math.abs(vgap)>=.1?(vgap>0?'you':'them'):null;
-    if(gap<1.2&&!/^Win-win|^Hurts both/.test(ov)){
+   {let Vq=trCtx().V,q=i=>Vq[i]?Vq[i].q:0,srt=a=>a.map(q).sort((x,y)=>y-x),sid=L=>new Set(L.st.filter(x=>x.v).map(x=>x.v.p.id)),
+     cmp=(outI,inI,s0,s1)=>{let o=srt(outI.filter(i=>s0.has(i))),n2=srt(inI.filter(i=>s1.has(i))),n=Math.min(o.length,n2.length),w=0,b=0,t=0;for(let k=0;k<n;k++){t+=Math.abs(n2[k]-o[k]);if(n2[k]<o[k]-.15)w++;else if(n2[k]>o[k]+.15)b++}return {n,w,b,t}},
+     me=cmp(sa,sb,sid(A0n),sid(A1n)),th=cmp(sb,sa,sid(B0n),sid(B1n));
+    let mW=me.n>=1&&me.w===me.n&&me.t>=.8,tW=th.n>=1&&th.w===th.n&&th.t>=.8,qLean=(mW&&!tW)?'them':((tW&&!mW)?'you':null),vLean=Math.abs(vgap)>=.1?(vgap>0?'you':'them'):null;
+    
+    if(gap<(qLean?2:1.2)&&!/^Win-win|^Hurts both/.test(ov)){
      if(qLean&&qLean!==lean){lean=qLean;ov='Favors '+lean;ovC=lean==='you'?'win':'lose';ovT=lean==='you'?'The players you get back are better than the ones you send, and projected higher this week.':'The players you get back are not as good as the ones you send, and are projected lower this week.'}
+     else if(qLean&&qLean===lean&&/^Close|^Fair, leans/.test(ov)){ov='Favors '+lean;ovC=lean==='you'?'win':'lose';ovT=lean==='you'?'The players you get are better than the ones you send, and the lineup gains agree.':'The players you send are better than the ones you get back, and their lineup gains more.'}
      else if(!qLean&&vLean&&vLean!==lean){lean=vLean;ov='Close, tilts toward '+lean;ovC='even';ovT='Lineups and long-term value point in different directions, so this is close.'}}}
    const vOf=i=>trCtx().V[i],nd0=(ids,k)=>trNeeds(ids,k),add=(s,t)=>cs.push([s,t]);
    [[sb,'You','my'],[sa,'They','their']].forEach(([inc,who,side])=>{let ids=TR[side],n0=nd0(ids,'now'),n1=nd0(ids,'later');inc.map(vOf).filter(Boolean).forEach(v=>{
