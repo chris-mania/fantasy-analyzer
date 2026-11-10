@@ -2679,6 +2679,47 @@ except Exception as _e:
     VSX = {"t": {}}
     print("   Game logs against teams skipped:", _e)
 
+# ---------- data file for the separate weekly-rankings graphics tool (public/graphics/) ----------
+# Same projections the app shows. Keep GFX_OUT in step with FMOUT in the page script (name -> first week back; 99 = out for the year).
+GFX_OUT = {"Lamar Jackson": 99, "Michael Wilson": 99, "De'Von Achane": 99, "Gardner Minshew": 99, "Josh Jacobs": 14, "Puka Nacua": 14}
+try:
+    _gx = {"week": next_week, "season": SEASON, "built": BUILT_AT, "pos": {}}
+
+    def _gl(t_):
+        return (TEAM_LOGOS.get(t_) or {}).get("l", "")
+
+    def _gc(t_):
+        return (TEAM_LOGOS.get(t_) or {}).get("c", "")
+    for _ps in ("QB", "RB", "WR", "TE", "K", "DST"):
+        _rows_g = []
+        if _ps == "QB":
+            _src = [(x_, (x_.get("proj") or {}).get("pts"), x_.get("opp")) for x_ in QBS]
+        elif _ps in ("RB", "WR", "TE"):
+            _src = [(x_, (x_.get("proj") or {}).get("pts"), x_.get("opp")) for x_ in players if x_.get("pos") == _ps]
+        else:
+            _src = [(x_, x_.get("wk"), x_.get("opp")) for x_ in KDX["k" if _ps == "K" else "d"]]
+        for x_, pts_, opp_ in _src:
+            if pts_ is None or not opp_ or opp_ == "BYE":
+                continue
+            if GFX_OUT.get(str(x_.get("name")), 0) > next_week or x_.get("out"):
+                continue
+            _t = str(x_.get("team") or "")
+            _rows_g.append({"n": str(x_["name"]), "t": _t, "o": str(opp_), "p": round(float(pts_), 1), "h": str(x_.get("headshot") or "") if _ps != "DST" else "",
+                            "l": _gl(_t), "c": _gc(_t)})
+        _rows_g.sort(key=lambda z: -z["p"])
+        _gx["pos"][_ps] = _rows_g[:40]
+    os.makedirs("public/graphics", exist_ok=True)
+    with open("public/graphics/data.json", "w") as _f:
+        json.dump(_gx, _f, separators=(",", ":"))
+    if os.path.exists("graphics_tool.html"):
+        with open("graphics_tool.html") as _f:
+            _gh = _f.read()
+        with open("public/graphics/index.html", "w") as _f:
+            _f.write(_gh)
+    print("   Graphics data:", {k_: len(v_) for k_, v_ in _gx["pos"].items()})
+except Exception as _e:
+    print("   Graphics data skipped:", _e)
+
 meta = json.dumps({
     "season": SEASON,
     "week": max_week,
