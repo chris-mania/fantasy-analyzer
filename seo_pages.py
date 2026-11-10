@@ -9,7 +9,7 @@ screen as plain pages:
 
 The saved page looks like the app. The first tap on a tab, arrow or button opens the
 live profile in the app (/#p=<id>), so everything interactive still works. Player photos
-are left out (the app's initials show instead); the app itself keeps the photos.
+keep the same player photo links the app uses.
 
 If anything goes wrong this script changes nothing and the normal site still publishes.
 """
@@ -103,6 +103,7 @@ class Assets:
 
 
 DATA_SRC = re.compile(r'src="data:([a-z/+.-]+)(;base64)?,([^"]*)"')
+NFL_PIC = re.compile(r'(<img\b[^>]*\bsrc="https://static\.www\.nfl\.com[^"]*"[^>]*>)(\s*<span class="initials")(?: style="[^"]*")?')
 NFL_IMG = re.compile(r'<img\b[^>]*\bsrc="https://static\.www\.nfl\.com[^"]*"[^>]*>')
 ON_ATTR = re.compile(r'\s(on[a-z]+)="[^"]*"')
 SCRIPT = re.compile(r"<script\b[\s\S]*?</script>", re.I)
@@ -111,7 +112,9 @@ NAV_BTN = re.compile(r'<button\b([^>]*)\bdata-v="([a-z]+)"([^>]*)>([\s\S]*?)</bu
 
 def clean(fragment, assets):
     fragment = SCRIPT.sub("", fragment)
-    fragment = NFL_IMG.sub("", fragment)
+    # Player photos stay: they are the same links the app itself uses. If a photo hadn't loaded yet when the
+    # page was saved, show it anyway and hide the initials placeholder that sits right after it.
+    fragment = NFL_PIC.sub(lambda m: m.group(1).replace(' style="display: none;"', "") + m.group(2) + ' style="display:none"', fragment)
     fragment = ON_ATTR.sub("", fragment)
     fragment = DATA_SRC.sub(assets.from_data_uri, fragment)
     return fragment
