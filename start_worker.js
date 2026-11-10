@@ -52,7 +52,11 @@ async function load(env, url) {
   if (!r.ok) throw new Error("no data");
   const d = await r.json();
   d.by = {}; d.byId = {};
-  d.players.forEach((p) => { d.by[p.s] = p; d.byId[p.id] = p; });
+  d.players.forEach((p) => {
+    // People search "Bears defense", not "Bears D/ST".
+    if (p.pos === "DST" && / ?D\/ST$/.test(p.n)) p.n = p.n.replace(/\s*D\/ST$/, "") + " Defense";
+    d.by[p.s] = p; d.byId[p.id] = p;
+  });
   CACHE = { at: Date.now(), data: d };
   return d;
 }
@@ -66,7 +70,7 @@ const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&":
 const f1 = (v) => (v == null || isNaN(v) ? "—" : (+v).toFixed(1));
 const posName = (p) => (p === "DST" ? "D/ST" : p);
 function short(p) {
-  if (p.pos === "DST") return p.n.replace(/\s*D\/ST$/, "");
+  if (p.pos === "DST") return p.n.replace(/\s*(D\/ST|Defense)$/, "");
   const w = p.n.replace(/,?\s+(Jr\.|Sr\.|II|III|IV)$/, "").split(/\s+/);
   return w.length > 1 ? w.slice(1).join(" ") : p.n;
 }
@@ -164,7 +168,7 @@ function ready(){return typeof renderCompare==='function'&&typeof byId==='functi
 function seoShow(){var s=document.getElementById('fmSeo'),v=document.getElementById('compare');if(s)s.hidden=!(window.__fmStart&&v&&v.classList.contains('on'))}
 function tweak(){if(!window.__fmStart)return;var hero=document.querySelector('#compare .compareHero');if(!hero||!A||!B)return;
  var cards=hero.querySelectorAll('.comparePlayer');if(cards.length<2)return;
- var pick=document.querySelector('#compare .cwin strong, #compare .kdVerdict strong'),pn=pick?pick.textContent.trim():null;
+ var pick=document.querySelector('#compare .cwin strong, #compare .kdVerdict strong'),pn=pick?dn(pick.textContent.trim()):null;
  [[cards[0],A],[cards[1],B]].forEach(function(x){var el=x[0],p=x[1];if(el.dataset.fm==='1')return;el.dataset.fm='1';
   var big=el.querySelector('.scorebig'),lab=el.querySelector('.scorelab'),mr=big?big.textContent.trim():'';
   var pj=p.proj&&p.proj.pts!=null?p.proj.pts:null,bye=p.opp==='BYE'||(p.r&&p.r.bye);
@@ -175,7 +179,7 @@ function tweak(){if(!window.__fmStart)return;var hero=document.querySelector('#c
    var col=+mr>=80?'#16803f':+mr>=60?'#9a6700':'#c0303c';bt.innerHTML='<b style="color:'+col+'">'+mr+'</b><small>MANIA OVERALL</small>';
    bt.addEventListener('click',function(e){e.stopPropagation();var h=document.getElementById('fmMHelp');if(h){h.hidden=!h.hidden;if(!h.hidden)h.scrollIntoView({block:'nearest',behavior:'smooth'})}});
    if(por)por.appendChild(bt);else el.insertBefore(bt,el.firstChild)}
-  var name=p.name||(p.r&&p.r.name);el.dataset.fmName=name;el.dataset.fmPj=pj==null?'':pj;el.dataset.fmOpp=p.opp||'';
+  var name=dn(p.name||(p.r&&p.r.name));el.dataset.fmName=name;el.dataset.fmPj=pj==null?'':pj;el.dataset.fmOpp=p.opp||'';
   if((pn&&name===pn)||(!pn&&p.id===C.win)){el.classList.add('fmWin');var s=document.createElement('div');s.className='fmStart';s.textContent='Start '+name;el.insertBefore(s,el.firstChild)}
  });
  fixAnswer(cards,pn);
@@ -183,8 +187,9 @@ function tweak(){if(!window.__fmStart)return;var hero=document.querySelector('#c
   h.innerHTML='<b>What is the Mania Rating?</b> It is a player\\'s overall grade from 0 to 100, kind of like a Madden overall. Fantasy Mania combines how much he produces, how much he is used, his role, his high-value chances (like red-zone looks) and his efficiency, each compared with every other '+(POSW[A.pos]||'player')+', into one number. 90+ is Elite, 82+ Excellent, 74+ Strong, 65+ Starter.<br><br>The big number is the <b>Week '+C.wk+' projection</b>: the points we expect this week after the matchup and the injury report. That is the number to use for start/sit.';
   hero.parentNode.insertBefore(h,hero.nextSibling)}
 }
-function last(n){if(n.slice(-4)==='D/ST')return n.slice(0,-4).trim();var w=n.split(' '),suf=['Jr.','Sr.','II','III','IV'];if(w.length>2&&suf.indexOf(w[w.length-1])>=0)w.pop();return w.length>1?w.slice(1).join(' '):n}
-function fixAnswer(cards,pn){if(!pn)return;var h=document.querySelector('#fmSeo [data-fmv="head"]');if(!h||h.textContent==='Start '+pn+'.')return;
+function last(n){if(n.slice(-4)==='D/ST')return n.slice(0,-4).trim();if(n.slice(-8)===' Defense')return n.slice(0,-8);var w=n.split(' '),suf=['Jr.','Sr.','II','III','IV'];if(w.length>2&&suf.indexOf(w[w.length-1])>=0)w.pop();return w.length>1?w.slice(1).join(' '):n}
+function dn(n){n=n||'';return n.slice(-4)==='D/ST'?n.slice(0,-4).trim()+' Defense':n}
+function fixAnswer(cards,pn){pn=dn(pn);if(!pn)return;var h=document.querySelector('#fmSeo [data-fmv="head"]');if(!h||h.textContent==='Start '+pn+'.')return;
  var w=[].find.call(cards,function(c){return c.dataset.fmName===pn}),l=[].find.call(cards,function(c){return c!==w});if(!w||!l)return;
  var vs=function(c){return c.dataset.fmOpp&&c.dataset.fmOpp!=='BYE'?' against '+c.dataset.fmOpp:''},f=function(c){return c.dataset.fmPj===''?'—':(+c.dataset.fmPj).toFixed(1)};
  var line='Start '+pn+' over '+l.dataset.fmName+' in Week '+C.wk+'. Fantasy Mania projects '+last(pn)+' for '+f(w)+' points'+vs(w)+', versus '+f(l)+' for '+last(l.dataset.fmName)+vs(l)+'.';

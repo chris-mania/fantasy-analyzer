@@ -9,6 +9,10 @@
   Google by opening the built app in a hidden browser and saving each real profile and rankings view. It
   makes no API calls. Keep that workflow step too. Profile or rankings design changes in build.py flow into
   these pages automatically.
+- seo_pages.py also makes /players/<name>/game-log/ (the profile cut down to its game log), /teams/ and
+  /teams/<team>/ (depth chart incl. kicker, snap share, target share, game logs against), and
+  /insights/schedule-strength/ and /insights/defense-vs-position/. Rankings pages use the Projections view
+  with "Week N" titles. Reloading any of these pages opens the normal app (HANDOFF script).
 - Start/sit pages (/start/ and /start/<a>-vs-<b>/): seo_pages.py calls start_sit.py, which writes
   start-data.json, sitemap-start.xml, _routes.json and copies start_worker.js to public/_worker.js. The
   worker makes each matchup page on request and only runs for /start addresses. Pair rules and nicknames

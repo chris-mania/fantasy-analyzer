@@ -22,7 +22,7 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
         # Makes no API calls: it only reads the page build.py just made. If it fails, runs long or it isn't
         # its turn, the next step keeps the last published pages and the site still publishes normally.
         continue-on-error: true
-        timeout-minutes: 18
+        timeout-minutes: 24
         run: |
           if [ "$(date -u +%M)" -lt 15 ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             pip install playwright==1.63.0
@@ -77,7 +77,7 @@ jobs:
         run: |
           rm -rf public/_seo_tmp
           keep=""
-          [ -d public/players ] || keep="players rankings a trade compare team insights sitemap.xml"
+          [ -d public/players ] || keep="players rankings a trade compare team insights teams sitemap.xml"
           [ -f public/start-data.json ] || keep="$keep start-data.json sitemap-start.xml _worker.js _routes.json"
           if [ -n "$keep" ]; then
             git fetch --depth 1 origin gh-pages || true
