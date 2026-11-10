@@ -161,8 +161,8 @@ function opener(d, a, b, v) {
 var POSW={QB:'quarterback',RB:'running back',WR:'wide receiver',TE:'tight end',K:'kicker',DST:'defense'};
 ['pointerdown','keydown'].forEach(function(t){addEventListener(t,function(){touched=true},{capture:true,once:true})});
 function ready(){return typeof renderCompare==='function'&&typeof byId==='function'&&typeof showView==='function'&&typeof DB!=='undefined'}
-function seoShow(){var s=document.getElementById('fmSeo'),v=document.getElementById('compare');if(s)s.hidden=!(v&&v.classList.contains('on'))}
-function tweak(){var hero=document.querySelector('#compare .compareHero');if(!hero||!A||!B)return;
+function seoShow(){var s=document.getElementById('fmSeo'),v=document.getElementById('compare');if(s)s.hidden=!(window.__fmStart&&v&&v.classList.contains('on'))}
+function tweak(){if(!window.__fmStart)return;var hero=document.querySelector('#compare .compareHero');if(!hero||!A||!B)return;
  var cards=hero.querySelectorAll('.comparePlayer');if(cards.length<2)return;
  var pick=document.querySelector('#compare .cwin strong, #compare .kdVerdict strong'),pn=pick?pick.textContent.trim():null;
  [[cards[0],A],[cards[1],B]].forEach(function(x){var el=x[0],p=x[1];if(el.dataset.fm==='1')return;el.dataset.fm='1';
@@ -193,7 +193,7 @@ function hook(){if(window.__fmHooked)return;window.__fmHooked=1;var r=renderComp
  var sv=showView;showView=function(){var o=sv.apply(this,arguments);try{seoShow()}catch(e){}return o}}
 function open(){if(!ready()){if(++tries<200)setTimeout(open,40);return}hook();
  var a=byId(C.a),b=byId(C.b);if(!a||!b){seoShow();return}A=a;B=b;selA=null;selB=null;try{cmpOpen.start=true}catch(e){}
- showView('compare');renderCompare();seoShow();try{scrollTo(0,0)}catch(e){}}
+ window.__fmOpening=1;window.__fmStart=1;try{showView('compare');renderCompare();seoShow()}finally{window.__fmOpening=0}try{scrollTo(0,0)}catch(e){}}
 open();
 addEventListener('load',function(){[300,900].forEach(function(t){setTimeout(function(){var v=document.getElementById('compare');if(!touched&&v&&!v.classList.contains('on'))open()},t)})});
 })();</script>`;
