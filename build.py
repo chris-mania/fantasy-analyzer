@@ -6573,10 +6573,10 @@ function trCtx(){let key=[TR.n,TR.sf?1:0,JSON.stringify(TR.st),META.next_week].j
  vs.forEach(v=>{let G=v.gw.length,R=Math.min(v.pl.R,G),arr=[],rp=repl[v.p.pos],wv=waiv[v.p.pos],qbb=TR.sf?1.4:1,pt=x=>x==null?0:trSoft(x-rp)+.35*trSoft(x-wv),av=v.p.inj&&v.p.inj.avail!=null?v.p.inj.avail:1;
   v.later=v.base+(v.boost>0?(v.cause?v.boost*v.cause.retain:v.boost*.6):0);
   for(let c=0;c<G;c++){let x=null;if(c>=R&&!v.pl.gone){x=v.base+(v.boost>0?(v.cause?(c<v.cause.R?v.boost:v.boost*v.cause.retain):v.boost*.6):0);if(R>0&&c===R)x*=.85;else if(R>0&&c===R+1)x*=.93;if(R===0&&c===0&&av<1)x*=av}arr.push(x)}
-  v.arr=arr;v.arrW=arr.map((x,ci)=>{if(x==null)return null;let w=v.gw[ci];if(ci===0&&w===META.next_week&&v.wk!=null&&R===0)return v.wk;let vs=trDvp(v.p.pos)[oppOf(v.p.team,w)];return x*(1+Math.max(-.08,Math.min(.08,(vs||0)*.003)))});v.G=G;v.retW=v.gw[R]||99;v.raw=qbb*arr.reduce((s,x)=>s+pt(x),0);if(v.pl.R>=4&&G<=6)v.raw*=.65;v.raw4=qbb*arr.slice(0,4).reduce((s,x)=>s+pt(x),0);
+  v.arr=arr;v.arrW=arr.map((x,ci)=>{if(x==null)return null;let w=v.gw[ci];if(ci===0&&w===META.next_week&&v.wk!=null&&R===0)return v.wk;let vs=trDvp(v.p.pos)[oppOf(v.p.team,w)];return x*(1+Math.max(-.08,Math.min(.08,(vs||0)*.003)))});v.G=G;v.retW=v.gw[R]||99;v.raw=qbb*arr.reduce((s,x)=>s+pt(x),0);if(v.pl.R>=4&&G<=6)v.raw*=.65;v.raw4=qbb*arr.slice(0,4).reduce((s,x)=>s+pt(x),0);if(v.bye!=null&&v.bye>=META.next_week&&G>0&&!v.pl.gone){v.raw*=(G+1)/G;if(v.bye<META.next_week+4)v.raw4*=4/3}
   let pl=arr.filter(x=>x!=null);v.avgRest=pl.length?pl.reduce((s,x)=>s+x,0)/pl.length:0;let f4=arr.slice(0,4).filter(x=>x!=null);v.nowAvg=f4.length?f4.reduce((s,x)=>s+x,0)/f4.length:null;
   v.nowP=(v.pl.R>0||v.gw[0]!==META.next_week||v.pl.gone)?null:(v.wk!=null?v.wk:(arr[0]!=null?arr[0]:null));
-  let a0=arr.length?arr.map(x=>x==null?0:x):[],ros=a0.length?a0.reduce((s,x)=>s+x,0)/a0.length:0,thisW=v.pl.gone?0:(v.pl.R>0?0:(v.wk!=null?v.wk:(arr[0]!=null?arr[0]:v.later))),lvl=v.mp!=null?v.mp:v.base,eff=v.pl.gone?0:.35*lvl+.25*thisW+.40*ros;if(v.p.pos==='QB')eff-=TR.sf?1:2.5;v.eff=eff;v.outlook=trScale(eff)});
+  let a0=arr.length?arr.map(x=>x==null?0:x):[],ros=a0.length?a0.reduce((s,x)=>s+x,0)/a0.length:0,thisW=v.pl.gone?0:(v.pl.R>0?0:(v.wk!=null?v.wk:(arr[0]!=null?arr[0]:v.later))),lvl=v.mp!=null?v.mp:v.base,eff=v.pl.gone?0:.35*lvl+.25*thisW+.40*ros;if(v.p.pos==='QB')eff-=TR.sf?1:2.5;v.eff=eff;v.q=v.pl.gone?0:(.4*(v.wk!=null?v.wk:v.base)+.3*v.base+.3*(v.mp!=null?v.mp:v.base))*(v.pl.R>0?.5:1);v.outlook=trScale(eff)});
  vs.forEach(v=>{v.tv=Math.pow(v.raw,1.3);v.tv4=Math.pow(v.raw4,1.3)});let mx=Math.max(1,...vs.map(v=>v.tv));vs.forEach(v=>{v.val=trDisp(100*v.tv/mx);v.val4=trDisp(100*v.tv4/mx)});
  return TRC={key,V,repl,waiv,avg,start,S,mx,vs}}
 function trWeekPpg(v,w){let i=v.gw.indexOf(w);if(i<0)return null;if(w===META.next_week&&v.p.played&&v.p.played.ppr!=null)return +v.p.played.ppr;if(w===META.next_week&&v.p.proj&&v.p.proj.pts!=null&&!v.p.out)return +v.p.proj.pts;return v.arr[i]}
@@ -6649,7 +6649,7 @@ function trIns(ids,frac){let c=trCtx(),L=trLineup(ids,'later'),used=new Set(),to
  st.forEach(x=>{let s=x.v,m=TRMISS[s.p.pos]*s.G,best=null,bu=0;L.bench.forEach(b=>{if(used.has(b.v.p.id))return;let ok=x.slot==='FLEX'?b.v.p.pos!=='QB':x.slot==='SFLEX'?true:b.v.p.pos===x.slot;if(!ok)return;let u=b.ppg,cuff=b.v.p.team===s.p.team&&b.v.p.pos===s.p.pos&&s.p.pos!=='QB';if(cuff)u=b.ppg+Math.max(0,s.later*.9-b.ppg)*.8;if(u>bu){bu=u;best=b;best.cuff=cuff}});
   if(best){used.add(best.v.p.id);tot+=m*Math.max(0,bu-c.repl[s.p.pos])*(best.cuff&&s.p.pos==='RB'?1.8:1)}});return tot*frac}
 function trTV(ids,kind){let key=kind+'|'+ids.slice().sort().join(','),h=TRTV[key];if(h!==undefined)return h;let c=trCtx(),V=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone),W=trWeeks(kind),tot=0;
- W.forEach(w=>{tot+=trPick(V.map(v=>({v,ppg:trWeekPpg(v,w)})).filter(e=>e.ppg!=null)).tot});tot+=trIns(ids,W.length/Math.max(1,trWeeks('ros').length));return TRTV[key]=tot}
+ W.forEach(w=>{tot+=trPick(V.map(v=>({v,ppg:(()=>{let x=trWeekPpg(v,w);return x==null&&v.bye===w&&v.pl.R<=0?v.later:x})()})).filter(e=>e.ppg!=null)).tot});tot+=trIns(ids,W.length/Math.max(1,trWeeks('ros').length));return TRTV[key]=tot}
 function trTVd(before,after,kind){return (trTV(after,kind)-trTV(before,kind))/Math.max(1,trWeeks(kind).length)}
 function trMarg(ids,id,kind){let k=kind||TR.hz,w=trWeeks('ros').length/Math.max(1,trWeeks(k).length),m=ids.includes(id)?trTV(ids,k)-trTV(ids.filter(x=>x!==id),k):trTV(ids.concat(id),k)-trTV(ids,k);return m*w}
 function trStarN(v){return Math.round(5*Math.pow(Math.max(v,0)/100,.65)*2)/2}
@@ -7127,13 +7127,19 @@ function trFullSolo(){TRCVmap=null;let a=trRosterRaw('my','Your team',true),V=tr
 
 function trRepData(sa,sb){let myAfter=TR.my.filter(i=>!sa.includes(i)).concat(sb),thAfter=TR.their.filter(i=>!sb.includes(i)).concat(sa),
    A0n=trLineup(TR.my,'now'),A1n=trLineup(myAfter,'now'),B0n=trLineup(TR.their,'now'),B1n=trLineup(thAfter,'now'),
-   na=trTVd(TR.my,myAfter,'now'),nb=trTVd(TR.their,thAfter,'now'),la=trTVd(TR.my,myAfter,'ros'),lb=trTVd(TR.their,thAfter,'ros'),pa=trTVd(TR.my,myAfter,'play'),pb=trTVd(TR.their,thAfter,'play'),E=.25,wN=TR.hz==='now'?.85:.3,sm=TR.hz==='play'?pa:wN*na+(1-wN)*la,st=TR.hz==='play'?pb:wN*nb+(1-wN)*lb,G=trSide(sa,sb.length),R=trSide(sb,sa.length),mx=Math.max(R.tot,G.tot,1),vgap=(R.tot-G.tot)/mx,
+   na=trTVd(TR.my,myAfter,'now'),nb=trTVd(TR.their,thAfter,'now'),la=trTVd(TR.my,myAfter,'ros'),lb=trTVd(TR.their,thAfter,'ros'),pa=trTVd(TR.my,myAfter,'play'),pb=trTVd(TR.their,thAfter,'play'),E=.25,wN=TR.hz==='now'?.7:.3,wkA=A1n.tot-A0n.tot,wkB=B1n.tot-B0n.tot,sm=TR.hz==='play'?pa:wN*(.6*wkA+.4*na)+(1-wN)*la,st=TR.hz==='play'?pb:wN*(.6*wkB+.4*nb)+(1-wN)*lb,G=trSide(sa,sb.length),R=trSide(sb,sa.length),mx=Math.max(R.tot,G.tot,1),vgap=(R.tot-G.tot)/mx,
    gap=Math.abs(sm-st),mnD=Math.min(sm,st),lean=sm>st?'you':'them',cs=[];
    let ov,ovT,ovC;
    if(sm>E&&st>E){ov='Win-win trade';ovC='win';ovT='Both teams get better.'}
    else if(sm<=-E&&st<=-E){ov='Hurts both teams';ovC='lose';ovT='Neither lineup improves. Look for a different deal.'}
    else if(mnD>=-E){if(gap<=.5){ov='Fair trade';ovC='even';ovT='Works for both sides. Nobody is getting taken.'}else if(gap<=1.2){ov='Fair, leans toward '+lean;ovC='even';ovT=`Neither team gets worse, but ${lean==='you'?'you gain':'they gain'} a little more.`}else{ov='Favors '+lean;ovC=lean==='you'?'win':'lose';ovT=`Neither team gets worse, but ${lean==='you'?'you gain':'they gain'} a lot more than ${lean==='you'?'they do':'you do'}.`}}
    else{let hurt=sm<st?'you':'they',hd=Math.abs(mnD);if(hd<.7){ov='Close, tilts toward '+lean;ovC='even';ovT=`${hurt==='you'?'You give':'They give'} up a little, so it is close to fair but not perfectly even.`}else{ov='Favors '+lean;ovC=lean==='you'?'win':'lose';ovT=`${hurt==='you'?'You get':'They get'} worse here, so ${hurt==='you'?'you should ask for more':'they will probably want more'}.`}}
+   {let Vq=trCtx().V,q=i=>Vq[i]?Vq[i].q:0,srt=a=>a.map(q).sort((x,y)=>y-x),out=srt(sa),inn=srt(sb),n=Math.min(out.length,inn.length),dm=0,dt=0;
+    for(let k=0;k<n;k++){if(inn[k]<out[k]-.3)dm++;else if(inn[k]>out[k]+.3)dt++}
+    let qLean=n>=1&&dm===n?'them':(n>=1&&dt===n?'you':null),vLean=Math.abs(vgap)>=.1?(vgap>0?'you':'them'):null;
+    if(gap<1.2&&!/^Win-win|^Hurts both/.test(ov)){
+     if(qLean&&qLean!==lean){lean=qLean;ov='Favors '+lean;ovC=lean==='you'?'win':'lose';ovT=lean==='you'?'The players you get back are better than the ones you send, and projected higher this week.':'The players you get back are not as good as the ones you send, and are projected lower this week.'}
+     else if(!qLean&&vLean&&vLean!==lean){lean=vLean;ov='Close, tilts toward '+lean;ovC='even';ovT='Lineups and long-term value point in different directions, so this is close.'}}}
    const vOf=i=>trCtx().V[i],nd0=(ids,k)=>trNeeds(ids,k),add=(s,t)=>cs.push([s,t]);
    [[sb,'You','my'],[sa,'They','their']].forEach(([inc,who,side])=>{let ids=TR[side],n0=nd0(ids,'now'),n1=nd0(ids,'later');inc.map(vOf).filter(Boolean).forEach(v=>{
      if(v.pl.R>0)add(side,`${who==='You'?'You get':'They get'} <b>${trL(v.p)}</b>, who is ${v.pl.label||'out'} (back ~Week ${v.retW}). He will not help ${who==='You'?'you':'them'} until then.`);
@@ -7173,7 +7179,7 @@ function trRepHTML(D,nm){let V=trCtx().V,named=!!(nm&&nm.me),me=named?trEsc(nm.m
  else{head=named?wn+' is winning this trade':(lean==='you'?'You are winning this trade':'They are winning this trade');chip=D.gap>=1.2?'Clear edge':'Small edge'}
  let pl=ids=>ids.map(i=>{let v=V[i];if(!v)return '';let p=v.p,t=trForm(p),tag=v.pl.R>0?`<i class="trTag bad">${v.pl.label||'Out'}</i>`:v.bye>=META.next_week&&v.bye<=META.next_week+1?`<i class="trTag">Bye wk ${v.bye}</i>`:'';return `<div class="rpP"><span class="rpTh">${thumb(p)}</span><div class="rpI"><b class="tlink" data-open="${p.id}">${trEsc(p.name)}</b><small>${p.pos} • ${p.team} • ${trPpgTxt(v)} ${tag}</small>${trStars(v.val)}${t?`<em class="rpTr ${t.up?'up':'dn'}">${t.up?'&#9650; Trending up':'&#9660; Trending down'}</em>`:''}</div></div>`}).join('')||'<div class="trEmpty">Nobody</div>';
  let swap=`<div class="rpSwap"><div class="rpSd"><small>${me} send${named?'s':''}</small>${pl(sa)}</div><div class="rpAr">&#8644;</div><div class="rpSd"><small>${th} send${named?'s':''}</small>${pl(sb)}</div></div>`;
- let all=sa.concat(sb).map(i=>V[i]).filter(Boolean).sort((x,y)=>y.tv-x.tv),bp=all[0],best='';
+ let all=sa.concat(sb).map(i=>V[i]).filter(Boolean).sort((x,y)=>y.q-x.q),bp=all[0],best='';
  if(bp){let to=sa.includes(bp.p.id)?th:me;best=`<div class="rpBest"><span class="rpBi">&#9733;</span><div><b>Best player in the trade: <span class="tlink" data-open="${bp.p.id}">${trEsc(bp.p.name)}</span></b><small>${bp.p.pos} • ${trPpgTxt(bp)} a game. He goes to ${to}.${all[1]?' Next best: '+trEsc(all[1].p.name)+'.':''}</small></div>${trStars(bp.val)}</div>`}
  let sg=x=>x>.05?'up':x<-.05?'dn':'',W=(w,d)=>`<b class="${sg(d)}">${trWord(d)}</b><small>${trSgn(d)} a week</small>`,hasPl=trWeeks('play').length>0,
   rows=[['This week',`<b class="${sg(D.A1n.tot-D.A0n.tot)}">${trN(D.A0n.tot)} &rarr; ${trN(D.A1n.tot)}</b><small>best lineup</small>`,`<b class="${sg(D.B1n.tot-D.B0n.tot)}">${trN(D.B0n.tot)} &rarr; ${trN(D.B1n.tot)}</b><small>best lineup</small>`],['Next 4 weeks',W(0,D.na),W(0,D.nb)],['Rest of season',W(0,D.la),W(0,D.lb)]];
