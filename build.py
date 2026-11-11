@@ -9294,7 +9294,31 @@ document.addEventListener('click',function(e){var c=e.target.closest&&e.target.c
  window.fmEndStart=endStart;
  document.addEventListener('click',function(e){if(window.__fmStart&&e.target.closest&&e.target.closest('.cmpBackB'))endStart()},true);
  var _sv=showView;showView=function(v){if(window.__fmStart&&!window.__fmOpening)endStart();return _sv.apply(this,arguments)};
- window.fmOpenStart=function(a,b){window.__fmOpening=1;try{showView('compare');window.__fmStart=1;A=a;B=b;selA=dflC(a);selB=dflC(b);var x=document.getElementById('aQ'),y=document.getElementById('bQ');if(x)x.value=a.name;if(y)y.value=b.name;var hh=document.querySelector('#compare h1.title');if(hh)hh.textContent='Who Should I Start?';renderCompare()}finally{window.__fmOpening=0}};
+ window.fmOpenStart=function(a,b){window.__fmOpening=1;try{showView('compare');window.__fmStart=1;A=a;B=b;selA=dflC(a);selB=dflC(b);var x=document.getElementById('aQ'),y=document.getElementById('bQ');if(x)x.value=a.name;if(y)y.value=b.name;var hh=document.querySelector('#compare h1.title');if(hh){hh.textContent='Who Should I Start?';if(!document.querySelector('#compare .fmPpr'))hh.insertAdjacentHTML('afterend','<p class="fmPpr">Week '+META.next_week+' start/sit · PPR scoring</p>')}document.querySelectorAll('.navb').forEach(function(n){n.classList.remove('on')});renderCompare()}finally{window.__fmOpening=0}};
+ /* Who should I start: its own look. Big number = this week's projection, Mania overall badge on the photo, the pick outlined with a Start label. Same look as the /start/ pages. */
+ (function(){var st=document.createElement('style');st.textContent='.fmPpr{display:inline-block;margin:2px 0 6px;font-size:12px;font-weight:700;color:#40474f;background:#fff;border:1px solid #d9dfe7;border-radius:99px;padding:3px 10px}.comparePlayer.fmWin{outline:3px solid #22a45d;outline-offset:-3px;border-radius:24px;position:relative}.fmStart{display:inline-block;background:#22a45d;color:#fff;font-weight:800;font-size:13px;letter-spacing:.3px;border-radius:99px;padding:5px 14px;margin:0 auto 10px}.cmpPortrait{position:relative}.fmOvr{position:absolute;right:-6px;bottom:-4px;width:66px;height:66px;border-radius:50%;background:#fff;border:0;box-shadow:0 6px 18px -6px rgba(10,30,60,.45);display:grid;place-content:center;cursor:pointer;padding:0;z-index:2;font:inherit}.fmOvr b{font-size:19px;font-weight:900;line-height:1;letter-spacing:-.5px}.fmOvr small{font-size:7.5px;font-weight:800;letter-spacing:.6px;color:#40474f;margin-top:2px}.fmProjLab{font-weight:700}#fmMHelp{max-width:760px;margin:12px auto 0;text-align:left;background:#f3f6fb;border:1px solid #d9e2f1;border-radius:14px;padding:14px 16px;font-size:14.5px;line-height:1.55;color:#272c33}#fmMHelp[hidden]{display:none}#fmMHelp b{color:#0b1830}@media(max-width:800px){.fmOvr{width:52px;height:52px;right:-8px;bottom:-6px}.fmOvr b{font-size:15px}.fmOvr small{font-size:6px}.fmStart{font-size:12px;padding:4px 12px}}';document.head.appendChild(st)})();
+ var POSW={QB:'quarterback',RB:'running back',WR:'wide receiver',TE:'tight end',K:'kicker',DST:'defense'};
+ function sdn(n){n=n||'';return n.slice(-4)==='D/ST'?n.slice(0,-4).trim()+' Defense':n}
+ function ssTweak(){if(!window.__fmStart)return;var hero=document.querySelector('#compare .compareHero');if(!hero||!A||!B)return;
+  var cards=hero.querySelectorAll('.comparePlayer');if(cards.length<2)return;var wk=META.next_week;
+  var pick=document.querySelector('#compare .cwin strong, #compare .kdVerdict strong'),pn=pick?sdn(pick.textContent.trim()):null;
+  var pv=function(p){var bye=p.opp==='BYE'||(p.r&&p.r.bye);return bye||p.out?-1:(p.proj&&p.proj.pts!=null?+p.proj.pts:-1)},win=pv(A)===pv(B)?null:(pv(A)>pv(B)?A:B);
+  [[cards[0],A],[cards[1],B]].forEach(function(x){var el=x[0],p=x[1];if(el.dataset.fm==='1')return;el.dataset.fm='1';
+   var big=el.querySelector('.scorebig'),lab=el.querySelector('.scorelab'),mr=big?big.textContent.trim():'';
+   var pj=p.proj&&p.proj.pts!=null?p.proj.pts:null,bye=p.opp==='BYE'||(p.r&&p.r.bye);
+   if(big){big.className='scorebig';big.style.color='#0b1830';big.textContent=bye?'BYE':p.out?'OUT':pj!=null?(+pj).toFixed(1):'—'}
+   if(lab){lab.textContent='Week '+wk+' projection';lab.classList.add('fmProjLab')}
+   var por=el.querySelector('.cmpPortrait');
+   if(mr&&mr!=='—'){var bt=document.createElement('button');bt.type='button';bt.className='fmOvr';bt.setAttribute('aria-label','Mania Rating '+mr+' overall. Tap for what it means.');
+    var col=+mr>=80?'#16803f':+mr>=60?'#9a6700':'#c0303c';bt.innerHTML='<b style="color:'+col+'">'+mr+'</b><small>MANIA OVERALL</small>';
+    bt.addEventListener('click',function(e){e.stopPropagation();var h=document.getElementById('fmMHelp');if(h){h.hidden=!h.hidden;if(!h.hidden)h.scrollIntoView({block:'nearest',behavior:'smooth'})}});
+    if(por)por.appendChild(bt);else el.insertBefore(bt,el.firstChild)}
+   var name=sdn(p.name||(p.r&&p.r.name));el.dataset.fmName=name;el.dataset.fmPj=pj==null?'':pj;el.dataset.fmOpp=p.opp||'';
+   if((pn&&name===pn)||(!pn&&win===p)){el.classList.add('fmWin');var s=document.createElement('div');s.className='fmStart';s.textContent='Start '+name;el.insertBefore(s,el.firstChild)}});
+  if(!document.getElementById('fmMHelp')){var h=document.createElement('div');h.id='fmMHelp';h.hidden=true;
+   h.innerHTML='<b>What is the Mania Rating?</b> It is a player\'s overall grade from 0 to 100, kind of like a Madden overall. Fantasy Mania combines how much he produces, how much he is used, his role, his high-value chances (like red-zone looks) and his efficiency, each compared with every other '+(POSW[A.pos]||'player')+', into one number. 90+ is Elite, 82+ Excellent, 74+ Strong, 65+ Starter.<br><br>The big number is the <b>Week '+wk+' projection</b>: the points we expect this week after the matchup and the injury report. That is the number to use for start/sit.';
+   hero.parentNode.insertBefore(h,hero.nextSibling)}}
+ var rcS=renderCompare;renderCompare=function(){var r=rcS.apply(this,arguments);try{ssTweak()}catch(e){}return r};
  document.getElementById('hsGo').onclick=function(){fill('A','hsA');fill('B','hsB');var m=document.getElementById('hsMsg');if(!P.A||!P.B||P.A===P.B){m.textContent=(!P.A||!P.B)?'Pick two players first.':'Pick two different players.';m.classList.add('on');return}m.classList.remove('on');fmOpenStart(P.A,P.B)};
  // Copy link on the answer
  var rc=renderCompare;renderCompare=function(){var r=rc.apply(this,arguments);try{addCopy()}catch(e){}return r};
