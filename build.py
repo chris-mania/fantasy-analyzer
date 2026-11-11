@@ -446,6 +446,34 @@ except Exception as e:
     if os.environ.get("REQUIRE_SCHEDULE") == "1":
         raise SystemExit("In-game injury feed down: keeping the last good page live.")
 
+# Extra check: low snaps with no in-game injury note, but he shows up on the injury report right after the game
+# (Out / Doubtful / Questionable with an injury listed). Treated as hurt in that game.
+inj_after = {}   # (player_id, week_of_game) -> True
+try:
+    _ij = pd.read_csv(f"{BASE}/injuries/injuries_{SEASON}.csv", low_memory=False)
+    if "game_type" in _ij.columns:
+        _ij = _ij[_ij["game_type"].astype(str).eq("REG")]
+    for _r in _ij.itertuples():
+        _st = str(getattr(_r, "report_status", "")).lower()
+        _inj_txt = getattr(_r, "report_primary_injury", None)
+        _pi_txt = getattr(_r, "practice_primary_injury", None)
+        if _st in ("out", "doubtful", "questionable") and (pd.notna(_inj_txt) or pd.notna(_pi_txt)):
+            try:
+                inj_after[(_r.gsis_id, int(_r.week) - 1)] = True
+            except Exception:
+                pass
+    print(f"   Found {len(inj_after)} injury-report listings right after a game.")
+    # Players we know are hurt right now (same list as FMOUT / GFX_OUT in this file): their last game, if he left early, was the injury.
+    def _nk(n_):
+        t_ = [p_ for p_ in re.sub(r"[.'\u2019`]", "", str(n_).lower()).replace("-", " ").split() if p_ not in ("jr", "sr", "ii", "iii", "iv", "v")]
+        return (t_[0][0], re.sub(r"[^a-z]", "", t_[-1])) if len(t_) >= 2 else None
+    _hurt_now = {_nk(n_) for n_ in ("Josh Jacobs", "Puka Nacua", "Michael Wilson", "De'Von Achane", "Gardner Minshew", "Lamar Jackson")}
+    for _pid_h, _d_h in merged.groupby("player_id"):
+        if _nk(_d_h["player_name"].iloc[0]) in _hurt_now:
+            inj_after[(_pid_h, int(_d_h["week"].max()))] = True
+except Exception as e:
+    print("   Post-game injury report unavailable:", e)
+
 for pid, idx in merged.groupby("player_id").groups.items():
     ix = list(idx)
     snaps_pct = merged.loc[ix, "offense_pct"].values.astype(float)
@@ -467,6 +495,7 @@ for pid, idx in merged.groupby("player_id").groups.items():
         # confirms an in-game injury before the 4th quarter was nearly over.
         wks_ = merged.loc[ix, "week"].astype(int).values
         el_ = np.array([inj_game.get((pid, w_), -1.0) for w_ in wks_])
+        el_ = np.where(is_partial & (el_ < 0) & np.array([(pid, w_) in inj_after for w_ in wks_]), 0.5, el_)
         hurt_early = is_partial & (el_ >= 0) & (el_ < 0.85)
         # Hurt with at least half the game still to play (or barely played): leave the game out entirely.
         major = hurt_early & ((el_ <= 0.60) | (ratio < 0.5))
