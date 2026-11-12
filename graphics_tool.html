@@ -52,7 +52,7 @@ function draw(){
  part.forEach(function(p,i){var rk=SL*PER+i+1;
   var head=isD?'<div class="lg big dl">'+imgTag(p.l,p.t)+'</div>':'<div class="hd2">'+imgTag(p.h,p.n)+'</div><div class="lg">'+imgTag(p.l,p.t)+'</div>';
   h+='<div class="r"><div class="n">'+rk+'</div>'+head+'<div style="padding-left:16px;border-left:2px solid #d7deea;height:44px;display:grid;align-content:center"><div class="nm">'+esc(p.n)+'</div><div class="sb">'+esc(p.t)+' '+esc(isD?'DEF':POS)+' &middot; vs '+esc(p.o)+'</div></div><div class="pj"><small>PROJ</small><b>'+p.p.toFixed(1)+'</b><div class="gb"><i style="width:'+Math.max(6,Math.round(p.p/mx*100))+'%"></i></div></div></div>'});
- h+='</div><div class="foot"><div class="l">Full '+esc(lab)+' rankings at</div><div class="rr">fantasymania.org &rsaquo;</div></div>';
+ h+='</div><div class="foot"><div class="l">Full top '+rows.length+' '+esc(lab)+' rankings at</div><div class="rr">fantasymania.org &rsaquo;</div></div>';
  document.getElementById('board').innerHTML=h;fit()}
 function fit(){var f=document.getElementById('fit'),b=document.getElementById('board'),s=Math.min(1,f.clientWidth/1080);b.style.transform='scale('+s+')';f.style.height=(1350*s)+'px'}
 function btns(){var bp=document.getElementById('bp'),bs=document.getElementById('bs');
