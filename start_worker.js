@@ -226,7 +226,7 @@ const APP_CSS = `
 #fmSeo .fmCard{background:#fff;border-radius:20px;padding:20px 22px;border:1px solid #e4eaf3;box-shadow:0 10px 26px -20px rgba(20,40,80,.5)}
 #fmSeo h3{font-size:16px;margin:16px 0 4px}#fmSeo h3:first-child{margin-top:0}#fmSeo p{margin:0;color:#272c33;line-height:1.55}
 #fmSeo .fmChips{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:0}#fmSeo .fmChips a{display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;border-radius:99px;background:#fff;border:1px solid #d9dfe7;color:#0b1830;text-decoration:none;font-weight:700;font-size:14px}#fmSeo .fmChips a:hover{border-color:#2563eb;color:#1d4ed8}
-#fmSeo .fmGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}#fmSeo .fmGrid h3{margin-top:0}
+#fmSeo .fmFootW{margin-top:22px;padding-top:14px;border-top:1px solid #e4eaf3}#fmSeo .fmFoot{font-size:13px;color:#5a6882;margin:0 0 6px;line-height:1.7}#fmSeo .fmFoot b{color:#40474f}#fmSeo .fmFoot a{color:#1d4ed8;text-decoration:none;font-weight:600}#fmSeo .fmGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}#fmSeo .fmGrid h3{margin-top:0}
 .fmPpr{display:inline-block;margin:2px 0 6px;font-size:12px;font-weight:700;color:#40474f;background:#fff;border:1px solid #d9dfe7;border-radius:99px;padding:3px 10px}
 .comparePlayer.fmWin{outline:3px solid #22a45d;outline-offset:-3px;border-radius:24px;position:relative}
 .fmStart{display:inline-block;background:#22a45d;color:#fff;font-weight:800;font-size:13px;letter-spacing:.3px;border-radius:99px;padding:5px 14px;margin:0 auto 10px}
@@ -237,6 +237,20 @@ const APP_CSS = `
 #fmMHelp{max-width:760px;margin:12px auto 0;text-align:left;background:#f3f6fb;border:1px solid #d9e2f1;border-radius:14px;padding:14px 16px;font-size:14.5px;line-height:1.55;color:#272c33}#fmMHelp[hidden]{display:none}#fmMHelp b{color:#0b1830}
 @media(max-width:800px){.fmOvr{width:52px;height:52px;right:-8px;bottom:-6px}.fmOvr b{font-size:15px}.fmOvr small{font-size:6px}#fmSeo{padding:0 14px}.fmStart{font-size:12px;padding:4px 12px}}
 `;
+
+// Small link rows at the very bottom: this week's position rankings, both players' pages, top matchups at the position.
+function footLinks(d, a, b) {
+  const wk = d.next, R = [["QB", "qb"], ["RB", "rb"], ["WR", "wr"], ["TE", "te"], ["Kickers", "k"], ["Defenses", "dst"]];
+  const top = d.players.filter((p) => p.pos === a.pos && p.wk && !p.bye && !p.out).sort((x, y) => x.wk - y.wk).slice(0, 12);
+  const pop = [];
+  for (let i = 0; i + 1 < top.length && pop.length < 6; i += 2) pop.push([top[i], top[i + 1]]);
+  const row = (h, items) => items.length ? `<p class="fmFoot"><b>${h}:</b> ${items.join(" · ")}</p>` : "";
+  return `<div class="fmFootW">`
+    + row(`Week ${wk} rankings`, R.map(([n, s]) => `<a href="/rankings/${s}/">${n}</a>`))
+    + row("Players", [a, b].flatMap((p) => [`<a href="/players/${p.s}/">${esc(p.n)}</a>`, p.pos === "K" || p.pos === "DST" ? null : `<a href="/players/${p.s}/game-log/">${esc(short(p))} game log</a>`]).filter(Boolean))
+    + row(`Top ${a.pos === "DST" ? "defense" : a.pos === "K" ? "kicker" : a.pos} matchups this week`, pop.map(([x, y]) => `<a href="/start/${[x.s, y.s].sort().join("-vs-")}/">${esc(x.n)} or ${esc(y.n)}</a>`))
+    + `</div>`;
+}
 
 function seoSection(d, a, b, v) {
   const wk = d.next;
@@ -252,6 +266,7 @@ function seoSection(d, a, b, v) {
 <h3>Is ${esc(b.n)} a good start in Week ${wk}?</h3><p>${esc(startTake(d, b))}</p></div>
 <h2>More start/sit questions</h2><div class="fmGrid">${more(a, b)}${more(b, a)}</div>
 <p style="margin-top:14px"><a href="/start/">Compare any two players →</a></p>
+${footLinks(d, a, b)}
 </section>`;
 }
 
