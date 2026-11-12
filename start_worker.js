@@ -177,6 +177,12 @@ function listed(d, a, b) {
   return pts(a) != null && pts(b) != null && Math.abs(pts(a) - pts(b)) < d.gap;
 }
 
+// Google may keep any realistic matchup (same position, or RB vs WR) even when it drops out of this week's
+// sitemap, so a page it already indexed doesn't flip to noindex the next week. Only odd pairs stay noindex.
+function indexable(a, b) {
+  return a.pos === b.pos || (a.pos === "RB" && b.pos === "WR") || (a.pos === "WR" && b.pos === "RB");
+}
+
 // Same rule as the app's Compare "Our pick".
 function verdict(d, a, b) {
   const wk = d.next, why = (p) => (p.bye ? "is on bye" : p.out ? "is ruled out" : "has already played");
@@ -312,7 +318,7 @@ async function matchupApp(env, url, d, a, b) {
   const desc = v.w ? snippet(d, v, a, b) : v.line;
   const path = `/start/${[a.s, b.s].sort().join("-vs-")}/`;
   const ld = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [["Fantasy Mania", "/"], ["Start/Sit", "/start/"], [both, path]].map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c[0], item: SITE + c[1] })) };
-  const headExtra = `${listed(d, a, b) ? "" : '<meta name="robots" content="noindex,follow">'}<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}${path}"><meta property="og:image" content="https://fantasymania.org/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/og.png"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script><style>${APP_CSS}</style>`;
+  const headExtra = `${indexable(a, b) ? "" : '<meta name="robots" content="noindex,follow">'}<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}${path}"><meta property="og:image" content="https://fantasymania.org/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/og.png"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script><style>${APP_CSS}</style>`;
   const app = await env.ASSETS.fetch(new Request(url.origin + "/index.html"));
   if (!app.ok) throw new Error("no app");
   const res = new HTMLRewriter()
