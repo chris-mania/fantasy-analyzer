@@ -27,4 +27,6 @@
   position group ("room") is stored once, and game logs / similar players / weekly room rows store field
   names once. A small function in the payload rebuilds the exact same DB before the app runs. Keep that
   step when editing the payload; new per-player fields work as usual.
+- build.py writes the app's big script (data + code) to public/js/fm-<hash>.js and index.html loads it with
+  <script src>, so pages stay small and phones/Google cache it (new name each build). fantasy.html stays inline.
 - The live site is https://fantasymania.org.

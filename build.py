@@ -9678,7 +9678,24 @@ document.addEventListener('click',function(e){var t=e.target.closest&&e.target.c
 
 html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("__REFS__", refs_json).replace("__DEPTH__", depth_json).replace("__XTRA__", extra_json)
 os.makedirs("public", exist_ok=True)
-with open("public/index.html","w",encoding="utf-8") as f:f.write(html)
+# The app's big script (player data + code, ~3 MB) goes in its own file with a new name every build, so
+# each page (and every Google page made from this one) is small, phones keep the file between pages, and
+# new projections always load right away (new name = fresh download). If it ever fails to load, reload once.
+def _fm_external(h):
+    import hashlib, re as _rx
+    m = _rx.search(r"<script>(\s*const DB=.*?)</script>", h, _rx.S)
+    if not m: return h
+    js = m.group(1); ver = hashlib.md5(js.encode("utf-8")).hexdigest()[:12]
+    os.makedirs("public/js", exist_ok=True)
+    for _old in os.listdir("public/js"):
+        if _old.startswith("fm-") and _old.endswith(".js"): os.remove(os.path.join("public/js", _old))
+    with open("public/js/fm-%s.js" % ver, "w", encoding="utf-8") as f: f.write(js)
+    tag = ('<script src="/js/fm-%s.js" onerror="try{if(!sessionStorage.getItem(\'fmJsRetry\')){sessionStorage.setItem(\'fmJsRetry\',1);location.reload()}'
+           'else{document.body.insertAdjacentHTML(\'afterbegin\',\'<p style=&quot;padding:16px;font:600 15px system-ui&quot;>Fantasy Mania did not finish loading. '
+           '<a href=&quot;javascript:location.reload()&quot;>Tap to reload</a></p>\')}}catch(e){}"></script>'
+           '<script>try{if(typeof DB!==\'undefined\')sessionStorage.removeItem(\'fmJsRetry\')}catch(e){}</script>') % ver
+    return h[:m.start()] + tag + h[m.end():]
+with open("public/index.html","w",encoding="utf-8") as f:f.write(_fm_external(html))
 import json as _js
 _pl=[{_k:_v for _k,_v in _r.items() if _k not in ('room','similar','adv','buckets')} for _r in players];assert len(_pl)>100
 _slim=_fmpk_payload(_pl)

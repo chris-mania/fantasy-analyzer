@@ -94,6 +94,12 @@ jobs:
           size=$(wc -c < public/index.html)
           echo "index.html is $size bytes"
           test "$size" -gt 300000
+          if grep -q 'src="/js/fm-' public/index.html; then
+            f=$(grep -o 'src="/js/fm-[0-9a-f]*\.js"' public/index.html | head -1 | sed 's#src="/##; s#"##')
+            echo "app script: $f"
+            test -s "public/$f"
+            test "$(wc -c < "public/$f")" -gt 1000000
+          fi
 
       - name: Deploy to GitHub Pages
         if: steps.b.outputs.ok == '1'
