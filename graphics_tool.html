@@ -22,10 +22,10 @@ body{margin:0;background:#0d1118;color:#eaf0fb;font-family:Barlow,system-ui,sans
 .nm{font:800 26px 'Barlow Condensed';text-transform:uppercase;line-height:1;white-space:nowrap}.sb{font:600 18px Barlow;color:#5b6678}
 .pj{text-align:center;border-left:2px solid #d7deea;line-height:1;padding:0 12px 0 14px}.pj small{display:block;font:700 12px Barlow;color:#5b6678;margin-top:2px}.pj b{display:block;font:900 italic 32px 'Barlow Condensed';color:#0a63ff;line-height:.95}
 .gb{height:6px;border-radius:4px;background:#d9e4dc;margin-top:3px;overflow:hidden}.gb i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#1ea85d,#5dffa6);box-shadow:0 0 10px #37c979}
-.hd2{position:relative;width:76px;height:76px;margin:-8px 0 0 4px;filter:drop-shadow(0 3px 4px #0a1f5a33)}.hd2 img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom}
+.hd2{position:relative;width:84px;height:64px;margin:0;overflow:hidden;background:radial-gradient(circle at 50% 70%,#dbe6fb,#f4f7fd 75%)}.hd2 img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;image-rendering:auto}
 .hd2 svg{width:100%;height:100%}
 .lg{display:grid;place-items:center;height:48px}.lg img{max-width:52px;max-height:48px;object-fit:contain}
-.lg.big{grid-column:2/4}
+.lg.big{grid-column:2/4}.lg.dl{height:60px}.lg.dl img{max-width:96px;max-height:56px}
 .deco{position:absolute;right:0;top:330px;width:340px;height:900px;background:linear-gradient(160deg,#0a63ff22,#0a63ff08);clip-path:polygon(22% 0,100% 0,100% 100%,0 100%)}
 .deco:before{content:"";position:absolute;right:0;top:0;width:160px;height:100%;background:linear-gradient(180deg,#0a63ff,#0647c4);clip-path:polygon(60% 0,100% 0,100% 100%,0 100%);opacity:.9}
 .deco:after{content:"";position:absolute;left:46px;bottom:60px;width:130px;height:12px;background:#0a63ff;transform:skewX(-30deg)}
@@ -50,7 +50,7 @@ function draw(){
  '<div class="it" style="position:absolute;left:34px;top:84px;font-size:200px;line-height:.9;letter-spacing:-.01em;white-space:nowrap"><span style="color:#0b0f17">'+esc(lab)+'</span> <span style="color:#0a63ff">RANKINGS</span></div>'+
  '<div style="position:absolute;left:34px;top:300px;display:flex;align-items:center;height:56px"><div class="it" style="background:#0b0f17;color:#fff;font-size:40px;padding:6px 40px 6px 22px;clip-path:polygon(0 0,100% 0,92% 100%,0 100%);text-transform:uppercase">Week '+D.week+'</div><div style="font:800 24px \'Barlow Condensed\';background:#e9eef7;padding:14px 22px;letter-spacing:.04em;text-transform:uppercase;margin-left:-10px;color:#36435a">Top '+rows.length+' '+NAMES[POS]+' <span style="color:#0a63ff;margin:0 8px">|</span> '+(POS==='K'||isD?'Fantasy':'PPR')+' Projections</div></div><div class="rows">';
  part.forEach(function(p,i){var rk=SL*PER+i+1;
-  var head=isD?'<div class="hd2"><div style="position:absolute;inset:0;display:grid;place-items:center">'+imgTag(p.l,p.t)+'</div></div><div></div>':'<div class="hd2">'+imgTag(p.h,p.n)+'</div><div class="lg">'+imgTag(p.l,p.t)+'</div>';
+  var head=isD?'<div class="lg big dl">'+imgTag(p.l,p.t)+'</div>':'<div class="hd2">'+imgTag(p.h,p.n)+'</div><div class="lg">'+imgTag(p.l,p.t)+'</div>';
   h+='<div class="r"><div class="n">'+rk+'</div>'+head+'<div style="padding-left:16px;border-left:2px solid #d7deea;height:44px;display:grid;align-content:center"><div class="nm">'+esc(p.n)+'</div><div class="sb">'+esc(p.t)+' '+esc(isD?'DEF':POS)+' &middot; vs '+esc(p.o)+'</div></div><div class="pj"><small>PROJ</small><b>'+p.p.toFixed(1)+'</b><div class="gb"><i style="width:'+Math.max(6,Math.round(p.p/mx*100))+'%"></i></div></div></div>'});
  h+='</div><div class="foot"><div class="l">Full top '+rows.length+' '+esc(lab)+' rankings at</div><div class="rr">fantasymania.org &rsaquo;</div></div>';
  document.getElementById('board').innerHTML=h;fit()}
