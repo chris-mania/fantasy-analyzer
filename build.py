@@ -7228,7 +7228,7 @@ function lgIdeasPick(all,pos,k,used){let r=all.filter(d=>d.pos.indexOf(pos)>=0&&
  tp=d=>d.ti+'T'+d.B.slice().sort((a,b)=>b.raw-a.raw)[0].p.id,sa=d=>'S'+d.A.slice().sort((a,b)=>b.raw-a.raw)[0].p.id,
  dup=d=>{let a=d.ti+'A'+d.A.map(x=>x.p.id).join(),b=d.ti+'B'+d.B.map(x=>x.p.id).join();return seen.has(a)||seen.has(b)||seen.has(tp(d))||seen.has(sa(d))},
  add=d=>{seen.add(tp(d));seen.add(sa(d));seen.add(d.ti+'A'+d.A.map(x=>x.p.id).join());seen.add(d.ti+'B'+d.B.map(x=>x.p.id).join());out.push(d)};
- if(trIdDeepOK()){let o2=[];r.slice().sort((a,b)=>trRank(a)-trRank(b)||b.score-a.score).forEach(d=>{if(o2.length<k&&!dup(d)&&(cnt[d.ti]||0)<7){add(d);cnt[d.ti]=(cnt[d.ti]||0)+1;o2.push(d)}});r.slice().sort((a,b)=>trRank(a)-trRank(b)||b.score-a.score).forEach(d=>{if(out.length<k&&out.indexOf(d)<0&&!used.has(d.key)){add(d)}});out.forEach(d=>used.add(d.key));return out}
+ if(trIdDeepOK()){r.slice().sort((a,b)=>trRank(a)-trRank(b)||b.score-a.score).forEach(d=>{if(out.length<k&&!used.has(d.key)){out.push(d)}});out.forEach(d=>used.add(d.key));return out}
  let tys=['dd','ds','sd','ss'],qs=tys.map(t=>r.filter(d=>d.ty===t)),pi=tys.map(()=>0),turn=0,guard=0;
  while(out.length<k&&guard++<800&&qs.some((q,i)=>pi[i]<q.length)){let d=qs[turn][pi[turn]];if(d===undefined){turn=(turn+1)%4;continue}pi[turn]++;if(!dup(d)&&(cnt[d.ti]||0)<(trIdDeepOK()?7:3)){add(d);cnt[d.ti]=(cnt[d.ti]||0)+1;turn=(turn+1)%4}}
  r.forEach(d=>{if(out.length<k&&out.indexOf(d)<0&&!dup(d))add(d)});
