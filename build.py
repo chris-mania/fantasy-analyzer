@@ -992,8 +992,24 @@ if not AS_OF_WEEK:
             if _ef:
                 _espn = json.load(open(_ef))
             else:
-                import urllib.request as _ur
-                _espn = json.loads(_ur.urlopen(_ur.Request("https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries", headers={"User-Agent": "Mozilla/5.0"}), timeout=25).read())
+                # Ask ESPN only about 5 times a day: reuse the saved copy (kept on the live site) until it is ~4.5 hours old.
+                _sv = _live_json("espn_inj.json") or {}
+                _age = (datetime.now(timezone.utc).timestamp() - float(_sv.get("t", 0))) / 3600.0
+                _espn = _sv.get("d") if (_sv.get("d") and _age < 4.5) else None
+                if _espn is None:
+                    try:
+                        import urllib.request as _ur
+                        _espn = json.loads(_ur.urlopen(_ur.Request("https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries", headers={"User-Agent": "Mozilla/5.0"}), timeout=25).read())
+                        _sv = {"t": datetime.now(timezone.utc).timestamp(), "d": _espn}
+                        print("   ESPN injury report fetched fresh.")
+                    except Exception as _e2:
+                        if _sv.get("d") and _age < 30:
+                            _espn = _sv["d"]; print("   ESPN unreachable; using the saved copy from", round(_age, 1), "hours ago.")
+                        else:
+                            raise
+                else:
+                    print("   ESPN injury report: reusing saved copy,", round(_age, 1), "hours old.")
+                _save_json("espn_inj.json", _sv)
             _wend = {}
             if games is not None:
                 _gg = games[games["game_type"].astype(str).eq("REG")] if "game_type" in games.columns else games
