@@ -986,6 +986,51 @@ if not AS_OF_WEEK:
         except Exception as e:
             print("   Roster status unavailable:", e)
 
+        # ---- ESPN injury report: official status and estimated return date (free public feed; skipped quietly if it fails) ----
+        try:
+            _ef = os.environ.get("MANIA_ESPN_INJ_FILE")   # test hook: a saved copy of the feed
+            if _ef:
+                _espn = json.load(open(_ef))
+            else:
+                import urllib.request as _ur
+                _espn = json.loads(_ur.urlopen(_ur.Request("https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries", headers={"User-Agent": "Mozilla/5.0"}), timeout=25).read())
+            _wend = {}
+            if games is not None:
+                _gg = games[games["game_type"].astype(str).eq("REG")] if "game_type" in games.columns else games
+                for _w_, _d_ in _gg.groupby(safe_num(_gg["week"]).astype(int))["gameday"]:
+                    _wend[int(_w_)] = str(_d_.max())[:10]
+            def _ek(n):
+                return re.sub(r"[^a-z]", "", re.sub(r"\b(jr|sr|ii|iii|iv|v)\b\.?", "", str(n).lower()))
+            _byname = {}
+            for _pid_e, _nm_e, _ps_e in zip(g["player_id"], g["player_name"], g["position"]):
+                _byname.setdefault((_ek(_nm_e), _ps_e), []).append(_pid_e)
+            _ne = 0
+            for _tm in _espn.get("injuries", []):
+                for _it in _tm.get("injuries", []):
+                    _at = _it.get("athlete") or {}
+                    _ps = ((_at.get("position") or {}).get("abbreviation")) or ""
+                    _st = str(_it.get("status") or "")
+                    if _ps not in ("QB", "RB", "WR", "TE") or _st.lower() not in ("out", "injured reserve", "pup", "doubtful"):
+                        continue
+                    _rd = str(((_it.get("details") or {}).get("returnDate")) or "")[:10]
+                    _rw = None
+                    if re.match(r"\d{4}-\d{2}-\d{2}$", _rd):
+                        _rw = next((w_ for w_ in sorted(_wend) if _wend[w_] >= _rd), 99)
+                    for _pid_e in _byname.get((_ek(_at.get("displayName") or _at.get("fullName") or ""), _ps), [])[:1]:
+                        _cur = inj_by_pid.get(_pid_e) or {"avail": 0.0, "label": _st, "note": ""}
+                        if _st.lower() in ("out", "injured reserve", "pup"):
+                            _cur["avail"] = 0.0
+                            _cur["label"] = "Injured reserve" if _st.lower() == "injured reserve" else _st
+                        _det = (_it.get("details") or {}).get("detail") or (_it.get("details") or {}).get("type") or ""
+                        if _det and not _cur.get("note"):
+                            _cur["note"] = str(_det)
+                        if _rw is not None:
+                            _cur["rw"] = int(_rw); _cur["ret"] = _rd
+                        inj_by_pid[_pid_e] = _cur; _ne += 1
+            print(f"   ESPN injury report applied to {_ne} players.")
+        except Exception as e:
+            print("   ESPN injury report unavailable:", e)
+
         # ---- Depth chart: who is next up at each position ----
         depth_rank = {}
         depth_pre = {}
@@ -6043,7 +6088,8 @@ function playedHTML(p){let q=p.played;if(!q)return '';let d=q.proj!=null?q.ppr-q
 function injHTML(p){let wk=META.next_week,o=[],pm=x=>(x>0?'+':'')+x.toFixed(1);
  (p.inj_why||[]).forEach(w=>{o.push(w.kind==='depth'?`<div class="injRow ${w.pts>0?'up':'q'}"><b>Depth chart</b> (${w.s}) ${pm(w.pts)} • ${w.pts>0?'first up at his position':'someone is now ahead of him'}</div>`:w.kind==='qb'?`<div class="injRow ${w.pts<0?'q':'up'}"><b>${w.n}</b> (QB, ${w.s}) ${pm(w.pts)} • passing game takes a hit</div>`:`<div class="injRow up"><b>${w.n}</b> (${w.pos}, ${w.s}) ${pm(w.pts)} • ${w.ev?`without him that work was worth ${w.ev.without} pts vs ${w.ev.with} with (${w.ev.games} game${w.ev.games>1?'s':''})`:'his work shifts to teammates'}</div>`)});
  if(!p.inj&&!o.length)return '';
- let pen=p.inj?(4*(1-p.inj.avail)).toFixed(1):0,head=p.inj?`<b>${p.inj.label}</b>${p.inj.note?' ('+p.inj.note+')':''} • ${p.out?'no Week '+wk+' Rating':'Rating -'+pen}`:`Teammate injuries shift his Week ${wk} Rating`,dot=`<span class="injDot ${p.out?'o':p.inj?'q':'up'}"></span>`;
+ let pen=p.inj?(4*(1-p.inj.avail)).toFixed(1):0,rt=p.inj&&p.inj.ret?(p.inj.rw>17?' • Out for the season (ESPN)':' • Est. return '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p.inj.ret.slice(5,7)-1]+' '+(+p.inj.ret.slice(8,10))+(p.inj.rw<=17?' (Week '+p.inj.rw+', ESPN)':'')):'',
+  head=p.inj?`<b>${p.inj.label}</b>${p.inj.note?' ('+p.inj.note+')':''} • ${p.out?'no Week '+wk+' Rating':'Rating -'+pen}${rt}`:`Teammate injuries shift his Week ${wk} Rating`,dot=`<span class="injDot ${p.out?'o':p.inj?'q':'up'}"></span>`;
  if(!o.length)return `<div class="injMini"><div class="injLine" style="display:flex;align-items:center;gap:8px;font-size:13px;padding:8px 12px;color:#33445f">${dot}<span>${head}</span></div></div>`;
  return `<details class="injMini"><summary>${dot}<span>${head}</span><span class="injMore">${o.length} teammate note${o.length>1?'s':''} ▾</span></summary><div class="injBody">${o.join('')}${META.injuries&&META.injuries.updated?'<div class="injUp">Injury report updated '+META.injuries.updated+'</div>':''}</div></details>`}
 function outlook(p,start){
@@ -6729,7 +6775,8 @@ function trBye(team){let o=(META.opps||{})[team]||{};for(let w=1;w<=18;w++)if(!o
 var FMOUT={"Lamar Jackson":{gone:1,label:"Out for the year"},"Michael Wilson":{gone:1,label:"Out for the year"},"De'Von Achane":{gone:1,label:"Out for the year"},"Gardner Minshew":{gone:1,label:"Out for the year"},"Josh Jacobs":{back:14,label:"Out at least 4 weeks"},"Puka Nacua":{back:14,label:"Out at least 4 weeks"}};
 function fmManual(p){var m=p&&FMOUT[p.name];if(!m)return null;if(m.gone)return {out:true,R:99,gone:true,label:m.label,missed:0};var R=Math.max(0,m.back-(META.next_week||0));return R>0?{out:true,R:R,gone:false,label:m.label,missed:0}:null}
 function trPlan(p){let mo=fmManual(p);if(mo)return mo;let i=p.inj,lab=((i&&i.label)||''),l=lab.toLowerCase(),out=!!p.out||(i&&i.avail!=null&&i.avail<=.1),R=0,gone=false,lw=0,missed=0;(p.logs||[]).forEach(x=>{if(x.w>lw&&x.snap>0)lw=x.w});if(lw>0)missed=Math.max(0,(META.week||0)-lw);
- if(out){R=/injured/.test(l)?Math.max(1,5-missed):/doubtful/.test(l)?1:Math.max(1,2-missed);if(/released|retired|inactive|exempt/.test(l)){gone=true;R=99}}
+ if(out){R=/injured/.test(l)?Math.max(1,5-missed):/doubtful/.test(l)?1:Math.max(1,2-missed);if(/inactive/.test(l))R=1;if(/released|retired|exempt/.test(l)){gone=true;R=99}}
+ if(out&&i&&i.rw!=null&&i.rw>(META.next_week||0)){R=i.rw>17?99:i.rw-(META.next_week||0);gone=i.rw>17}
  return {out,R,gone,label:lab,missed}}
 function trScale(x){let P=[[0,0],[2,5],[5,20],[10,45],[14,65],[17,77],[20,88],[25,100]];if(x<=0)return 0;for(let i=1;i<P.length;i++)if(x<=P[i][0]){let a=P[i-1],b=P[i];return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])}return 100}
 var TROUT=false;
