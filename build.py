@@ -6760,7 +6760,7 @@ function trCtx(){let key=[TR.n,TR.sf?1:0,JSON.stringify(TR.st),META.next_week].j
   v.role={k:'cuff',st,f,risk,alone};v.hcF=f;v.raw*=f;v.raw4*=f});
  vs.forEach(v=>{v.tv=Math.pow(v.raw,1.3);v.tv4=Math.pow(v.raw4,1.3)});let mx=Math.max(1,...vs.map(v=>v.tv));vs.forEach(v=>{v.val=trDisp(100*v.tv/mx);v.val4=trDisp(100*v.tv4/mx)});
  return TRC={key,V,repl,waiv,avg,start,S,mx,vs}}
-function trWeekPpg(v,w){let i=v.gw.indexOf(w);if(i<0)return null;if(w===META.next_week&&v.p.played&&v.p.played.ppr!=null)return +v.p.played.ppr;if(w===META.next_week&&v.p.proj&&v.p.proj.pts!=null&&!v.p.out)return +v.p.proj.pts;return v.arr[i]}
+function trWeekPpg(v,w){let i=v.gw.indexOf(w);if(i<0)return null;if(w===META.next_week&&v.p.played&&v.p.played.ppr!=null)return v.p.played.proj!=null?+v.p.played.proj:v.arr[i];if(w===META.next_week&&v.p.proj&&v.p.proj.pts!=null&&!v.p.out)return +v.p.proj.pts;return v.arr[i]}
 function trPick(ent){let c=trCtx(),s=TR.st,pool=ent.slice().sort((a,b)=>(b.sel!=null?b.sel:b.ppg)-(a.sel!=null?a.sel:a.ppg)),used=new Set(),st=[];
  const take=(slot,ok,fill)=>{let e=pool.find(x=>!used.has(x.v.p.id)&&ok(x.v.p.pos));if(e){used.add(e.v.p.id);st.push({slot,v:e.v,ppg:e.ppg,empty:false})}else st.push({slot,v:null,ppg:fill,empty:true})};
  for(let i=0;i<s.QB;i++)take('QB',p=>p==='QB',c.repl.QB);for(let i=0;i<s.RB;i++)take('RB',p=>p==='RB',c.repl.RB);for(let i=0;i<s.WR;i++)take('WR',p=>p==='WR',c.repl.WR);for(let i=0;i<s.TE;i++)take('TE',p=>p==='TE',c.repl.TE);
@@ -6768,7 +6768,7 @@ function trPick(ent){let c=trCtx(),s=TR.st,pool=ent.slice().sort((a,b)=>(b.sel!=
  return {st,bench:pool.filter(x=>!used.has(x.v.p.id)),tot:st.reduce((a,x)=>a+x.ppg,0)}}
 function trEnt(ids,fn){let c=trCtx();return ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone).map(v=>({v,ppg:fn(v)})).filter(e=>e.ppg!=null)}
 function trLineup(ids,key){let c=trCtx(),L=trPick(trEnt(ids,v=>key==='now'?v.nowP:key==='ros'?v.rosv:v.later));L.off=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone&&(key==='now'?v.nowP==null:false));L.gone=ids.map(i=>c.V[i]).filter(v=>v&&v.pl.gone);return L}
-function trWeekPpgD(v,w){let i=v.gw.indexOf(w);if(i<0)return null;if(w===META.next_week&&v.p.played&&v.p.played.ppr!=null)return +v.p.played.ppr;if(w===META.next_week&&v.p.proj&&v.p.proj.pts!=null&&!v.p.out)return +v.p.proj.pts;return v.arrW[i]}
+function trWeekPpgD(v,w){let i=v.gw.indexOf(w);if(i<0)return null;if(w===META.next_week&&v.p.played&&v.p.played.ppr!=null)return v.p.played.proj!=null?+v.p.played.proj:v.arrW[i];if(w===META.next_week&&v.p.proj&&v.p.proj.pts!=null&&!v.p.out)return +v.p.proj.pts;return v.arrW[i]}
 function trWeekSel(v,w){let i=v.gw.indexOf(w);if(i<0)return null;if(w===META.next_week){if(v.p.played&&v.p.played.proj!=null)return +v.p.played.proj;if(v.p.proj&&v.p.proj.pts!=null&&!v.p.out)return +v.p.proj.pts}return v.arrW[i]}
 function trEntSel(ids,fn,w){return trEnt(ids,fn).map(e=>{e.sel=trWeekSel(e.v,w);return e})}
 function trLineupWD(ids,w){return trPick(trEntSel(ids,v=>trWeekPpgD(v,w),w))}
