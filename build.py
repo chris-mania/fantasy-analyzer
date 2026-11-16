@@ -9849,6 +9849,22 @@ document.addEventListener('click',function(e){var t=e.target.closest&&e.target.c
 </script></body></html>'''
 
 html = html.replace("__PAYLOAD__", payload).replace("__META__", meta).replace("__REFS__", refs_json).replace("__DEPTH__", depth_json).replace("__XTRA__", extra_json)
+# Scoreboard look (black + brand blue): a separate stylesheet made from the app's own, loaded only when switched on with ?look=sb.
+def _fm_sb(h):
+    import hashlib, re as _rx
+    from look_scoreboard import make_scoreboard_css
+    css = "".join(_rx.findall(r"<style[^>]*>(.*?)</style>", h, _rx.S))
+    sb = make_scoreboard_css(css, h)
+    ver = hashlib.md5(sb.encode("utf-8")).hexdigest()[:10]
+    os.makedirs("public/css", exist_ok=True)
+    for _o in os.listdir("public/css"):
+        if _o.startswith("fm-sb-"): os.remove(os.path.join("public/css", _o))
+    with open("public/css/fm-sb-%s.css" % ver, "w", encoding="utf-8") as f: f.write(sb)
+    tag = ("<script>try{var q=/[?&]look=(sb|classic)/.exec(location.search);if(q)localStorage.setItem('fmLook',q[1]);"
+           "if(localStorage.getItem('fmLook')==='sb'){document.documentElement.className+=' sb';"
+           "document.write('<link rel=\\'stylesheet\\' href=\\'/css/fm-sb-%s.css\\'><meta name=\\'theme-color\\' content=\\'#070b12\\'><link rel=\\'stylesheet\\' href=\\'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap\\'>')}}catch(e){}</script>") % ver
+    return h.replace("<head>", "<head>" + tag, 1)
+html = _fm_sb(html)
 os.makedirs("public", exist_ok=True)
 # The app's big script (player data + code, ~3 MB) goes in its own file with a new name every build, so
 # each page (and every Google page made from this one) is small, phones keep the file between pages, and
