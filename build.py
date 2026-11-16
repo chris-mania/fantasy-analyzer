@@ -2335,6 +2335,10 @@ TEAMCAR = merged.groupby(["team", "week"])["carries"].sum().to_dict()
 for _, r in g.sort_values("mania", ascending=False).iterrows():
     d = merged[(merged["player_id"] == r["player_id"]) & (merged["team"] == r["team"])].sort_values("week")
 
+    _pv = merged[(merged["player_id"] == r["player_id"]) & (merged["team"] != r["team"]) & (merged["game_weight"] > 0)].sort_values("week")
+    prev = [{"w": int(y.week), "t": str(y.team), "ppr": round(float(y.fantasy_points_ppr), 2), "tgt": int(y.targets), "car": int(y.carries),
+             "air": round(float(y.receiving_air_yards), 1)} for y in _pv.itertuples()]
+
     logs = []
     for x in d.itertuples():
         logs.append({
@@ -2357,6 +2361,7 @@ for _, r in g.sort_values("mania", ascending=False).iterrows():
             "rzc": int(x.rz_carries),
             "gl": int(x.gl_carries),
             "partial": bool(x.partial),
+            "t": str(x.team),
             "weight": round(float(x.game_weight), 2),
             "auto": bool(x.auto_excl),
             "pj": (round(float(HIST[(r["player_id"], int(x.week))]), 1) if (r["player_id"], int(x.week)) in HIST else (PROJ[r["player_id"]]["pts"] if (int(x.week) == next_week and r["player_id"] in PROJ) else None)),
@@ -2454,6 +2459,7 @@ for _, r in g.sort_values("mania", ascending=False).iterrows():
         },
         "m": metrics,
         "logs": logs,
+        "prev": prev,
         "room": room_data,
         "similar": match_examples.get(r["player_id"], []),
     })
@@ -6729,7 +6735,11 @@ function trScale(x){let P=[[0,0],[2,5],[5,20],[10,45],[14,65],[17,77],[20,88],[2
 var TROUT=false;
 function trL(p){return `<span class="tlink" data-open="${p.id}">${p.name}</span>`}
 function trFx(){var f=TR.st.FLEX;return TR.sf?{F:Math.max(0,f-1),SF:1}:{F:f,SF:0}}
-function trRecent(v){var p=v.p,pos=p.pos,C={RB:[-.497,.676,1.518,.012],WR:[-.14,1.537,.018,1.426],TE:[.509,1.526,.015,0]},c=C[pos],L=(p.logs||[]).filter(function(l){return l.ppr!=null&&!l.auto&&l.weight!==0});if(!L.length)return v.sh;if(pos==='QB'&&L.length>=5){var ys=L.map(function(l){return +l.ppr}).sort(function(x,y){return x-y}),md=ys[Math.floor(ys.length/2)],mx=Math.floor(L.length/5),cut=0;L=L.filter(function(l){if(cut<mx&&+l.ppr<md*.5){cut++;return false}return true})}var n=L.length,sw=0,sz=0;L.forEach(function(l,i){var w=Math.pow(.5,(n-1-i)/5),y=+l.ppr,z=y;if(c){var ep=pos==='RB'?c[0]+c[1]*(l.car||0)+c[2]*(l.tgt||0)+c[3]*(l.air||0):pos==='WR'?c[0]+c[1]*(l.tgt||0)+c[2]*(l.air||0)+c[3]*(l.car||0):c[0]+c[1]*(l.tgt||0)+c[2]*(l.air||0);z=.3*Math.max(0,ep)+.7*y}sw+=w;sz+=w*z});return (sz+3*TRPRI[pos])/(sw+3)}
+function trRecent(v){var p=v.p,pos=p.pos,C={RB:[-.497,.676,1.518,.012],WR:[-.14,1.537,.018,1.426],TE:[.509,1.526,.015,0]},c=C[pos],L=(p.prev||[]).concat(p.logs||[]).filter(function(l){return l.ppr!=null&&!l.auto&&l.weight!==0});if(!L.length)return v.sh;if(pos==='QB'&&L.length>=5){var ys=L.map(function(l){return +l.ppr}).sort(function(x,y){return x-y}),md=ys[Math.floor(ys.length/2)],mx=Math.floor(L.length/5),cut=0;L=L.filter(function(l){if(cut<mx&&+l.ppr<md*.5){cut++;return false}return true})}var n=L.length,sw=0,sz=0,mvT=L.some(function(l){return l.t&&l.t!==p.team});L.forEach(function(l,i){var w=Math.pow(.5,(n-1-i)/5)*(mvT&&l.t&&l.t!==p.team?.5:1),y=+l.ppr,z=y;if(c){var ep=pos==='RB'?c[0]+c[1]*(l.car||0)+c[2]*(l.tgt||0)+c[3]*(l.air||0):pos==='WR'?c[0]+c[1]*(l.tgt||0)+c[2]*(l.air||0)+c[3]*(l.car||0):c[0]+c[1]*(l.tgt||0)+c[2]*(l.air||0);z=.3*Math.max(0,ep)+.7*y}sw+=w;sz+=w*z});var own=(sz+3*TRPRI[pos])/(sw+3);return trMove(p,L,own,sw)}
+var TRMVSH={WR:[.30,.24,.18,.12,.08],RB:[.50,.28,.12,.06],TE:[.62,.22,.10]};
+function trMove(p,L,own,sw){var pos=p.pos,T=p.team,sh=TRMVSH[pos];if(!sh||!p.team)return own;var nNew=L.filter(function(l){return l.t===T}).length,mv=!!p.traded||L.some(function(l){return l.t&&l.t!==T});if(!mv)return own;
+ var a=Math.min(1,.5+.5*nNew/6);if(a>=1)return own;var room=DB.filter(function(q){return q.team===T&&q.pos===pos&&q.id!==p.id&&q.m&&q.m.ppr!=null}).map(function(q){return +q.m.ppr}).sort(function(x,y){return y-x}),n=sh.length;if(room.length<2)return own;
+ var tot=room.slice(0,n).reduce(function(x,y){return x+y},0),k=room.filter(function(x){return x>own}).length;k=Math.min(k,n-1);var S=tot*sh[k];S=Math.max(.5*own,Math.min(1.8*own,S));return a*own+(1-a)*S}
 function trCtx(){let key=[TR.n,TR.sf?1:0,JSON.stringify(TR.st),META.next_week].join('|');if(TRC&&TRC.key===key)return TRC;
  let st=TR.st,fx0=trFx(),F=fx0.F,sf=fx0.SF,V={};
  allPlayers().filter(p=>TRPRI[p.pos]!=null&&(p.pos!=='QB'||p.mania!=null)).forEach(p=>{let m=p.m||{},n=p.games||0,pd=p.played,ex=(pd&&pd.ppr!=null&&pd.counted!==true&&!p.out)?1:0,sh=(n*(+m.ppr||0)+(ex?+pd.ppr:0)+3*TRPRI[p.pos])/(n+ex+3),pr=p.proj,fx=(pr&&pr.fx)||{},ok=!!pr&&!p.out&&pr.pts!=null,
