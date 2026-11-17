@@ -84,7 +84,7 @@
       bd=meta.querySelector('.bdgs');
       var sg=meta.textContent+'|'+(bd?bd.children.length:0)+'|'+meta.clientWidth;
       if(meta.getAttribute('data-fit')!==sg){
-        meta.style.setProperty('--bs','36px');meta.style.setProperty('--mf','19px');
+        meta.style.setProperty('--bs','40px');meta.style.setProperty('--mf','21px');
         var k=0;while(meta.scrollWidth>meta.clientWidth+1&&k++<40){
           var bs=parseFloat(meta.style.getPropertyValue('--bs')),mf=parseFloat(meta.style.getPropertyValue('--mf'));
           if(mf>16)meta.style.setProperty('--mf',(mf-.5)+'px');
@@ -97,8 +97,8 @@
     var h1=hero.querySelector('.hid h1'),rl=hero.querySelector('.hid .rankline');
     var s2=(h1?h1.textContent:'')+(hero.querySelector('.hid').clientWidth)+'|'+(rl?rl.textContent:'')+'|'+hero.clientWidth;
     if(hero.getAttribute('data-fit2')!==s2){
-      if(h1){h1.style.whiteSpace='nowrap';h1.style.setProperty('font-size','44px','important');var hs=44,n1=0;var avH=function(){var hb=hero.getBoundingClientRect(),eb=h1.getBoundingClientRect();return hb.right-16-eb.left};while(h1.scrollWidth>avH()&&hs>18&&n1++<40){hs-=1;h1.style.setProperty('font-size',hs+'px','important')}}
-      if(rl){rl.style.flexWrap='nowrap';rl.style.setProperty('font-size','17px','important');var rf=17,n2=0;var avR=function(e){var hb=hero.getBoundingClientRect(),eb=e.getBoundingClientRect();return hb.right-16-eb.left};while(rl.scrollWidth>avR(rl)&&rf>9&&n2++<40){rf-=.25;rl.style.setProperty('font-size',rf+'px','important')}}
+      if(h1){h1.style.whiteSpace='nowrap';h1.style.setProperty('font-size','48px','important');var hs=48,n1=0;var avH=function(){var hb=hero.getBoundingClientRect(),eb=h1.getBoundingClientRect();return hb.right-16-eb.left};while(h1.scrollWidth>h1.clientWidth+1&&hs>18&&n1++<40){hs-=1;h1.style.setProperty('font-size',hs+'px','important')}}
+      if(rl){rl.style.flexWrap='nowrap';rl.style.setProperty('font-size','19px','important');var rf=19,n2=0;var avR=function(e){var hb=hero.getBoundingClientRect(),eb=e.getBoundingClientRect();return hb.right-16-eb.left};while(rl.scrollWidth>rl.clientWidth+1&&rf>9&&n2++<40){rf-=.25;rl.style.setProperty('font-size',rf+'px','important')}}
       hero.setAttribute('data-fit2',s2);
     }
     var pj=hero.querySelector('.heroPj'),ol=hero.querySelector('.hol .outlook'),pm=body.querySelector('.pgMin');

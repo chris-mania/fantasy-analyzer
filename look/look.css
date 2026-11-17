@@ -520,3 +520,13 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile .hero2 .hid .rankline>i{padding:4px 7px!important;margin-right:4px!important}
 #profile .hero2 .hid .rankline>i{font-size:inherit!important}
 #profile .hero2 .hid .rankline>i{letter-spacing:.03em!important;padding:4px 6px!important;margin-right:3px!important}
+
+@media(max-width:999px){
+#profile .hero2 .hid{display:flex!important;flex-direction:column!important;justify-content:space-between!important;align-self:stretch!important;padding-top:4px!important;padding-bottom:4px!important;padding-right:2px!important;gap:0!important}
+#profile .hero2 .hid h1{display:block!important;margin:0!important;line-height:1!important}
+#profile .hero2 .hid .meta{--mf:21px;line-height:var(--bs,34px)!important;margin:0!important;min-height:0!important}
+#profile .hero2 .hid .meta .bdgs{align-items:center!important;height:var(--bs,34px)!important;margin-left:auto}
+#profile .hero2 .hid .meta .bdgs .bdgBtn{display:flex!important;align-items:center!important;height:var(--bs,34px)!important}
+#profile .hero2 .hid .rankline{display:flex!important;justify-content:space-between!important;width:100%!important;gap:4px!important;margin:0!important}
+#profile .hero2 .hid .rankline>i{margin-right:0!important;padding:6px 8px!important;flex:0 0 auto}
+}
