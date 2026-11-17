@@ -335,3 +335,23 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #kdBoard th:nth-child(2),#kdBoard td:nth-child(2){width:38%}
 #kdBoard td:nth-child(2){font-size:13px!important}
 #kdBoard .thumb,#kdBoard .portrait{width:28px!important;height:28px!important}
+/* ===== top-card layout options (preview only, ?top=b|c) ===== */
+@media(max-width:999px){
+#profile[data-lktop="b"] .hero2{grid-template-areas:"hp hp hp hp" "hid hid hid hid" "ol ol ol ol" "sl sl sr sr" "pj pj pj pj"!important;row-gap:4px!important;background:linear-gradient(135deg,var(--lkB1),var(--lkB2)) 0 0/100% calc(100% - 118px) no-repeat,#fff!important}
+#profile[data-lktop="b"] .hero2 .hp{justify-self:center!important}
+#profile[data-lktop="b"] .hero2 .portrait{width:112px!important;height:112px!important}
+#profile[data-lktop="b"] .hero2 .portrait img{width:104px!important;height:104px!important}
+#profile[data-lktop="b"] .hero2 .hid{text-align:center!important;padding:0!important}
+#profile[data-lktop="b"] .hero2 .hid h1,#profile[data-lktop="b"] .hero2 .hid .meta{text-align:center!important;justify-content:center!important}
+#profile[data-lktop="b"] .hero2 .rankline{justify-content:center!important}
+#profile[data-lktop="b"] .hero2 .hol{align-items:center!important;padding:0 0 14px!important}
+#profile[data-lktop="b"] .hero2 .bdgs{justify-content:center!important}
+#profile[data-lktop="c"] .hero2{grid-template-areas:"hid hid hid hp" "ol ol ol hp" "sl sl sr sr" "pj pj pj pj"!important}
+#profile[data-lktop="c"] .hero2 .hp{justify-self:end!important;align-self:start!important}
+#profile[data-lktop="c"] .hero2 .portrait{width:116px!important;height:116px!important}
+#profile[data-lktop="c"] .hero2 .portrait img{width:108px!important;height:108px!important}
+#profile[data-lktop="c"] .hero2 .hid{padding-left:4px!important}
+#profile[data-lktop="c"] .hero2 .hid h1{font-size:34px!important;line-height:.95!important}
+#profile[data-lktop="c"] .hero2 .hol{padding-left:4px!important}
+#profile[data-lktop="c"] .hero2 .rankline{flex-wrap:wrap!important}
+}

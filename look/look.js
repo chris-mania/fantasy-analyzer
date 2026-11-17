@@ -64,4 +64,6 @@
       [['ov','Overview'],['st','Stats']].forEach(function(a){var b=document.createElement('button');b.type='button';b.textContent=a[1];b.dataset.v=a[0];b.onclick=function(){kb.dataset.lkv=a[0];d.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x.dataset.v===a[0])})};if(a[0]===kb.dataset.lkv)b.className='on';d.appendChild(b)});
       kb.insertBefore(d,kb.firstChild)}}catch(e){}}
   setInterval(kdTabs,400);
+
+  try{var tp=new URLSearchParams(location.search).get('top');if(tp)setInterval(function(){var e=document.getElementById('profile');if(e&&e.getAttribute('data-lktop')!==tp)e.setAttribute('data-lktop',tp)},300)}catch(e){}
 })();
