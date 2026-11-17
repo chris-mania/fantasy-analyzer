@@ -592,12 +592,5 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #compare .cdet[open]>summary{border-bottom:1.5px solid rgba(20,35,70,.1)}
 #compare .cdet .cdBody{padding:14px 14px 16px!important}
 
-/* pass 21: spread the top block out (name, line, chips) */
-@media(max-width:999px){
-#profile .hero2 .hid{display:flex!important;flex-direction:column!important;justify-content:center!important;gap:14px!important}
-#profile .hero2 .hid h1{margin:0!important}
-#profile .hero2 .hid .meta{margin:0!important}
-#profile .hero2 .hid .rankline{margin:2px 0 0!important}
-#profile .hero2{padding-top:22px!important;padding-bottom:30px!important;row-gap:0}
-}
-@media(max-width:999px){#profile #lkInfo{margin-top:30px!important}}
+/* pass 22: score cards up a little more */
+@media(max-width:999px){#profile .hero2 .hs.left,#profile .hero2 .hs.right{margin-top:-6px!important}#profile #lkInfo{margin-top:54px!important}}
