@@ -33,4 +33,9 @@
   setTimeout(function(){lift();sq(document.body)},1200);
   var sv=window.showView; if(typeof sv==='function'){window.showView=function(){var r=sv.apply(this,arguments);setTimeout(function(){lift();sq(document.body)},600);return r}}
   var ct;document.addEventListener('click',function(){clearTimeout(ct);ct=setTimeout(function(){lift();sq(document.body)},700)},true);
+
+  // ---- team color for the profile band + blue "IN THE WORLD" ----
+  function tint(){try{var pb=document.getElementById('profileBody');if(pb&&typeof curPlayer!=='undefined'&&curPlayer&&typeof TCOL!=='undefined'){var c=TCOL[curPlayer.team]||'#275DF3';if(pb.style.getPropertyValue('--lkTc')!==c)pb.style.setProperty('--lkTc',c);var pr=document.getElementById('profile');if(pr&&pr.style.getPropertyValue('--lkTc')!==c)pr.style.setProperty('--lkTc',c)}
+    var h=document.querySelector('#home .hhL h1');if(h&&!h.querySelector('.lkBl')&&/in the world/i.test(h.textContent)){h.innerHTML=h.textContent.replace(/(in the world)/i,'<span class="lkBl">$1</span>')}}catch(e){}}
+  setInterval(tint,500);
 })();
