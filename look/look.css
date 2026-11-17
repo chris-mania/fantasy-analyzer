@@ -355,3 +355,35 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile[data-lktop="c"] .hero2 .hol{padding-left:4px!important}
 #profile[data-lktop="c"] .hero2 .rankline{flex-wrap:wrap!important}
 }
+/* ===== pass 13: top card matched to the approved mock (phone) ===== */
+@media(max-width:999px){
+#profile .hero2 .portrait{width:106px!important;height:106px!important;filter:drop-shadow(0 0 10px rgba(124,243,166,.75))!important}
+#profile .hero2 .portrait img,#profile .hero2 .portrait .initials{width:86px!important;height:86px!important;border-radius:50%!important;background:#fff!important}
+#profile .hero2 .portrait .initials{font-size:30px!important;font-weight:800!important;display:flex!important;align-items:center;justify-content:center;margin:auto;position:absolute;inset:0;width:86px!important;height:86px!important;margin:auto!important}
+#profile .portrait .rsv .rp{stroke:#7CF3A6!important;stroke-width:10px!important;stroke-linecap:round}
+#profile .portrait .rsv .rt{stroke:rgba(124,243,166,.3)!important;stroke-width:10px!important}
+#profile .hero2 .hid{padding-left:22px!important}
+#profile .hero2 .hid h1{font-size:31px!important;white-space:nowrap!important;letter-spacing:.005em}
+#profile .hero2 .hid .meta{font-size:13px!important;white-space:nowrap}
+#profile .hero2 .rankline{flex-wrap:nowrap!important;gap:4px!important;margin-top:8px!important}
+#profile .hero2 .rankline i{font-size:10.5px!important;letter-spacing:.05em!important;padding:3px 6px!important;white-space:nowrap!important;background:rgba(255,255,255,.2)!important;border-radius:2px!important}
+#profile .hero2 .hol{padding-left:22px!important}
+}
+/* ===== pass 14: desktop top card like the desktop mock (cards inside the band) ===== */
+#profile .portrait .rsv .rp{stroke:#7CF3A6!important;stroke-linecap:round}
+#profile .portrait .rsv .rt{stroke:rgba(124,243,166,.3)!important}
+@media(min-width:1000px){
+#profile .dkTop{min-height:336px!important;padding-bottom:0!important}
+#profile .dkTop::before{height:336px!important}
+#profile .lkWm{height:336px!important}
+#profile .dkOv,#profile .dkKp>.dkT:first-child{top:100px!important;height:136px!important}
+#profile .dkKp{margin:44px 0 14px!important}
+#profile .dkNm .lkOl,#profile .dkNm .outlook{display:inline-block!important;font-size:11px!important;padding:3px 8px!important;margin:8px 0 0!important;border-radius:0!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+#profile .dkBd{margin-top:14px!important}
+#profile .dkBd .bdgBtn i,#profile .dkBd .bdgBtn svg{width:42px!important;height:49px!important}
+}
+@media(min-width:1000px){
+#profile .dkTop::before{left:50%!important;right:auto!important;width:100vw!important;transform:translateX(-50%);box-shadow:none!important;clip-path:none!important;height:336px!important}
+#profile .lkWm{left:50%!important;right:auto!important;width:100vw!important;transform:translateX(-50%);height:336px!important;max-height:336px!important;box-sizing:border-box}
+}
+@media(min-width:1000px){#profile .dkKp{margin-top:104px!important}}
