@@ -472,3 +472,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 @media(max-width:820px){.lkSort button{min-height:0!important;height:30px!important;line-height:1!important;white-space:nowrap!important;flex:1 1 0;padding:0 8px!important;width:auto!important}.lkSort span{flex:none}}
 #profile .stR:not(.stClk) .stGo{visibility:hidden}
 .lkSort{display:none!important}
+@media(max-width:700px){
+#rankings.wideView th:nth-child(3),#rankings.wideView td:nth-child(3){min-width:76px!important;width:76px!important;text-align:right!important;padding-left:6px!important;padding-right:10px!important;white-space:nowrap!important;position:static}
+#rankings.wideView th:nth-child(2),#rankings.wideView td:nth-child(2){width:186px!important;min-width:186px!important;max-width:186px!important}
+}
