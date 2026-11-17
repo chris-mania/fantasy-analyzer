@@ -68,4 +68,36 @@
   try{var tp=new URLSearchParams(location.search).get('top');if(tp)setInterval(function(){var e=document.getElementById('profile');if(e&&e.getAttribute('data-lktop')!==tp)e.setAttribute('data-lktop',tp)},300)}catch(e){}
 
 
+
+  /* ===== profile info strip (projection / rank tag / games counted / note) ===== */
+  function liInfo(){
+    var pr=document.getElementById('profile');if(!pr)return;
+    var v=null;try{v=new URLSearchParams(location.search).get('info')}catch(e){}
+    if(!v)return;
+    if(pr.getAttribute('data-lkinfo')!==v)pr.setAttribute('data-lkinfo',v);
+    var body=document.getElementById('profileBody');if(!body)return;
+    var hero=body.querySelector('.hero2');if(!hero)return;
+    var pj=hero.querySelector('.heroPj'),ol=hero.querySelector('.hol .outlook'),pm=body.querySelector('.pgMin'),dc=body.querySelector('.disclaimer');
+    var pt=pj?pj.textContent.replace(/\s+/g,' ').trim():'';
+    var m=pt.match(/projection\s*([\d.]+)\s*(PPR|Half|Std)?/i);
+    var proj=m?m[1]:'',fmt=m&&m[2]?m[2]:'PPR';
+    var wk=(pt.match(/Week\s*(\d+)/i)||[])[1]||'';
+    var tag=ol?ol.textContent.replace(/\s*this week/i,'').trim():'';
+    var gm=pm&&pm.querySelector('b')?pm.querySelector('b').textContent.trim():'';
+    var note=dc?dc.textContent.replace(/\s+/g,' ').trim():'';
+    var sig=[proj,fmt,wk,tag,gm,note].join('|');
+    var el=document.getElementById('lkInfo');
+    if(el&&el.getAttribute('data-sig')===sig&&el.previousElementSibling===hero)return;
+    if(el)el.remove();
+    el=document.createElement('div');el.id='lkInfo';el.className='lkInfo';el.setAttribute('data-sig',sig);
+    el.innerHTML='<button type="button" class="liP"><small>Wk '+wk+' projection</small><b>'+proj+'</b><u>'+fmt+'</u><i>›</i></button>'
+      +(tag?'<div class="liR"><small>This week</small><b>'+tag+'</b></div>':'')
+      +(gm?'<button type="button" class="liG"><small>Games counted</small><b>'+gm+'</b><u>Edit</u></button>':'')
+      +(note?'<div class="liN"><em>i</em><span></span></div>':'');
+    var sp=el.querySelector('.liN span');if(sp)sp.textContent=note;
+    el.querySelector('.liP').onclick=function(){if(pj)pj.click()};
+    var g=el.querySelector('.liG');if(g)g.onclick=function(){if(pm)pm.click()};
+    hero.parentNode.insertBefore(el,hero.nextSibling);
+  }
+  setInterval(function(){if(!document.hidden)try{liInfo()}catch(e){}},500);
 })();

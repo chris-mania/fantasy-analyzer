@@ -471,3 +471,60 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #rankings.wideView th:nth-child(2),#rankings.wideView td:nth-child(2){width:186px!important;min-width:186px!important;max-width:186px!important}
 }
 @media(max-width:700px){#rankings .bi i{width:14px!important}#rankings .bi i:nth-child(n+2){margin-left:-4px!important}}
+
+/* ===== pass 15: CeeDee fixes + info strip options (phone) ===== */
+@media(max-width:999px){
+/* Back / share buttons were pushed under the header: put them back in the page */
+#profile .backBtn,#profile .topBtns{transform:none!important}
+#profile .topRow{margin-top:0!important;margin-bottom:6px!important}
+/* flush score cards, lighter */
+#profile .hero2 .hs.left{margin-left:-14px!important}
+#profile .hero2 .hs.right{margin-right:-14px!important}
+#profile .hero2 .hs.left,#profile .hero2 .hs.right{box-shadow:0 4px 12px rgba(15,30,70,.10)!important}
+#profile .hero2 .hs .scorebig{font-size:44px!important;text-shadow:none!important;filter:none!important}
+}
+/* hide the three original rows when a strip is active */
+#profile[data-lkinfo] .hero2 .hpjW,#profile[data-lkinfo] .hero2 .hol .outlook,#profile[data-lkinfo] .pgTop.min,#profile[data-lkinfo] .disclaimer{display:none!important}
+#profile[data-lkinfo] .hero2{padding-bottom:0!important;background-size:100% 100%,auto!important}
+#profile #lkInfo{margin:62px 0 8px;font-family:'Barlow','Helvetica Neue',Arial,sans-serif!important}
+#profile #lkInfo *{font-family:'Barlow','Helvetica Neue',Arial,sans-serif!important;font-style:normal;text-decoration:none;box-sizing:border-box}
+#profile #lkInfo button{background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer;color:var(--ink)}
+#profile #lkInfo small{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+#profile #lkInfo b{font-weight:800;color:var(--ink)}
+#profile #lkInfo u{color:var(--blue);font-weight:800}
+#profile #lkInfo .liN{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.35;color:#41557a}
+#profile #lkInfo .liN em{flex:0 0 16px;height:16px;border-radius:50%;border:1.5px solid var(--blue);color:var(--blue);font-size:11px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+/* A: one strip, three cells */
+#profile[data-lkinfo="a"] #lkInfo{display:grid;grid-template-columns:1.3fr .8fr 1fr;background:#fff;border:1px solid var(--line);border-top:3px solid var(--blue)}
+#profile[data-lkinfo="a"] #lkInfo>.liP,#profile[data-lkinfo="a"] #lkInfo>.liR,#profile[data-lkinfo="a"] #lkInfo>.liG{padding:10px 12px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+#profile[data-lkinfo="a"] #lkInfo>.liG{border-right:0}
+#profile[data-lkinfo="a"] #lkInfo b{font-size:26px;line-height:1.05;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important}
+#profile[data-lkinfo="a"] #lkInfo .liP u{display:inline;font-size:12px;color:var(--muted);margin-left:4px}
+#profile[data-lkinfo="a"] #lkInfo .liP{position:relative}
+#profile[data-lkinfo="a"] #lkInfo .liP i{position:absolute;right:10px;top:50%;transform:translateY(-30%);color:var(--blue);font-size:20px;font-weight:800}
+#profile[data-lkinfo="a"] #lkInfo .liP b,#profile[data-lkinfo="a"] #lkInfo .liP u{display:inline-block}
+#profile[data-lkinfo="a"] #lkInfo .liR b{color:#157a43}
+#profile[data-lkinfo="a"] #lkInfo .liG u{font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+#profile[data-lkinfo="a"] #lkInfo .liG b{display:inline-block}
+#profile[data-lkinfo="a"] #lkInfo .liG u{display:inline-block;margin-left:8px}
+#profile[data-lkinfo="a"] #lkInfo .liN{grid-column:1/-1;padding:8px 12px;border-top:1px solid var(--line);background:#f3f6fc}
+/* B: pill row */
+#profile[data-lkinfo="b"] #lkInfo{display:flex;flex-wrap:wrap;gap:8px}
+#profile[data-lkinfo="b"] #lkInfo>.liP,#profile[data-lkinfo="b"] #lkInfo>.liR,#profile[data-lkinfo="b"] #lkInfo>.liG{display:inline-flex;align-items:baseline;gap:6px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);box-shadow:0 1px 4px rgba(15,30,70,.06)}
+#profile[data-lkinfo="b"] #lkInfo small{font-size:10.5px}
+#profile[data-lkinfo="b"] #lkInfo b{font-size:18px;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important}
+#profile[data-lkinfo="b"] #lkInfo u{font-size:11px;color:var(--muted)}
+#profile[data-lkinfo="b"] #lkInfo .liP i{color:var(--blue);font-weight:800}
+#profile[data-lkinfo="b"] #lkInfo .liR{background:#e3f5ea;border-color:#bfe6cf}
+#profile[data-lkinfo="b"] #lkInfo .liR b,#profile[data-lkinfo="b"] #lkInfo .liR small{color:#157a43}
+#profile[data-lkinfo="b"] #lkInfo .liG u{color:var(--blue);font-size:12px}
+#profile[data-lkinfo="b"] #lkInfo .liN{flex:1 0 100%;padding:2px 2px 0}
+/* C: stacked spec rows */
+#profile[data-lkinfo="c"] #lkInfo{background:#fff;border:1px solid var(--line);border-left:4px solid var(--blue)}
+#profile[data-lkinfo="c"] #lkInfo>.liP,#profile[data-lkinfo="c"] #lkInfo>.liR,#profile[data-lkinfo="c"] #lkInfo>.liG{display:flex;align-items:baseline;justify-content:space-between;gap:8px;width:100%;padding:9px 12px;border-bottom:1px solid var(--line)}
+#profile[data-lkinfo="c"] #lkInfo b{font-size:20px;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;margin-left:auto}
+#profile[data-lkinfo="c"] #lkInfo u{font-size:12px;letter-spacing:.06em;text-transform:uppercase;min-width:34px;text-align:right}
+#profile[data-lkinfo="c"] #lkInfo .liP u{color:var(--muted);min-width:0;margin-left:4px}
+#profile[data-lkinfo="c"] #lkInfo .liP i{color:var(--blue);font-size:18px;font-weight:800;margin-left:6px}
+#profile[data-lkinfo="c"] #lkInfo .liR b{color:#157a43}
+#profile[data-lkinfo="c"] #lkInfo .liN{padding:8px 12px;background:#f3f6fc}
