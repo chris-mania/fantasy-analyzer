@@ -313,3 +313,25 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 }
 #profile .barrow{grid-template-columns:minmax(0,1fr) 48px!important;grid-template-areas:"l n" "t t"!important;row-gap:6px!important}
 #profile .barrow>span{grid-area:l!important}#profile .barrow>.track{grid-area:t!important}#profile .barrow>b{grid-area:n!important}
+/* ===== pass 12: top card closer to mock; kickers/defenses like the others ===== */
+#profile .hero2 .rankline i,#profile .dkNm .rankline i{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-size:12px!important;letter-spacing:.07em!important;padding:3px 7px!important;text-transform:uppercase}
+#profile .hero2 .hid .meta,#profile .dkNm .meta{font-size:14px!important;font-weight:500!important;opacity:.95}
+#profile .portrait .rsv circle{stroke-width:9px!important}
+#profile .portrait .rsv .rt{stroke:rgba(255,255,255,.35)!important}
+@media(max-width:999px){#profile .hero2 .portrait{width:98px!important;height:98px!important}#profile .hero2 .portrait img{width:90px!important;height:90px!important}}
+#kdBoard .lkKdTabs{display:flex;gap:0;border-bottom:2px solid var(--line);margin:10px 0 6px}
+#kdBoard .lkKdTabs button{flex:1;background:none;border:0;border-bottom:4px solid transparent;margin-bottom:-2px;padding:10px 0;font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-weight:800;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);cursor:pointer}
+#kdBoard .lkKdTabs button.on{color:var(--ink);border-bottom-color:var(--blue)}
+#kdBoard[data-lkv="ov"] th:nth-child(n+6),#kdBoard[data-lkv="ov"] td:nth-child(n+6){display:none!important}
+#kdBoard[data-lkv="st"] th:nth-child(3),#kdBoard[data-lkv="st"] td:nth-child(3),#kdBoard[data-lkv="st"] th:nth-child(4),#kdBoard[data-lkv="st"] td:nth-child(4),#kdBoard[data-lkv="st"] th:nth-child(5),#kdBoard[data-lkv="st"] td:nth-child(5){display:none!important}
+#kdBoard th{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;letter-spacing:.08em;font-size:11.5px!important;font-weight:800!important}
+#kdBoard td:nth-child(2),#kdBoard td:nth-child(2) *{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-weight:800!important;font-size:15px}
+#kdBoard td{padding-top:7px!important;padding-bottom:7px!important}
+#kdBoard .thumb,#kdBoard .portrait{width:36px!important;height:36px!important}
+#kdBoard,#kdBoard table{width:100%!important;max-width:100%!important;table-layout:fixed}
+#kdBoard{overflow-x:hidden!important}
+#kdBoard th,#kdBoard td{padding-left:3px!important;padding-right:3px!important;white-space:normal!important;overflow:hidden}
+#kdBoard th:nth-child(1),#kdBoard td:nth-child(1){width:24px}
+#kdBoard th:nth-child(2),#kdBoard td:nth-child(2){width:38%}
+#kdBoard td:nth-child(2){font-size:13px!important}
+#kdBoard .thumb,#kdBoard .portrait{width:28px!important;height:28px!important}

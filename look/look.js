@@ -57,4 +57,11 @@
     if(pj){var x=pj.querySelector('.lkOl');if(ol){if(!x){x=document.createElement('span');pj.querySelector('.heroPj')?pj.querySelector('.heroPj').appendChild(x):pj.appendChild(x)}
       x.className='lkOl '+(/g90/.test(ol.className)?'g':/g70/.test(ol.className)?'y':/g0/.test(ol.className)?'r':'');if(x.textContent!==ol.textContent)x.textContent=ol.textContent}else if(x)x.remove()}}catch(e){}}
   setInterval(chips,400);
+
+  function kdTabs(){try{var rs=document.getElementById('rankings'),kb=document.getElementById('kdBoard');if(!rs||!kb||!rs.classList.contains('kdOn'))return;
+    if(!kb.dataset.lkv)kb.dataset.lkv='ov';
+    if(!kb.querySelector('.lkKdTabs')){var d=document.createElement('div');d.className='lkKdTabs';
+      [['ov','Overview'],['st','Stats']].forEach(function(a){var b=document.createElement('button');b.type='button';b.textContent=a[1];b.dataset.v=a[0];b.onclick=function(){kb.dataset.lkv=a[0];d.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x.dataset.v===a[0])})};if(a[0]===kb.dataset.lkv)b.className='on';d.appendChild(b)});
+      kb.insertBefore(d,kb.firstChild)}}catch(e){}}
+  setInterval(kdTabs,400);
 })();
