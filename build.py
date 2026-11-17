@@ -2098,7 +2098,8 @@ try:
         for w_ in _twk:
             if (_t, w_) in _qbw:
                 _qs.setdefault(_qbw[(_t, w_)][0], {"n": _lastn(_qbw[(_t, w_)][1]), "w": []})["w"].append(w_)
-        _qc = sorted(_qs.items(), key=lambda kv_: -len(kv_[1]["w"]))[:3]
+        _qcur = max(_qs.items(), key=lambda kv_: max(kv_[1]["w"]))[0] if _qs else None   # QB of the latest game = current
+        _qc = sorted(_qs.items(), key=lambda kv_: (0 if kv_[0] == _qcur else 1, -len(kv_[1]["w"])))[:5]
         _sk = merged[(merged["team"] == _t) & merged["position"].isin(["RB", "WR", "TE"]) & (merged["offense_pct"] >= 0.30)]
         if _sk.empty:
             continue
@@ -2115,8 +2116,8 @@ try:
             for qid_, qd_ in _qc:
                 wi_ = sorted(pw_ & set(qd_["w"]))
                 wo_ = sorted(w_ for w_ in pw_ if w_ not in qd_["w"])
-                if wi_ and wo_:
-                    o_.append({"id": str(qid_), "n": qd_["n"], "pos": "QB", "wi": wi_, "wo": wo_})
+                if wi_ or wo_:   # every QB the team used stays listed (a new QB with a thin sample too)
+                    o_.append({"id": str(qid_), "n": qd_["n"], "pos": "QB", "wi": wi_, "wo": wo_, **({"cur": 1} if qid_ == _qcur else {})})
             for X_ in _sa.index:
                 if X_ == P_:
                     continue
@@ -5401,7 +5402,7 @@ body:has(#profile.on){background:var(--bg)!important}
 .vsP{margin-bottom:18px}.vsSum{margin:2px 0 10px;font-size:14px;color:#43506a}.vsT{width:100%;border-collapse:collapse;min-width:560px}.vsT th,.vsT td{padding:8px 10px;border-bottom:1px solid rgba(20,35,70,.07);font-size:14px;text-align:left;white-space:nowrap}.vsT th.r,.vsT td.r{text-align:right}.vsT tbody tr:nth-child(even){background:rgba(20,35,70,.03)}.vsT .playerlink{cursor:pointer;color:#2457b8;font-weight:700}.vsT tr.vsTot td{background:#eef2fa;font-weight:800}
 .fa2 .pj.fin,.fa2 .pt.fin{color:#12703a}.fa2 .pj.fin:after,.fa2 .pt.fin:after{content:' \2713';font-size:.7em}
 .mixBar{margin-top:14px;padding-top:12px;border-top:1px solid rgba(20,35,70,.1);text-align:left}.mixT{font-size:14px;font-weight:900;color:#0b1830}.mixSub{font-size:12.5px;color:#5a6882;margin:4px 0 8px}
-.mixR{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:5px 0}.mixN{flex:1 1 110px;font-size:14px;font-weight:800;color:#0b1830}.mixN i{font-style:normal;font-size:11px;color:#6b7893;font-weight:800;margin-left:3px}
+.mixR{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;margin:6px 0;background:#f6f8fc;border:1.5px solid rgba(20,35,70,.14);border-radius:12px}.mixR.on{border-color:#2f6df6;background:#eef4ff}.mixB[disabled]{opacity:.4;pointer-events:none}.mixCur{font-style:normal;font-size:10.5px;font-weight:900;color:#12a150;background:#e4f7ec;border-radius:999px;padding:2px 7px;margin-left:5px;white-space:nowrap}.mixN{flex:1 1 110px;font-size:14px;font-weight:800;color:#0b1830}.mixN i{font-style:normal;font-size:11px;color:#6b7893;font-weight:800;margin-left:3px}
 .mixB{border:0;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:800;background:#fff;color:#1b2740;box-shadow:inset 0 0 0 1.5px #c9d3e4;cursor:pointer}.mixB small{opacity:.6;margin-left:3px}.mixB.on{background:#0b1830;color:#fff;box-shadow:none}
 .mixF{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}.mixM{font-size:13px;font-weight:800;color:#12703a}.mixM.bad{color:#b3271f}.mixClr{border:0;background:none;color:#2457b8;font-weight:800;font-size:13px;cursor:pointer}
 .gameControls .mixBar{flex:1 1 100%;width:100%}
@@ -9027,7 +9028,7 @@ function mixSt(p,c,s){var k=c+p.id+(s||'');return MIX[k]=MIX[k]||{}}
 function mixIdx(p,st){var ws=null;(p.tm||[]).forEach(function(t){var m=st[t.id];if(!m)return;var a=m==='in'?t.wi:t.wo;ws=ws===null?a.slice():ws.filter(function(w){return a.indexOf(w)>=0})});if(ws===null)return null;return (p.logs||[]).map(function(l,i){return ws.indexOf(l.w)>=0?i:-1}).filter(function(i){return i>=0})}
 function mixBar(p,c,s){if(!p||p.pos==='QB'||!p.tm||!p.tm.length)return '';var st=mixSt(p,c,s),any=Object.keys(st).some(function(k){return st[k]}),idx=any?mixIdx(p,st):null,msg=any?(idx&&idx.length?idx.length+' of '+p.logs.length+' games match':'No games match all of these'):'';
  return '<div class="mixBar" data-c="'+c+'" data-s="'+(s||'')+'" data-id="'+p.id+'"><div class="mixT">Mix and match games</div><p class="mixSub">Pick a teammate with or without. Pick more than one to combine them, like a game without the QB and without the other back.</p>'
- +p.tm.map(function(t){var v=st[t.id];return '<div class="mixR"><span class="mixN">'+trEsc(t.n)+' <i>'+t.pos+'</i></span><button type="button" class="mixB'+(v==='in'?' on':'')+'" data-t="'+t.id+'" data-v="in">With <small>'+t.wi.length+'</small></button><button type="button" class="mixB'+(v==='out'?' on':'')+'" data-t="'+t.id+'" data-v="out">Without <small>'+t.wo.length+'</small></button></div>'}).join('')
+ +p.tm.map(function(t){var v=st[t.id];return '<div class="mixR'+(v?' on':'')+'"><span class="mixN">'+trEsc(t.n)+' <i>'+t.pos+'</i>'+(t.cur?' <em class="mixCur" title="Current starter">✓ current</em>':'')+'</span><button type="button" class="mixB'+(v==='in'?' on':'')+'"'+(t.wi.length?'':' disabled')+' data-t="'+t.id+'" data-v="in">With <small>'+t.wi.length+'</small></button><button type="button" class="mixB'+(v==='out'?' on':'')+'"'+(t.wo.length?'':' disabled')+' data-t="'+t.id+'" data-v="out">Without <small>'+t.wo.length+'</small></button></div>'}).join('')
  +'<div class="mixF"><span class="mixM'+(any&&idx&&!idx.length?' bad':'')+'">'+msg+'</span>'+(any?'<button type="button" class="mixClr">Clear</button>':'')+'</div></div>'}
 function mixApply(p,c,s,idx){
  if(c==='prof'){document.querySelectorAll('.gameToggle,.gameToggleChip').forEach(function(x){x.checked=idx.indexOf(Number(x.dataset.i))>=0});var al=$('allGames');if(al)al.checked=idx.length===p.logs.length;customProfile(p);var mn=document.querySelector('.pgTop .pgMin span b');if(mn)mn.textContent=idx.length+' of '+p.logs.length}
