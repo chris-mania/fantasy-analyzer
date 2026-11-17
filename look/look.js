@@ -38,4 +38,13 @@
   function tint(){try{var pb=document.getElementById('profileBody');if(pb&&typeof curPlayer!=='undefined'&&curPlayer&&typeof TCOL!=='undefined'){var c=TCOL[curPlayer.team]||'#275DF3';if(pb.style.getPropertyValue('--lkTc')!==c)pb.style.setProperty('--lkTc',c);var pr=document.getElementById('profile');if(pr&&pr.style.getPropertyValue('--lkTc')!==c)pr.style.setProperty('--lkTc',c)}
     var h=document.querySelector('#home .hhL h1');if(h&&!h.querySelector('.lkBl')&&/in the world/i.test(h.textContent)){h.innerHTML=h.textContent.replace(/(in the world)/i,'<span class="lkBl">$1</span>')}}catch(e){}}
   setInterval(tint,500);
+
+  function words(){try{var pb=document.getElementById('profileBody');if(!pb||typeof curPlayer==='undefined'||!curPlayer)return;
+    var host=pb.querySelector('.dkTop')||pb.querySelector('.hero2');if(!host)return;
+    var w=host.querySelector(':scope>.lkWm');if(!w){w=document.createElement('div');w.className='lkWm';host.insertBefore(w,host.firstChild)}
+    if(w.textContent!==curPlayer.team)w.textContent=curPlayer.team;
+    var m=pb.querySelector('.hid .meta');var ag=pb.querySelector('.hid .ageChip');
+    if(m&&!m.dataset.lk){var t=m.textContent.replace(/\s*\u2022\s*/g,' \u00b7 ').trim();if(ag){t=ag.textContent.trim()+' \u00b7 '+t;ag.style.display='none'}m.textContent=t;m.dataset.lk='1'}
+    pb.querySelectorAll('.scoresub,.dkT em').forEach(function(e){if(e.textContent.indexOf('\u2022')>-1&&!e.querySelector('*'))e.textContent=e.textContent.replace(/\s*\u2022\s*/g,' \u00b7 ')})}catch(e){}}
+  setInterval(words,400);
 })();

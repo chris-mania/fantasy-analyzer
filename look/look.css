@@ -223,3 +223,10 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #rankings th,#rankings summary,#rankings button,#rankings select,#rankings .fl,#rankings .rs span,#rankings .rs small,#rankings .rs b,#rankings td span.g90,#rankings td span.g70,#rankings td span.g0,#rankings .act,#rankings .pdone,#rankings .injc{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;letter-spacing:.02em}
 #rankings .rs{font-weight:800!important}
 #home .hmSS .hsH>*{display:none!important}
+/* big faint team letters behind the band */
+#profile .lkWm{position:absolute;left:0;right:0;top:0;height:calc(100% - 118px);overflow:hidden;pointer-events:none;z-index:0;text-align:right;font-family:'Barlow Condensed','Arial Narrow',Impact,sans-serif;font-weight:900;font-size:200px;line-height:.95;letter-spacing:-.02em;color:rgba(255,255,255,.13);white-space:nowrap;padding-right:0}
+#profile .hero2>*:not(.lkWm){position:relative;z-index:1}
+#profile .hero2 .hp,#profile .hero2 .hid{z-index:1}
+@media(min-width:1000px){#profile .lkWm{height:268px;font-size:300px;padding-right:20px;z-index:-1}#profile .dkTop>*:not(.lkWm){z-index:1}}
+#profile .hero2 .pfWm{display:none!important}
+@media(max-width:999px){#profile .lkWm{font-size:150px}#profile .hero2 .hid .meta{text-align:left!important;display:block!important}}
