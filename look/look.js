@@ -66,4 +66,17 @@
   setInterval(kdTabs,400);
 
   try{var tp=new URLSearchParams(location.search).get('top');if(tp)setInterval(function(){var e=document.getElementById('profile');if(e&&e.getAttribute('data-lktop')!==tp)e.setAttribute('data-lktop',tp)},300)}catch(e){}
+
+  function lsort(){try{var box=document.getElementById('trPlanBox');if(!box)return;var card=box.querySelector('.tcard');if(!card)return;
+    var bar=box.querySelector('.lkSort');if(!bar){bar=document.createElement('div');bar.className='lkSort';bar.innerHTML='<span>Sort</span><button type="button" data-m="lineup" class="on">Lineup</button><button type="button" data-m="hi">High &#8595;</button><button type="button" data-m="lo">Low &#8593;</button>';
+      bar.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;box.dataset.lksort=b.dataset.m;bar.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b)});lsort()});
+      var ctl=box.querySelector('.tctl');if(ctl)ctl.insertAdjacentElement('afterend',bar)}
+    var m=box.dataset.lksort||'lineup';var kids=[].slice.call(card.children).filter(function(x){return x.classList.contains('tslot')||x.classList.contains('tsec')});
+    kids.forEach(function(x,i){if(x.dataset.lki==null)x.dataset.lki=i});
+    var key=function(x){var t=x.querySelector('.tv');var v=t?parseFloat(t.textContent):NaN;return isNaN(v)?-1:v};
+    var want;if(m==='lineup')want=kids.slice().sort(function(a,b){return a.dataset.lki-b.dataset.lki});
+    else{var sl=kids.filter(function(x){return x.classList.contains('tslot')}),se=kids.filter(function(x){return !x.classList.contains('tslot')});sl.sort(function(a,b){return m==='hi'?key(b)-key(a):key(a)-key(b)});want=se.concat(sl)}
+    var same=want.every(function(x,i){return x===kids[i]});if(!same)want.forEach(function(x){card.appendChild(x)});
+  }catch(e){}}
+  setInterval(lsort,500);
 })();
