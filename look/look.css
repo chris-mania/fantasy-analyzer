@@ -471,3 +471,4 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #trPlanBox[data-lksort="hi"] .tcard>.tsec,#trPlanBox[data-lksort="lo"] .tcard>.tsec{display:none}
 @media(max-width:820px){.lkSort button{min-height:0!important;height:30px!important;line-height:1!important;white-space:nowrap!important;flex:1 1 0;padding:0 8px!important;width:auto!important}.lkSort span{flex:none}}
 #profile .stR:not(.stClk) .stGo{visibility:hidden}
+.lkSort{display:none!important}
