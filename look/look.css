@@ -689,3 +689,9 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #compare .cxMs .matchWhy{margin-top:8px!important;font-size:12.5px!important;line-height:1.4!important;text-align:left}
 #compare .cxMs .muBoost{align-items:center!important}
 #compare .cxMs .muBoost span{white-space:nowrap!important;font-size:11px!important;letter-spacing:.03em!important}
+
+/* pass 30: info strip centered; projection sits in the middle */
+#profile #lkInfo>*{align-items:center!important;text-align:center!important}
+#profile #lkInfo span{justify-content:center!important}
+#profile #lkInfo>.liR{order:1}#profile #lkInfo>.liP{order:2}#profile #lkInfo>.liG{order:3}
+#profile #lkInfo.n3{grid-template-columns:.8fr 1.4fr 1fr!important}
