@@ -7,7 +7,7 @@ h1{line-height:.95}
 /* ticker */
 @keyframes lkscroll{to{transform:translateX(-100%)}}
 /* top bar */
-.topbar{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border-bottom:3px solid var(--ink)!important;box-shadow:none!important}
+.topbar{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border-bottom:1px solid #d9e0eb!important;box-shadow:none!important}
 .topbar .nav a,.topbar .nav button,.topbar .nav .tab{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;letter-spacing:.07em;font-weight:800!important;font-size:15px}
 /* flatten cards */
 .rcard,.tablewrap,.trCard,.thCard,.usageItem,.pbc,.ptile,.kdBox,.lgBox,.tset,.hmT,.hmTl{border-radius:0!important;box-shadow:none!important}
@@ -594,3 +594,98 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 
 /* pass 22: score cards up a little more */
 @media(max-width:999px){#profile .hero2 .hs.left,#profile .hero2 .hs.right{margin-top:-6px!important}#profile #lkInfo{margin-top:54px!important}}
+
+/* pass 23: home top — app buttons first, headline + search below; two long equal buttons */
+.homeHero .hhL .homeIm{order:0!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;width:100%!important;max-width:640px;margin:0 auto!important}
+.homeHero .hhL .moreApps{order:0!important}
+.homeHero .hhL h1{order:1!important}
+.homeHero .hhL .search{order:2!important}
+.homeHero .hhL .homeIm #homeFa{display:none!important}
+.homeHero .hhL .homeIm>button{width:100%!important;min-height:46px!important;margin:0!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important;border-radius:14px!important;box-sizing:border-box}
+.homeHero .hhL .homeIm #homeMore{flex-direction:row!important;gap:8px!important;font-size:15px!important;font-weight:800!important}
+
+/* pass 24: home bottom (Top 5 / Best at every position) in the Scoreboard look */
+.homeBlock .sectionTitle{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase!important;letter-spacing:.03em!important;font-weight:800!important;font-size:26px!important;color:var(--ink)!important;border-top:3px solid var(--ink);padding-top:12px;margin:0!important}
+.homeBlock .homeCap{font-size:13.5px!important;color:#5a6882!important;margin:4px 0 12px!important}
+#hmT5{display:grid!important;grid-template-columns:repeat(5,1fr)!important;gap:8px!important}
+#hmT5 .hmT{background:#fff!important;border:1.5px solid #d9e0eb!important;border-top:3px solid var(--ink)!important;border-radius:0!important;box-shadow:0 10px 20px -14px rgba(20,35,70,.4)!important;padding:10px 2px 8px!important;min-width:0}
+#hmT5 .hmT .hn{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-weight:800!important;font-size:13px!important;letter-spacing:.02em}
+#hmT5 .hmT .hs{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-size:22px!important}
+#posBest{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important}
+#posBest .pbc{position:relative;background:#fff!important;border:1.5px solid #d9e0eb!important;border-top:3px solid var(--ink)!important;border-radius:0!important;box-shadow:0 12px 22px -14px rgba(20,35,70,.4)!important;padding:14px 8px 12px!important;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px}
+#posBest .pbc .pbBadge{position:absolute!important;top:8px;right:8px;transform:scale(.8);transform-origin:top right}
+#posBest .pbc .pbPos{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-size:15px!important;letter-spacing:.1em;color:var(--blue)!important;margin-top:6px}
+#posBest .pbc .pbName{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-weight:800!important;font-size:19px!important;line-height:1.05;text-align:center;letter-spacing:.01em}
+#posBest .pbc .pbTag{font-size:12px!important;color:#5a6882!important}
+#posBest .pbc .pbScore{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-size:34px!important;line-height:1;margin-top:4px}
+#posBest .pbc .pbLab{font-size:11px!important;letter-spacing:.08em;text-transform:uppercase;color:#5a6882!important}
+
+/* pass 25: Players page list in the Scoreboard look */
+#players h1.title{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-weight:800!important;letter-spacing:.02em}
+#players #playerQ{border:2px solid var(--ink)!important;background:#fff!important;border-radius:0!important;color:var(--ink)!important}
+#players .plX h3{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-size:20px!important;letter-spacing:.04em!important;color:var(--ink)!important;border-top:3px solid var(--ink);padding-top:10px;margin:18px 0 10px!important;font-weight:800!important}
+#players .plX h3 small{font-family:inherit!important;font-size:12px!important;letter-spacing:.04em;color:#5a6882!important}
+#players .plRow{background:#fff!important;border-radius:0!important;box-shadow:0 8px 18px -14px rgba(20,35,70,.45)!important;border:1.5px solid #d9e0eb!important;border-left:4px solid var(--ink)!important;margin-bottom:8px!important;min-height:58px}
+#players .plRow .nm b{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-size:19px!important;font-weight:800!important;letter-spacing:.01em}
+#players .plRow .sc{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-size:24px!important;font-weight:800!important}
+#players .plRow .rk{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-size:17px!important}
+#players .plRec .chipP{border-radius:0!important;border:1.5px solid #d9e0eb!important;box-shadow:none!important;border-bottom:3px solid var(--ink)!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-size:16px!important;font-weight:800!important}
+#players .plX h3 small{display:block;margin-top:2px}
+
+/* pass 26: glowing green / yellow / red bars (rankings Breakdown + Stats, compare) like the classic site */
+.cbt,.cbt.lk-sq{border-radius:12px!important;height:12px!important;background:#e4e9f0!important;overflow:visible!important;box-shadow:inset 0 1px 2px rgba(10,20,40,.18)!important}
+.cbt>div,.cbt>div.lk-sq{border-radius:12px!important}
+.cbt>div[style*="22a45d"]{background:linear-gradient(90deg,#0f9a52,#3fe08b)!important;box-shadow:0 0 6px 1px rgba(34,190,100,.65),0 0 14px 2px rgba(34,190,100,.3)!important}
+.cbt>div[style*="e3a21a"]{background:linear-gradient(90deg,#e09a0a,#ffd04a)!important;box-shadow:0 0 6px 1px rgba(240,170,20,.65),0 0 14px 2px rgba(240,170,20,.3)!important}
+.cbt>div[style*="e2505b"]{background:linear-gradient(90deg,#d8283a,#ff6f7c)!important;box-shadow:0 0 6px 1px rgba(235,60,80,.6),0 0 14px 2px rgba(235,60,80,.28)!important}
+.cbt.mbw,.cbt.mbw.lk-sq{height:8px!important;margin-top:4px!important}
+
+/* pass 27: waiver pickups — each player is one compact card, verdict visible with no side scroll */
+@media(max-width:820px){
+.lgWTw{overflow:visible!important;border:0!important;background:transparent!important}
+.lgWT,.lgWT tbody{display:block!important;width:100%!important}
+.lgWT thead{display:block!important}
+.lgWT thead tr{display:flex!important;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.lgWT thead th{display:block!important;border:1.5px solid #d9e0eb!important;padding:6px 10px!important;font-size:11px!important;background:#fff!important}
+.lgWT thead th.on{background:var(--ink)!important;color:#fff!important;border-color:var(--ink)!important}
+.lgWT thead th:nth-child(n+6){display:none!important}
+.lgWT tbody tr{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto auto;column-gap:10px;row-gap:6px;align-items:center;background:#fff;border:1.5px solid #d9e0eb;border-left:4px solid var(--ink);box-shadow:0 8px 18px -14px rgba(20,35,70,.45);padding:10px 12px;margin-bottom:10px}
+.lgWT tbody td{display:block!important;border:0!important;padding:0!important;position:static!important;width:auto!important;min-width:0!important;max-width:none!important;overflow:visible!important;background:transparent!important;text-align:center}
+.lgWT td.lgPc{grid-column:1;grid-row:1;text-align:left;z-index:auto}
+.lgWT td.lgPc .lgPn{min-width:0}
+.lgWT td.lgPc .lgPn b{white-space:normal;overflow-wrap:anywhere;font-size:15px}
+.lgWT td:nth-child(2),.lgWT td:nth-child(3),.lgWT td:nth-child(4){grid-row:1;font-weight:800;font-size:15px;line-height:1.1}
+.lgWT td:nth-child(2){grid-column:2}.lgWT td:nth-child(3){grid-column:3}.lgWT td:nth-child(4){grid-column:4}
+.lgWT td:nth-child(2)::before,.lgWT td:nth-child(3)::before,.lgWT td:nth-child(4)::before{display:block;font-size:9.5px;letter-spacing:.08em;color:#6b7a94;font-weight:800;margin-bottom:2px}
+.lgWT td:nth-child(2)::before{content:"MANIA"}.lgWT td:nth-child(3)::before{content:"THIS WK"}.lgWT td:nth-child(4)::before{content:"AVG"}
+.lgWT td.lgVc{grid-column:1/-1;grid-row:2;text-align:left;display:flex!important;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+.lgWT td.lgVc .lgWt{display:inline!important;font-size:12.5px;line-height:1.3;color:#33445f;white-space:normal!important}
+.lgWT td.lgYc{grid-column:1;grid-row:3;text-align:left;font-size:11.5px;color:#5a6882;line-height:1.3}
+.lgWT td.lgAc{grid-column:2/-1;grid-row:3;display:flex!important;gap:6px;justify-content:flex-end;align-items:center}
+}
+
+/* pass 28: Mania overall badge is a small round chip on the photo corner, never over the face */
+#compare .cmpPortrait .fmOvr,#compare .fmOvr{width:42px!important;height:42px!important;right:2px!important;bottom:2px!important;border-radius:50%!important;background:#fff!important;border:2px solid #e3e9f2!important;box-shadow:0 5px 12px -4px rgba(10,30,60,.5)!important;padding:0!important;display:grid!important;place-content:center!important}
+#compare .fmOvr b{font-size:13px!important;letter-spacing:-.3px!important;line-height:1!important}
+#compare .fmOvr small{display:none!important}
+#compare .cxPjL{display:flex;align-items:baseline;gap:6px;background:#fff;border:1.5px solid #d9e0eb;border-top:3px solid var(--ink);padding:7px 10px;margin:0 0 8px;flex-wrap:wrap}
+#compare .cxPjL span{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5a6882;flex:1 1 100%}
+#compare .cxPjL b{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-size:34px;font-weight:800;line-height:1;color:var(--ink)}
+#compare .cxPjL i{font-style:normal;font-size:12px;font-weight:800;color:#5a6882}
+
+/* pass 29: compare Matchup tab — tidy, centered, full-width blocks */
+#compare .cxMs .mu2Top{align-items:stretch!important;gap:8px!important}
+#compare .cxMs .mu2Id{justify-content:flex-start}
+#compare .cxMs .muBoost{display:flex!important;flex-direction:row!important;align-items:baseline!important;justify-content:center!important;gap:8px!important;width:100%!important;box-sizing:border-box;margin:0!important;padding:8px 10px!important;text-align:center!important;background:#fff!important;border:1.5px solid #d9e0eb}
+#compare .cxMs .muBoost b{font-size:26px!important;line-height:1}
+#compare .cxMs .muBoost span{font-size:12px!important;font-weight:800;color:#5a6882;text-transform:uppercase;letter-spacing:.06em}
+#compare .cxMs .mu2Row{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:6px!important;margin:8px 0!important}
+#compare .cxMs .mu2Row>*{display:block!important;width:100%!important;box-sizing:border-box;text-align:center!important;padding:8px 10px!important;margin:0!important}
+#compare .cxMs .mu2Bar{margin:14px 12px 22px!important;position:relative}
+#compare .cxMs .muFacts{display:grid!important;grid-template-columns:1fr!important;gap:6px!important}
+#compare .cxMs .muFacts>div{background:#fff!important;border:1.5px solid #d9e0eb;padding:8px 10px!important;text-align:center!important;margin:0!important}
+#compare .cxMs .muFacts b{display:block;font-size:22px!important;line-height:1.1}
+#compare .cxMs .muFacts span{font-size:12px!important;color:#5a6882;line-height:1.25}
+#compare .cxMs .matchWhy{margin-top:8px!important;font-size:12.5px!important;line-height:1.4!important;text-align:left}
+#compare .cxMs .muBoost{align-items:center!important}
+#compare .cxMs .muBoost span{white-space:nowrap!important;font-size:11px!important;letter-spacing:.03em!important}
