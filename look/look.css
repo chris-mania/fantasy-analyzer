@@ -592,3 +592,12 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile .hero2 .hs.left,#profile .hero2 .hs.right{height:98px!important;margin-bottom:-50px!important;box-shadow:0 12px 24px -8px rgba(10,20,50,.45)!important}
 #profile .hero2 .hs .scorebig{font-size:42px!important}
 }
+
+/* four chips (e.g. #9 OVERALL, WR4, #1 WR ON LA, OUT) always stay on one line */
+@media(max-width:999px){
+#profile .hero2 .hid .rankline,#profile .hero2 .hid .rankline.lkTight{flex-wrap:nowrap!important;justify-content:space-between!important}
+#profile .hero2 .hid .rankline.lkTight{gap:3px!important}
+#profile .hero2 .hid .rankline.lkTight>i{padding:5px 5px!important;letter-spacing:0!important;gap:3px!important}
+#profile .hero2 .hid .rankline.lkTight>i *{letter-spacing:0!important}
+}
+@media(max-width:999px){#profile .hero2 .hid .meta .bdgD:not([hidden]){left:auto!important;right:0!important;width:min(240px,100%)!important;top:46px!important;font-size:12.5px!important}}
