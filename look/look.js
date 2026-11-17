@@ -45,6 +45,7 @@
     if(w.textContent!==curPlayer.team)w.textContent=curPlayer.team;
     var m=pb.querySelector('.hid .meta');var ag=pb.querySelector('.hid .ageChip');
     if(m&&!m.dataset.lk){var t=m.textContent.replace(/\s*\u2022\s*/g,' \u00b7 ').trim();if(ag){t=ag.textContent.trim()+' \u00b7 '+t;ag.style.display='none'}m.textContent=t;m.dataset.lk='1'}
+    var ov=pb.querySelector('.dkOv');if(ov&&!ov.dataset.lk){var sm=ov.querySelector('small');if(sm)sm.textContent='MANIA RATING';var hs=pb.querySelector('.hero2 .hs.left .scoresub');var t2=hs?hs.textContent.replace(/\s*\u2022\s*/g,' \u00b7 ').trim():'';if(t2){var em=document.createElement('em');em.textContent=t2;ov.appendChild(em)}ov.dataset.lk='1'}
     pb.querySelectorAll('.scoresub,.dkT em').forEach(function(e){if(e.textContent.indexOf('\u2022')>-1&&!e.querySelector('*'))e.textContent=e.textContent.replace(/\s*\u2022\s*/g,' \u00b7 ')})}catch(e){}}
   setInterval(words,400);
 })();

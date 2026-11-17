@@ -230,3 +230,17 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 @media(min-width:1000px){#profile .lkWm{height:268px;font-size:300px;padding-right:20px;z-index:-1}#profile .dkTop>*:not(.lkWm){z-index:1}}
 #profile .hero2 .pfWm{display:none!important}
 @media(max-width:999px){#profile .lkWm{font-size:150px}#profile .hero2 .hid .meta{text-align:left!important;display:block!important}}
+/* desktop score cards: same structure */
+@media(min-width:1000px){
+ #profile .dkOv,#profile .dkKp>.dkT:first-child{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center;padding:6px!important;gap:0}
+ #profile .dkOv b,#profile .dkKp>.dkT:first-child b{font-size:58px!important;line-height:1!important;margin:0!important}
+ #profile .dkOv small,#profile .dkKp>.dkT:first-child span{margin-top:6px!important;font-size:11px!important;letter-spacing:.14em!important;color:#4b5b75!important}
+ #profile .dkOv em,#profile .dkKp>.dkT:first-child em{font-style:normal;font-size:12px;color:#6b7891;margin-top:2px}
+}
+/* overview cards like the mock: white, blue top rule, condensed headings */
+#profile .panel,#profile .grid2>div>.panel,#profile .vsBox{border-radius:0!important;border:1px solid var(--line)!important;border-top:3px solid var(--blue)!important;box-shadow:none!important;background:#fff!important}
+#profile .panel h2,#profile .panel h3,#profile .vsBox h2,#profile .vsBox h3{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-weight:800!important;letter-spacing:.01em}
+#profile .panel .tablewrap,#profile .panel table{max-width:100%}
+#profile .panel .tablewrap{overflow-x:auto}
+#players .search,#players .search.lk-sq,#compare .search,#compare .search.lk-sq{border:1px solid #d5dbe8!important;border-radius:14px!important;background:#fff!important;box-shadow:none!important}
+#players .search input{background:transparent!important}
