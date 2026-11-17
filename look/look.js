@@ -1,11 +1,7 @@
 (function(){
   try{
     var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&display=swap';document.head.appendChild(l);
-    var t=document.createElement('div');t.id='lkTick';document.body.insertBefore(t,document.body.firstChild);
-    function sc(){try{var seen={},out=[];(DB||[]).forEach(function(p){if(p.played&&p.played.score&&!seen[p.played.score]){seen[p.played.score]=1;out.push(p.played.score.replace(',',''))}});
-      t.innerHTML='<span><b>WEEK '+(META.next_week||'')+'</b>'+(out.length?'Final: '+out.slice(0,14).join(' · '):'Scores, ratings and who to start')+'</span>'}catch(e){}}
-    var n=0,iv=setInterval(function(){if(typeof DB!=='undefined'&&typeof META!=='undefined'){sc();clearInterval(iv)}else if(++n>60)clearInterval(iv)},300);
-  }catch(e){}
+      }catch(e){}
 
   // ---- move intro paragraphs to an "About this page" note at the bottom of each page (content kept) ----
   function leaf(sec,re){var out=[];sec.querySelectorAll('div,p').forEach(function(d){if(d.closest('.lkAbout'))return;var own=[].slice.call(d.childNodes).filter(function(n){return n.nodeType===3}).map(function(n){return n.nodeValue}).join('').trim();if(re.test(own)&&d.querySelector('button,input,section')===null&&d.children.length<=3)out.push(d)});return out}
@@ -29,7 +25,7 @@
       list.forEach(function(e){if(!e.getBoundingClientRect||e.nodeType!==1||e.tagName==='svg'||e.closest&&e.closest('svg'))return;
         var s=getComputedStyle(e),r=parseFloat(s.borderTopLeftRadius)||0;if(r<4)return;var b=e.getBoundingClientRect();if(!b.width||!b.height)return;
         var m=Math.min(b.width,b.height);if(Math.abs(b.width-b.height)<=3&&r>=m*.35)return; /* circle */
-        if(e.tagName==='IMG'||e.closest('.portrait,.hp,.crW,.initials,.thumb,.pctNum,.ring'))return;e.classList.add('lk-sq')})}catch(e){}
+        if(e.tagName==='IMG'||e.closest('.portrait,.cmpPortrait,.hp,.crW,.initials,.thumb,.pctNum,.ring,.homeIm,.a2Tile,.newPill,.faNeon'))return;e.classList.add('lk-sq')})}catch(e){}
   }
   var pend=false,added=[];
   new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1)added.push(n)})});
