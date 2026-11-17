@@ -30,3 +30,6 @@
 - build.py writes the app's big script (data + code) to public/js/fm-<hash>.js and index.html loads it with
   <script src>, so pages stay small and phones/Google cache it (new name each build). fantasy.html stays inline.
 - The live site is https://fantasymania.org.
+- Side page /preview/ (fantasymania.org/preview/): `look_preview.py` runs in the workflow after the Google pages step. It copies the finished
+  public/index.html into public/preview/ and lays the "Scoreboard" look (look/look.css + look/look.js) on top. noindex, not in any sitemap,
+  never edits the real pages, step is continue-on-error. The real site keeps the classic look until the owner says to switch.

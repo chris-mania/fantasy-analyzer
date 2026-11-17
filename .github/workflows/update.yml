@@ -87,6 +87,13 @@ jobs:
           fi
           ls public | head -40
 
+      - name: Side page at /preview/ with the new Scoreboard look (never blocks the real site; keep this step)
+        if: steps.b.outputs.ok == '1'
+        # Copies the finished page into public/preview/ and lays look/look.css + look/look.js on top. The real pages are not edited.
+        continue-on-error: true
+        timeout-minutes: 3
+        run: python look_preview.py
+
       - name: Check the page is real before publishing
         if: steps.b.outputs.ok == '1'
         run: |
