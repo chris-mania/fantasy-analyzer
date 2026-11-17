@@ -244,3 +244,24 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile .panel .tablewrap{overflow-x:auto}
 #players .search,#players .search.lk-sq,#compare .search,#compare .search.lk-sq{border:1px solid #d5dbe8!important;border-radius:14px!important;background:#fff!important;box-shadow:none!important}
 #players .search input{background:transparent!important}
+/* pass 10: tighter band (badges beside the face under the chips), chips on one row */
+@media(max-width:999px){
+ #profile .hero2{grid-template-areas:"hp hid hid hid" "hp ol ol ol" "sl sl sr sr" "pj pj pj pj"!important;row-gap:6px!important;background:linear-gradient(135deg,var(--lkB1),var(--lkB2)) 0 0/100% calc(100% - 118px) no-repeat,#fff!important}
+ #profile .hero2 .hp{align-self:center!important}
+ #profile .hero2 .hol{align-self:start!important;padding:0 0 14px 12px!important}
+ #profile .hero2 .bdgs{justify-content:flex-start!important;gap:8px!important}
+ #profile .hero2 .bdgBtn{flex:0 0 auto!important}
+ #profile .hero2 .bdgBtn i,#profile .hero2 .bdgBtn svg{width:30px!important;height:35px!important}
+ #profile .hero2 .rankline{flex-wrap:nowrap!important;gap:4px!important}
+ #profile .hero2 .rankline i{font-size:9.5px!important;padding:3px 5px!important}
+ #profile .hero2 .rankline i.dcLink{display:none!important}
+}
+@media(max-width:999px){#profile .hero2 .hol{align-items:flex-start!important}}
+@media(min-width:821px){
+ #home .hmSS{display:flex!important;flex-direction:row!important;align-items:center!important;gap:12px!important;width:100%!important;max-width:760px!important;align-self:center!important;margin:0 auto!important;padding:8px 10px 8px 16px!important;background:#fff!important;border:1px solid var(--line)!important;border-left:4px solid var(--blue)!important;box-shadow:none!important;text-align:left!important}
+ #home .hmSS .hsH{margin:0!important;font-size:18px!important;white-space:nowrap!important;flex:0 0 auto}
+ #home .hmSS .hsR{display:flex!important;flex:1 1 auto;gap:8px!important;align-items:center;margin:0!important;min-width:0}
+ #home .hmSS .hsR input{flex:1 1 0;min-width:0;height:38px!important}
+ #home .hmSS .hsGo{flex:0 0 auto;height:38px!important;white-space:nowrap}
+ #home .hmSS .hsMsg{display:none!important}
+}
