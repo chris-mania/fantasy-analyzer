@@ -530,3 +530,54 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile .hero2 .hid .rankline{display:flex!important;justify-content:space-between!important;width:100%!important;gap:4px!important;margin:0!important}
 #profile .hero2 .hid .rankline>i{margin-right:0!important;padding:6px 8px!important;flex:0 0 auto}
 }
+
+/* ===== pass 16 ===== */
+@media(max-width:999px){
+/* badge names / descriptions never print into the meta line; tapped description floats under it */
+#profile .hero2 .hid .meta .bdgs .bdgN,#profile .hero2 .hid .meta .bdgs>*:not(.bdgBtn){display:none!important}
+#profile .hero2 .hid .meta .bdgs .bdgBtn{flex-direction:row!important;gap:0!important;padding:0!important;width:auto!important;height:var(--bs,34px)!important}
+#profile .hero2 .hid .meta .lkBdW{display:contents}
+#profile .hero2 .hid{position:relative!important}
+#profile .hero2 .hid .meta .bdgD{display:none!important}
+#profile .hero2 .hid .meta .bdgD:not([hidden]){display:block!important;position:absolute;left:0;right:0;top:46px;z-index:40;background:#0b1830;color:#fff!important;font-size:13px;line-height:1.35;line-height:1.35!important;white-space:normal;padding:9px 11px;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.35);font-weight:500}
+#profile .hero2 .hid .meta .bdgD b{color:#7fb0ff}
+/* raise the badges so they sit centred on the line and clear the chips below */
+#profile .hero2 .hid .meta .bdgs{transform:translateY(-3px)}
+#profile .hero2 .hid .meta{padding-bottom:4px!important}
+/* thin ring (DJ Moore style), no square glow box */
+#profile .portrait{filter:none!important}
+#profile .portrait .rsv,#profile .portrait .rsv.G,#profile .portrait .rsv.Y,#profile .portrait .rsv.R{filter:none!important}
+#profile .portrait .rsv .rp,#profile .portrait .rsv .rt{stroke-width:5px!important}
+#profile .portrait .rsv .rt{stroke:rgba(255,255,255,.3)!important}
+#profile .portrait .rsv.G .rp{stroke:#5fd68f!important}
+#profile .portrait .rsv.Y .rp{stroke:#ffcb4d!important}
+#profile .portrait .rsv.R .rp{stroke:#ff7a86!important}
+#profile .portrait{box-shadow:0 0 30px 14px rgba(255,255,255,.16)!important;border-radius:50%!important}
+/* info tabs: order, and centre when there are fewer than three */
+#profile #lkInfo{order:1}
+#profile #lkInfo.n2{grid-template-columns:1fr 1fr}
+#profile #lkInfo.n1{grid-template-columns:1fr}
+#profile #lkInfo.n2>*,#profile #lkInfo.n1>*{align-items:center;text-align:center}
+#profile #lkInfo.n2 span,#profile #lkInfo.n1 span{justify-content:center}
+}
+/* ===== pass 17: Overview slide arrows on top; Games counted panel ===== */
+@media(max-width:999px){
+#profile .ovSl{display:flex!important;flex-direction:column!important}
+#profile .ovSl .slNav{order:-1!important;margin:0 0 10px!important}
+#profile .ovSl .slTr{order:0!important}
+/* opened Games counted panel */
+#profile .pgTop:not(.min){margin:10px 0 12px!important}
+#profile .pgTop:not(.min) .pgMin{display:none!important}
+#profile .pgTop:not(.min) .gamePanelTop{border:1px solid var(--line)!important;border-top:3px solid var(--blue)!important;background:#fff!important;padding:0 12px 12px!important;box-shadow:0 6px 18px rgba(15,30,70,.08)!important}
+#profile .pgTop:not(.min) .gamePanelTop>div:first-child{position:sticky;top:0;z-index:6;background:#fff;display:flex!important;align-items:center;gap:8px;padding:12px 0 10px;border-bottom:1px solid var(--line);margin-bottom:10px}
+#profile .pgTop:not(.min) .gamePanelTop .ph{flex:1;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-size:22px!important;font-weight:800!important;letter-spacing:.02em}
+#profile .pgTop:not(.min) .gamePanelTop .reset{background:#eef1f7!important;color:#33445f!important;border:0!important;padding:8px 12px!important;font-weight:800!important;font-size:12px!important;letter-spacing:.06em}
+#profile .pgTop:not(.min) .gamePanelTop .pgHide{background:var(--blue)!important;color:#fff!important;border:0!important;padding:8px 14px!important;font-size:0!important;font-weight:800!important}
+#profile .pgTop:not(.min) .gamePanelTop .pgHide::after{content:"Done \2713";font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+#profile .pgTop:not(.min) .gameControls{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+#profile .pgTop:not(.min) .gameControls .gamechip{min-width:0!important;justify-content:center;text-align:center;padding:9px 4px!important;font-size:12px!important;white-space:normal;line-height:1.2}
+#profile .pgTop:not(.min) .gameControls .allchip{grid-column:1/-1}
+}
+/* ===== pass 18: Compare player cards restored (classic look, new fonts stay) ===== */
+#compare .comparePlayer{background:#fff!important;border-radius:20px!important;box-shadow:0 0 0 1px rgba(20,35,70,.10),0 24px 40px -26px rgba(20,35,70,.35)!important;overflow:visible}
+#compare .compareHero{perspective:1600px}
