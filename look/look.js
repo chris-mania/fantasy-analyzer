@@ -37,7 +37,7 @@
   // ---- team color for the profile band + blue "IN THE WORLD" ----
   function tint(){try{var pb=document.getElementById('profileBody');if(pb&&typeof curPlayer!=='undefined'&&curPlayer&&typeof TCOL!=='undefined'){var c=TCOL[curPlayer.team]||'#275DF3';if(pb.style.getPropertyValue('--lkTc')!==c)pb.style.setProperty('--lkTc',c);var pr=document.getElementById('profile');if(pr&&pr.style.getPropertyValue('--lkTc')!==c)pr.style.setProperty('--lkTc',c)}
     var h=document.querySelector('#home .hhL h1');if(h&&!h.querySelector('.lkBl')&&/in the world/i.test(h.textContent)){h.innerHTML=h.textContent.replace(/(in the world)/i,'<span class="lkBl">$1</span>')}}catch(e){}}
-  setInterval(tint,500);
+  setInterval(function(){if(!document.hidden)tint()},800);
 
   function words(){try{var pb=document.getElementById('profileBody');if(!pb||typeof curPlayer==='undefined'||!curPlayer)return;
     var host=pb.querySelector('.dkTop')||pb.querySelector('.hero2');if(!host)return;
@@ -47,7 +47,7 @@
     if(m&&!m.dataset.lk){var t=m.textContent.replace(/\s*\u2022\s*/g,' \u00b7 ').trim();if(ag){t=ag.textContent.trim()+' \u00b7 '+t;ag.style.display='none'}m.textContent=t;m.dataset.lk='1'}
     var ov=pb.querySelector('.dkOv');if(ov&&!ov.dataset.lk){var sm=ov.querySelector('small');if(sm)sm.textContent='MANIA RATING';var hs=pb.querySelector('.hero2 .hs.left .scoresub');var t2=hs?hs.textContent.replace(/\s*\u2022\s*/g,' \u00b7 ').trim():'';if(t2){var em=document.createElement('em');em.textContent=t2;ov.appendChild(em)}ov.dataset.lk='1'}
     pb.querySelectorAll('.scoresub,.dkT em').forEach(function(e){if(e.textContent.indexOf('\u2022')>-1&&!e.querySelector('*'))e.textContent=e.textContent.replace(/\s*\u2022\s*/g,' \u00b7 ')})}catch(e){}}
-  setInterval(words,400);
+  setInterval(function(){if(!document.hidden)words()},800);
 
   function chips(){try{var pb=document.getElementById('profileBody');if(!pb)return;
     pb.querySelectorAll('.rankline').forEach(function(rl){var dc=rl.querySelector('i.dcLink');if(!dc)return;var t=rl.querySelectorAll('i');
@@ -56,14 +56,14 @@
     var ol=pb.querySelector('.hol .outlook');var pj=pb.querySelector('.hpjW');
     if(pj){var x=pj.querySelector('.lkOl');if(ol){if(!x){x=document.createElement('span');pj.querySelector('.heroPj')?pj.querySelector('.heroPj').appendChild(x):pj.appendChild(x)}
       x.className='lkOl '+(/g90/.test(ol.className)?'g':/g70/.test(ol.className)?'y':/g0/.test(ol.className)?'r':'');if(x.textContent!==ol.textContent)x.textContent=ol.textContent}else if(x)x.remove()}}catch(e){}}
-  setInterval(chips,400);
+  setInterval(function(){if(!document.hidden)chips()},800);
 
   function kdTabs(){try{var rs=document.getElementById('rankings'),kb=document.getElementById('kdBoard');if(!rs||!kb||!rs.classList.contains('kdOn'))return;
     if(!kb.dataset.lkv)kb.dataset.lkv='ov';
     if(!kb.querySelector('.lkKdTabs')){var d=document.createElement('div');d.className='lkKdTabs';
       [['ov','Overview'],['st','Stats']].forEach(function(a){var b=document.createElement('button');b.type='button';b.textContent=a[1];b.dataset.v=a[0];b.onclick=function(){kb.dataset.lkv=a[0];d.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x.dataset.v===a[0])})};if(a[0]===kb.dataset.lkv)b.className='on';d.appendChild(b)});
       kb.insertBefore(d,kb.firstChild)}}catch(e){}}
-  setInterval(kdTabs,400);
+  setInterval(function(){if(!document.hidden)kdTabs()},800);
 
   try{var tp=new URLSearchParams(location.search).get('top');if(tp)setInterval(function(){var e=document.getElementById('profile');if(e&&e.getAttribute('data-lktop')!==tp)e.setAttribute('data-lktop',tp)},300)}catch(e){}
 

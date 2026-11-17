@@ -410,16 +410,10 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #rankings .rsub2 .bi{display:inline-flex!important;flex:0 0 auto;flex-wrap:nowrap!important;margin-left:0}
 #rankings .bi i{width:14px!important;height:16px!important}
 #rankings .bi i:nth-child(n+2){margin-left:-3px!important}
-#rankings .rsub2 .bi:has(i:nth-child(5)) i{width:13px!important}
-#rankings .rsub2 .bi:has(i:nth-child(5)) i:nth-child(n+2){margin-left:-5px!important}
 #rankings .rcard .rtxt{min-width:0;overflow:visible}
 }
 @media(max-width:700px){
 #rankings .rsub2{font-size:10.5px!important;gap:0 4px!important}
-#rankings .rsub2 .bi:has(i:nth-child(4)) i{width:13px!important}
-#rankings .rsub2 .bi:has(i:nth-child(4)) i:nth-child(n+2){margin-left:-4px!important}
-#rankings .rsub2 .bi:has(i:nth-child(5)) i{width:13px!important}
-#rankings .rsub2 .bi:has(i:nth-child(5)) i:nth-child(n+2){margin-left:-7px!important}
 }
 @media(max-width:700px){#rankings .rsub2{flex-wrap:wrap!important;white-space:normal!important;overflow:hidden}#rankings .rsub2 .bi{white-space:nowrap}}
 /* rankings Stats / Breakdown tables: same look as Overview rows */
@@ -476,3 +470,4 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #rankings.wideView th:nth-child(3),#rankings.wideView td:nth-child(3){min-width:76px!important;width:76px!important;text-align:right!important;padding-left:6px!important;padding-right:10px!important;white-space:nowrap!important;position:static}
 #rankings.wideView th:nth-child(2),#rankings.wideView td:nth-child(2){width:186px!important;min-width:186px!important;max-width:186px!important}
 }
+@media(max-width:700px){#rankings .bi i{width:14px!important}#rankings .bi i:nth-child(n+2){margin-left:-4px!important}}
