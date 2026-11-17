@@ -512,7 +512,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile .hero2 .portrait img{width:96px!important;height:96px!important}
 #profile .hero2 .portrait .initials{font-size:34px!important}
 #profile .hero2 .hid{padding-left:34px!important}
-#profile .hero2 .hid .meta{--mf:16px}
+#profile .hero2 .hid .meta{--mf:19px}
 }
 #profile .injMini:not(.lkShow){display:none!important}
 #profile .hero2 .hid .rankline{flex-wrap:nowrap!important}
