@@ -48,4 +48,13 @@
     var ov=pb.querySelector('.dkOv');if(ov&&!ov.dataset.lk){var sm=ov.querySelector('small');if(sm)sm.textContent='MANIA RATING';var hs=pb.querySelector('.hero2 .hs.left .scoresub');var t2=hs?hs.textContent.replace(/\s*\u2022\s*/g,' \u00b7 ').trim():'';if(t2){var em=document.createElement('em');em.textContent=t2;ov.appendChild(em)}ov.dataset.lk='1'}
     pb.querySelectorAll('.scoresub,.dkT em').forEach(function(e){if(e.textContent.indexOf('\u2022')>-1&&!e.querySelector('*'))e.textContent=e.textContent.replace(/\s*\u2022\s*/g,' \u00b7 ')})}catch(e){}}
   setInterval(words,400);
+
+  function chips(){try{var pb=document.getElementById('profileBody');if(!pb)return;
+    pb.querySelectorAll('.rankline').forEach(function(rl){var dc=rl.querySelector('i.dcLink');if(!dc)return;var t=rl.querySelectorAll('i');
+      var c=null;t.forEach(function(x){if(/\bon\b/i.test(x.textContent)&&x!==dc)c=x});
+      if(c&&!c.classList.contains('dcLink')){c.classList.add('dcLink','lkDc');c.dataset.dcteam=dc.dataset.dcteam;c.dataset.dcid=dc.dataset.dcid;c.title='Tap to see the depth chart'}});
+    var ol=pb.querySelector('.hol .outlook');var pj=pb.querySelector('.hpjW');
+    if(pj){var x=pj.querySelector('.lkOl');if(ol){if(!x){x=document.createElement('span');pj.querySelector('.heroPj')?pj.querySelector('.heroPj').appendChild(x):pj.appendChild(x)}
+      x.className='lkOl '+(/g90/.test(ol.className)?'g':/g70/.test(ol.className)?'y':/g0/.test(ol.className)?'r':'');if(x.textContent!==ol.textContent)x.textContent=ol.textContent}else if(x)x.remove()}}catch(e){}}
+  setInterval(chips,400);
 })();

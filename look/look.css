@@ -156,7 +156,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 }
 /* ===== pass 9: profile band by team color (matches approved mock) ===== */
 #profileBody{--lkTc:#275DF3}
-#profile{--lkB1:var(--lkTc);--lkB2:color-mix(in srgb,var(--lkTc) 62%,#0b1020)}
+#profile{--lkTc:#275DF3;--lkB1:var(--lkTc);--lkB2:color-mix(in srgb,var(--lkTc) 62%,#0b1020)}
 /* shield badges: bigger, no text labels */
 #profile .bdgs .bdgN,#profile .bdgD{display:none!important}
 #profile .bdgs .bdgBtn{background:transparent!important;border:0!important;padding:0!important;display:flex!important;justify-content:center}
@@ -254,7 +254,6 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
  #profile .hero2 .bdgBtn i,#profile .hero2 .bdgBtn svg{width:30px!important;height:35px!important}
  #profile .hero2 .rankline{flex-wrap:nowrap!important;gap:4px!important}
  #profile .hero2 .rankline i{font-size:9.5px!important;padding:3px 5px!important}
- #profile .hero2 .rankline i.dcLink{display:none!important}
 }
 @media(max-width:999px){#profile .hero2 .hol{align-items:flex-start!important}}
 @media(min-width:821px){
@@ -265,3 +264,52 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
  #home .hmSS .hsGo{flex:0 0 auto;height:38px!important;white-space:nowrap}
  #home .hmSS .hsMsg{display:none!important}
 }
+/* ===== pass 11 (from phone feedback) ===== */
+/* profile: three chips only, small badges, outlook text out of the band */
+#profile .hero2 .rankline i.dcLink:not(.lkDc),#profile .dkNm .rankline i.dcLink:not(.lkDc),#profile .hero2 .ageChip,#profile .dkNm .ageChip{display:none!important}
+#profile .hero2 .rankline{flex-wrap:wrap!important}
+#profile .hol .outlook,#profile .hero2 .hol .outlook{display:none!important}
+#profile .hpjW .lkOl{display:inline-block;margin-left:10px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;background:#eef2fa;color:#27407a}
+#profile .hpjW .lkOl.g{background:#e3f5ea;color:#157a43}#profile .hpjW .lkOl.r{background:#fbe6e8;color:#b3262f}#profile .hpjW .lkOl.y{background:#fdf1d6;color:#8a5a00}
+#profile .rankline i.lkDc{cursor:pointer}
+@media(max-width:999px){
+ #profile .hero2 .bdgBtn i,#profile .hero2 .bdgBtn svg{width:24px!important;height:28px!important}
+ #profile .hero2 .bdgs{gap:6px!important}
+ #profile .hero2 .hol{padding-bottom:10px!important}
+}
+@media(min-width:1000px){#profile .dkBd .bdgBtn i,#profile .dkBd .bdgBtn svg{width:30px!important;height:35px!important}}
+/* mania breakdown bars: round + glowing like before */
+#profile .track,#profile .track.lk-sq{border-radius:12px!important;overflow:visible!important;height:12px!important;background:#e4e9f0!important}
+#profile .fill,#profile .fill.lk-sq{border-radius:12px!important}
+#profile .fill[style*="22a45d"]{box-shadow:0 0 6px 1px rgba(34,190,100,.65),0 0 16px 3px rgba(34,190,100,.28),0 4px 10px -2px rgba(34,190,100,.65)!important}
+#profile .fill[style*="e3a21a"]{box-shadow:0 0 6px 1px rgba(240,170,20,.65),0 0 16px 3px rgba(240,170,20,.28),0 4px 10px -2px rgba(240,170,20,.65)!important}
+#profile .fill[style*="e2505b"]{box-shadow:0 0 6px 1px rgba(226,80,91,.65),0 0 16px 3px rgba(226,80,91,.28),0 4px 10px -2px rgba(226,80,91,.65)!important}
+#profile .panel,#profile .maniaPanel{overflow:visible!important}
+/* rankings: skinny rows, badges on the team line */
+#rankings .rcard{padding:6px 2px!important}
+#rankings .rsub2{flex-wrap:wrap!important;gap:0 6px!important;line-height:1.2!important;margin-top:0!important;font-size:11.5px!important}
+#rankings .rsub2 .tlg,#rankings .rsub2 .tlg.sm{height:13px!important;width:auto!important;margin-right:2px}
+#rankings .bi{margin-left:2px!important;gap:3px!important;display:inline-flex!important;align-items:center}
+#rankings .bi i{width:15px!important}
+#rankings .rcard .rtxt .bi{flex:0 0 auto}
+#rankings td .bi{margin:2px 0 0 0!important}
+#rankings td .bi i{width:15px!important}
+#rankings .pjp .bi,#rankings .pjs .bi{display:inline-flex!important}
+#rankings .thumb{width:40px!important;height:40px!important}
+#profile .hero2 .bdgBtn,#profile .dkBd .bdgBtn{padding:0!important;margin:0!important}
+#profile .hero2 .hol{padding-left:12px!important}
+@media(max-width:700px){
+ #rankings .thumb{width:34px!important;height:34px!important}
+ #rankings .rname{font-size:14px!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+ #rankings .rsub2{font-size:11px!important}
+ #rankings .bi i{width:13px!important}
+ #rankings .rcard .g90,#rankings .rcard .g70,#rankings .rcard .g0{font-size:19px!important}
+ #rankings .rn{font-size:15px!important;width:20px!important}
+}
+#profile .hero2 .hol{justify-self:stretch!important;width:100%!important;margin:0!important;align-items:flex-start!important}
+@media(min-width:1000px){
+ #profile .dkBd .bdgBtn{flex:0 0 auto!important;width:auto!important}
+ #profile .dkBd .bdgs{display:flex!important;justify-content:flex-start!important;gap:10px!important}
+}
+#profile .barrow{grid-template-columns:minmax(0,1fr) 48px!important;grid-template-areas:"l n" "t t"!important;row-gap:6px!important}
+#profile .barrow>span{grid-area:l!important}#profile .barrow>.track{grid-area:t!important}#profile .barrow>b{grid-area:n!important}
