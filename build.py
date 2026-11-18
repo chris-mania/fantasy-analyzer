@@ -7422,7 +7422,7 @@ function trEspnBookmarklet(){var base=location.origin+location.pathname.replace(
  +".then(function(d){data=JSON.stringify(d);send();setTimeout(function(){if(ready)return;var t=document.createElement('textarea');t.value=data;t.style.cssText='position:fixed;z-index:2147483647;left:5%;top:10%;width:90%;height:50%;font:12px monospace';document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(e){}alert('Fantasy Mania did not open. The league data is selected in the box: copy it (Ctrl+C), then paste it into the Import screen on Fantasy Mania.')},6000)})"
  +".catch(function(){alert('ESPN would not give the league data. Make sure you are logged in to ESPN and on your league page.')})})();";
  return 'javascript:'+encodeURIComponent(code)}
-function trEspnPreviewOk(){try{return location.pathname.indexOf('/preview/')===0}catch(e){return false}}
+function trEspnPreviewOk(){return true}
 function trEspnModal(){if(!trEspnPreviewOk())return trEspnModalPaste();
  var m=document.createElement('div'),yr=trEspnSeason();m.className='trModal';
  m.innerHTML='<div class="trModalB espnM"><b>Connect your ESPN league</b><p class="espnSub">Choose the kind of league you have.</p>'
