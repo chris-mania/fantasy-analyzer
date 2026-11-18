@@ -18,6 +18,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.hostname === "fantasymania.pages.dev") return Response.redirect(SITE + url.pathname + url.search, 301);
+    if (url.pathname === "/api/espn") return espnProxy(request, url);
     if (url.pathname.startsWith("/trade/") && url.pathname.includes("-for-")) {
       try { return await tradeRoute(env, url); } catch (e) { return env.ASSETS.fetch(new Request(url.origin + "/trade/")); }
     }
@@ -48,6 +49,68 @@ export default {
     }
   },
 };
+
+// ESPN import proxy: fetches a league straight from ESPN's own (unofficial, undocumented) read API.
+// Public league -> GET or POST {league, year}, no cookies. Private league -> POST also with {s2, swid},
+// the viewer's own ESPN session cookies, sent to ESPN for this one request and never stored or logged.
+function espnOut(obj, status) {
+  return new Response(JSON.stringify(obj), { status: status || 200, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+}
+async function espnProxy(request, url) {
+  let league, year, s2, swid;
+  try {
+    if (request.method === "POST") {
+      const b = await request.json();
+      league = String(b.league || ""); year = parseInt(b.year, 10); s2 = b.s2 || ""; swid = b.swid || "";
+    } else if (request.method === "GET") {
+      league = url.searchParams.get("league") || ""; year = parseInt(url.searchParams.get("year"), 10);
+    } else {
+      return espnOut({ error: "method", msg: "That request type is not supported." }, 405);
+    }
+  } catch (e) {
+    return espnOut({ error: "bad_body", msg: "That request could not be read." }, 400);
+  }
+  if (!/^\d{4,12}$/.test(league)) return espnOut({ error: "bad_league", msg: "That doesn't look like a league ID." }, 400);
+  if (!(year >= 2018 && year <= 2035)) return espnOut({ error: "bad_year", msg: "That season looks wrong." }, 400);
+  const bad = (v) => v && /[;\r\n]/.test(v);
+  if (bad(s2) || bad(swid) || (s2 && s2.length > 4000) || (swid && swid.length > 200)) {
+    return espnOut({ error: "bad_cookie", msg: "Those login values don't look right." }, 400);
+  }
+  const headers = { "user-agent": "Mozilla/5.0 (compatible; FantasyManiaImport/1.0)", accept: "application/json" };
+  if (s2 && swid) headers["cookie"] = "espn_s2=" + s2 + "; SWID=" + swid;
+  const base = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/" + year + "/segments/0/leagues/" + league;
+  let baseJson;
+  try {
+    const r = await fetch(base + "?view=mSettings&view=mTeam&view=mRoster&view=mStandings", { headers });
+    if (r.status === 401 || r.status === 403) return espnOut({ error: "private", msg: "That league is private. Use the private league tab, or make it public in ESPN's league settings." }, 200);
+    if (r.status === 404) return espnOut({ error: "notfound", msg: "ESPN has no league " + league + " for the " + year + " season." }, 200);
+    if (!r.ok) return espnOut({ error: "espn_" + r.status, msg: "ESPN did not answer right (code " + r.status + "). Try again in a minute." }, 200);
+    baseJson = await r.json();
+  } catch (e) {
+    return espnOut({ error: "fetch_failed", msg: "Could not reach ESPN. Try again in a minute." }, 200);
+  }
+  const cur = Math.max(1, baseJson.scoringPeriodId || 1);
+  const weeks = []; for (let w = cur; w <= 17; w++) weeks.push(w);
+  const proj = {};
+  await Promise.all(weeks.map(async (w) => {
+    try {
+      const r = await fetch(base + "?view=mRoster&scoringPeriodId=" + w, { headers });
+      if (!r.ok) return;
+      const j = await r.json();
+      const o = {};
+      (j.teams || []).forEach((t) => {
+        ((t.roster && t.roster.entries) || []).forEach((e) => {
+          const p = e.playerPoolEntry && e.playerPoolEntry.player;
+          if (!p) return;
+          const s = (p.stats || []).find((x) => x.statSourceId === 1 && x.scoringPeriodId === w);
+          if (s && s.appliedTotal != null) o[e.playerId] = Math.round(s.appliedTotal * 10) / 10;
+        });
+      });
+      proj[w] = o;
+    } catch (e) { /* skip that week */ }
+  }));
+  return espnOut({ base: baseJson, proj });
+}
 
 // ---------- shared trade links: /trade/<a>-and-<b>-for-<c>/ (any players, any size, made on request) ----------
 const TR_DEF = { n: 10, sf: false, hz: "ros", st: "1-2-2-1-1" };
