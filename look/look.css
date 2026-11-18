@@ -172,7 +172,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
  #profile .hero2 .portrait img{width:78px!important;height:78px!important}
  #profile .hero2 .portrait .initials{font-size:26px!important}
  #profile .hero2 .hid{grid-area:hid!important;text-align:left!important;padding-left:12px!important}
- #profile .hero2 .hid h1{font-size:30px!important;text-align:left!important;text-transform:uppercase;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;margin:0!important}
+ #profile .hero2 .hid h1{font-size:30px!important;text-align:left!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:700!important;text-transform:none!important;margin:0!important}
  #profile .hero2 .hid .meta{justify-content:flex-start!important;font-size:12.5px!important}
  #profile .hero2 .rankline{justify-content:flex-start!important;gap:4px!important}
  #profile .hero2 .rankline i{font-size:10.5px!important;padding:3px 6px!important;text-transform:uppercase;letter-spacing:.04em}
@@ -192,7 +192,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
  #profile .dkRing .hp{zoom:.62!important}
  #profile .dkLab{display:none!important}
  #profile .dkNm{grid-column:2;grid-row:1;background:transparent!important;display:block!important;padding:0!important;margin-top:6px}
- #profile .dkNm .hid h1{color:#fff!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;text-transform:uppercase;font-size:64px!important;letter-spacing:0!important}
+ #profile .dkNm .hid h1{color:#fff!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:700!important;text-transform:none!important;font-size:64px!important;letter-spacing:0!important}
  #profile .dkNm .hid .meta{color:#fff!important}
  #profile .dkNm .rankline i{background:rgba(255,255,255,.2)!important;color:#fff!important;text-transform:uppercase;font-size:11px!important;border-radius:0!important}
  #profile .dkBd{grid-column:2;grid-row:2;background:transparent!important;padding:0!important;box-shadow:none!important;align-self:start;margin-top:12px}

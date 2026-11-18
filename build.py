@@ -9127,10 +9127,15 @@ function matchupHTML(p,c){var m=c?c.match:{adj:p.matchup_adj,list:(p.similar||[]
  if(p.opp==='BYE')return '<div class="mu2"><div class="mu2Top"><div><div class="muK">Week '+wk+' matchup</div><div class="muOpp">Bye week</div></div></div><div class="matchWhy">No game this week, so there is no matchup to adjust for.</div></div>';
  if(p.opp==='TBD'||!p.opp)return '<div class="mu2"><div class="mu2Top"><div><div class="muK">Week '+wk+' matchup</div><div class="muOpp">To be decided</div></div></div><div class="matchWhy">His opponent is not set yet.</div></div>';
  var rows=defenseVs(p.pos).slice().sort(function(a,b){return b.pg-a.pg}),ix=rows.findIndex(function(x){return x.team===p.opp}),d=ix>=0?rows[ix]:null,
- v=adj>=1?['Good matchup','good']:adj<=-1?['Tough matchup','bad']:['Neutral matchup','mid'],diff=avgN?(avgA/avgN-1)*100:0,
- why=!n?'Not enough games against '+p.opp+' yet, so the boost stays close to 0 for now.':'Players with a role like his scored <b>'+fmt(avgA)+'</b> PPR a game against '+p.opp+', versus <b>'+fmt(avgN)+'</b> in their usual games ('+(diff>=0?'+':'')+Math.round(diff)+'%). That moves his Week '+wk+' Rating by <b>'+sg+fmt(adj)+'</b>.'+(v[1]==='mid'?' It is a small sample this early, so it counts for little.':'');
- var t=dvTier(p.opp,p.pos),cls=t?t.cls:'y',pos=t?Math.round(((t.n-t.rk)/Math.max(1,t.n-1))*100):50;
- return '<div class="mu2"><div class="mu2Top"><div class="mu2Id">'+tlogo(p.opp,'lg')+'<div><div class="muK">Week '+wk+' matchup</div><div class="muOpp">vs '+p.opp+'</div></div></div><div class="muBoost '+v[1]+'"><b>'+sg+fmt(adj)+'</b><span>Rating boost</span></div></div>'
+ t=dvTier(p.opp,p.pos),cls=t?t.cls:'y',pos=t?Math.round(((t.n-t.rk)/Math.max(1,t.n-1))*100):50,
+ // The verdict pill and the bar need to agree with the "Nth easiest of N" stat next to them, so both
+ // come from the same season-long defense rank (t.cls) whenever we have one. The adj-based wording is
+ // only a fallback for when there's no rank yet (early season). The Rating Boost number keeps its own
+ // sign-based color -- it's a different, smaller-sample stat, explained in the paragraph below.
+ v=t?(t.cls==='g'?['Easy matchup','good']:t.cls==='r'?['Tough matchup','bad']:['Average matchup','mid']):(adj>=1?['Good matchup','good']:adj<=-1?['Tough matchup','bad']:['Neutral matchup','mid']),
+ diff=avgN?(avgA/avgN-1)*100:0,
+ why=!n?'Not enough games against '+p.opp+' yet, so the boost stays close to 0 for now.':'Players with a role like his scored <b>'+fmt(avgA)+'</b> PPR a game against '+p.opp+', versus <b>'+fmt(avgN)+'</b> in their usual games ('+(diff>=0?'+':'')+Math.round(diff)+'%). That moves his Week '+wk+' Rating by <b>'+sg+fmt(adj)+'</b>.'+(Math.abs(adj)<1?' It is a small sample this early, so it counts for little.':'');
+ return '<div class="mu2"><div class="mu2Top"><div class="mu2Id">'+tlogo(p.opp,'lg')+'<div><div class="muK">Week '+wk+' matchup</div><div class="muOpp">vs '+p.opp+'</div></div></div><div class="muBoost '+(adj>=1?'good':adj<=-1?'bad':'mid')+'"><b>'+sg+fmt(adj)+'</b><span>Rating boost</span></div></div>'
  +'<div class="mu2Row"><span class="muVerdict '+v[1]+'">'+v[0]+'</span>'+(t?'<span class="oppC '+cls+'">'+ord(t.rk)+' easiest of '+t.n+' defenses for '+p.pos+'s</span>':'')+'</div>'
  +(t?'<div class="mu2Bar"><i class="'+cls+'" style="left:'+pos+'%"></i><span>Tough</span><span>Easy</span></div>':'')
  +'<div class="muFacts"><div><b>'+(d?fmt(d.pg):'—')+'</b><span>PPR a game '+p.opp+' allows to '+p.pos+'s</span></div><div><b>'+(n?fmt(avgN):'—')+'</b><span>Similar players, usual PPR a game</span></div><div><b class="'+(!n?'':diff>=0?'good':'bad')+'">'+(n?fmt(avgA):'—')+'</b><span>Same players against '+p.opp+'</span></div></div><div class="matchWhy">'+why+'</div></div>'}
