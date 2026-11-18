@@ -18,7 +18,6 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.hostname === "fantasymania.pages.dev") return Response.redirect(SITE + url.pathname + url.search, 301);
-    if (url.pathname === "/api/espn") return espnProxy(request, url);
     if (url.pathname.startsWith("/trade/") && url.pathname.includes("-for-")) {
       try { return await tradeRoute(env, url); } catch (e) { return env.ASSETS.fetch(new Request(url.origin + "/trade/")); }
     }
@@ -470,56 +469,4 @@ function hub(d) {
 function notFound(d) {
   const body = `<h1>We couldn't find that matchup</h1><p class="sub">One of those players isn't in this week's Fantasy Mania numbers. Pick two players below.</p><div class="card">${picker(d)}</div>`;
   return shell({ title: "Matchup not found | Fantasy Mania", desc: "Pick two players to see who to start.", path: "/start/", crumbs: [["Fantasy Mania", "/"], ["Start/Sit", "/start/"]], body, robots: "noindex,follow", nav: "/start/" });
-}
-
-
-// ---------- ESPN league import: /api/espn ----------
-// Reads one ESPN fantasy football league for the Fantasy Mania import screen and hands the raw data back to the page.
-// Public leagues need nothing. Private leagues: the page sends the person's own espn_s2 + SWID in a POST body; they are
-// used for these requests only, sent straight to ESPN, and never stored or logged. Nothing is cached.
-const ESPN_BASE = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/";
-async function espnProxy(request, url) {
-  const H = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" };
-  const out = (o, st) => new Response(JSON.stringify(o), { status: st || 200, headers: H });
-  try {
-    let q = {};
-    if (request.method === "POST") q = await request.json();
-    else if (request.method === "GET") q = { league: url.searchParams.get("league"), year: url.searchParams.get("year") };
-    else return out({ error: "bad_method" }, 405);
-    const league = String(q.league || "").trim(), year = parseInt(q.year, 10);
-    if (!/^\d{4,12}$/.test(league)) return out({ error: "bad_league", msg: "That does not look like a league ID. It is the number after leagueId= in the ESPN address." }, 400);
-    if (!(year >= 2018 && year <= 2035)) return out({ error: "bad_year" }, 400);
-    const headers = { "user-agent": "Mozilla/5.0", accept: "application/json" };
-    const s2 = String(q.s2 || "").trim(), swid = String(q.swid || "").trim();
-    if (s2 || swid) {
-      if (s2.length > 3000 || swid.length > 80 || /[;\r\n]/.test(s2 + swid)) return out({ error: "bad_cookie", msg: "Those cookie values look wrong. Copy each one again." }, 400);
-      headers.cookie = "espn_s2=" + s2 + "; SWID=" + swid;
-    }
-    const base = ESPN_BASE + year + "/segments/0/leagues/" + league;
-    const r = await fetch(base + "?view=mSettings&view=mTeam&view=mRoster&view=mStandings", { headers });
-    if (r.status === 401 || r.status === 403) return out({ error: "private", msg: s2 || swid ? "ESPN did not accept those login values. Copy espn_s2 and SWID again, exactly." : "That league is private. Use the private league option, or run it on your computer." }, 401);
-    if (r.status === 404) return out({ error: "notfound", msg: "ESPN has no league " + league + " for the " + year + " season." }, 404);
-    if (!r.ok) return out({ error: "espn_" + r.status, msg: "ESPN did not answer (" + r.status + "). Try again in a minute." }, 502);
-    const b = await r.json();
-    const cur = Math.max(1, b.scoringPeriodId || 1), proj = {};
-    const weeks = [];
-    for (let w = cur; w <= 17; w++) weeks.push(w);
-    await Promise.all(weeks.map(async (w) => {
-      try {
-        const rr = await fetch(base + "?view=mRoster&scoringPeriodId=" + w, { headers });
-        if (!rr.ok) return;
-        const j = await rr.json(), m = {};
-        for (const t of j.teams || []) for (const e of (t.roster && t.roster.entries) || []) {
-          const p = e.playerPoolEntry && e.playerPoolEntry.player;
-          if (!p) continue;
-          const st = (p.stats || []).find((x) => x.statSourceId === 1 && x.scoringPeriodId === w);
-          if (st && st.appliedTotal != null) m[e.playerId] = Math.round(st.appliedTotal * 10) / 10;
-        }
-        proj[w] = m;
-      } catch (e) {}
-    }));
-    return out({ base, proj });
-  } catch (e) {
-    return out({ error: "failed", msg: "Something went wrong reading that league." }, 500);
-  }
 }

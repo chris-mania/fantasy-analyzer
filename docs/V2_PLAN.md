@@ -26,15 +26,3 @@
 ## Open
 - Verify ESPN/Yahoo current access rules before building.
 - Table: what each import path returns vs. what's missing.
-
-## ESPN import: what each route returns (built, needs live test)
-| | Public ID | On my computer (bookmarklet) | Private (espn_s2 + SWID) |
-|---|---|---|---|
-| Login needed | No | Your own ESPN session, never leaves browser | Cookies sent once to /api/espn, not stored/logged |
-| Rosters, team names | Yes | Yes | Yes |
-| Record, seed, PF/PA | Yes | Yes | Yes |
-| League scoring/roster slots | Yes | Yes | Yes |
-| ESPN weekly projections (current..wk17) | Yes (per-week fetch) | Yes | Yes |
-| Which team is mine | No (pick) | No (pick) | Yes (SWID = owner) |
-| Works for private leagues | No | Yes | Yes |
-Fallback: paste the Rosters page. Client: trEspnModal/trEspnFromApi in build.py; proxy: espnProxy in start_worker.js.
