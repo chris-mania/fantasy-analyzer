@@ -19,6 +19,9 @@ export default {
     const url = new URL(request.url);
     if (url.hostname === "fantasymania.pages.dev") return Response.redirect(SITE + url.pathname + url.search, 301);
     if (url.pathname === "/api/espn") return espnProxy(request, url);
+    if (url.pathname === "/api/espn/link") return espnLink(request, env);
+    if (url.pathname === "/api/espn/refresh") return espnRefresh(request, env);
+    if (url.pathname === "/api/espn/unlink") return espnUnlink(request, env);
     if (url.pathname.startsWith("/trade/") && url.pathname.includes("-for-")) {
       try { return await tradeRoute(env, url); } catch (e) { return env.ASSETS.fetch(new Request(url.origin + "/trade/")); }
     }
@@ -51,43 +54,37 @@ export default {
 };
 
 // ESPN import proxy: fetches a league straight from ESPN's own (unofficial, undocumented) read API.
-// Public league -> GET or POST {league, year}, no cookies. Private league -> POST also with {s2, swid},
-// the viewer's own ESPN session cookies, sent to ESPN for this one request and never stored or logged.
+//
+// /api/espn       Public league -> GET or POST {league, year}, no cookies.
+//                 Private one-off -> POST also with {s2, swid}, the viewer's own ESPN session
+//                 cookies, sent to ESPN for this one request and never stored or logged.
+// /api/espn/link  One-time: POST {league, year, s2, swid} (copied by hand from the browser's own
+//                 DevTools, since espn_s2 is HttpOnly and no page script can read it). Verifies the
+//                 cookies work, encrypts and stores them in KV, returns a short {token}. From then on
+//                 the Home Screen app can refresh on its own with just that token.
+// /api/espn/refresh  POST {token} -> looks up the stored (encrypted) cookies and re-fetches fresh
+//                    data from ESPN. No cookie ever leaves the server again after /link.
+// /api/espn/unlink   POST {token} -> deletes the stored cookies. Anyone holding the token can wipe it.
 function espnOut(obj, status) {
   return new Response(JSON.stringify(obj), { status: status || 200, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 }
-async function espnProxy(request, url) {
-  let league, year, s2, swid;
-  try {
-    if (request.method === "POST") {
-      const b = await request.json();
-      league = String(b.league || ""); year = parseInt(b.year, 10); s2 = b.s2 || ""; swid = b.swid || "";
-    } else if (request.method === "GET") {
-      league = url.searchParams.get("league") || ""; year = parseInt(url.searchParams.get("year"), 10);
-    } else {
-      return espnOut({ error: "method", msg: "That request type is not supported." }, 405);
-    }
-  } catch (e) {
-    return espnOut({ error: "bad_body", msg: "That request could not be read." }, 400);
-  }
-  if (!/^\d{4,12}$/.test(league)) return espnOut({ error: "bad_league", msg: "That doesn't look like a league ID." }, 400);
-  if (!(year >= 2018 && year <= 2035)) return espnOut({ error: "bad_year", msg: "That season looks wrong." }, 400);
+function espnBadCookie(s2, swid) {
   const bad = (v) => v && /[;\r\n]/.test(v);
-  if (bad(s2) || bad(swid) || (s2 && s2.length > 4000) || (swid && swid.length > 200)) {
-    return espnOut({ error: "bad_cookie", msg: "Those login values don't look right." }, 400);
-  }
+  return bad(s2) || bad(swid) || (s2 && s2.length > 4000) || (swid && swid.length > 200);
+}
+async function espnFetchLeague(league, year, s2, swid) {
   const headers = { "user-agent": "Mozilla/5.0 (compatible; FantasyManiaImport/1.0)", accept: "application/json" };
   if (s2 && swid) headers["cookie"] = "espn_s2=" + s2 + "; SWID=" + swid;
   const base = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/" + year + "/segments/0/leagues/" + league;
   let baseJson;
   try {
     const r = await fetch(base + "?view=mSettings&view=mTeam&view=mRoster&view=mStandings", { headers });
-    if (r.status === 401 || r.status === 403) return espnOut({ error: "private", msg: "That league is private. Use the private league tab, or make it public in ESPN's league settings." }, 200);
-    if (r.status === 404) return espnOut({ error: "notfound", msg: "ESPN has no league " + league + " for the " + year + " season." }, 200);
-    if (!r.ok) return espnOut({ error: "espn_" + r.status, msg: "ESPN did not answer right (code " + r.status + "). Try again in a minute." }, 200);
+    if (r.status === 401 || r.status === 403) return { error: "private", msg: "That league is private. Use the private league tab, or make it public in ESPN's league settings." };
+    if (r.status === 404) return { error: "notfound", msg: "ESPN has no league " + league + " for the " + year + " season." };
+    if (!r.ok) return { error: "espn_" + r.status, msg: "ESPN did not answer right (code " + r.status + "). Try again in a minute." };
     baseJson = await r.json();
   } catch (e) {
-    return espnOut({ error: "fetch_failed", msg: "Could not reach ESPN. Try again in a minute." }, 200);
+    return { error: "fetch_failed", msg: "Could not reach ESPN. Try again in a minute." };
   }
   const cur = Math.max(1, baseJson.scoringPeriodId || 1);
   const weeks = []; for (let w = cur; w <= 17; w++) weeks.push(w);
@@ -109,7 +106,108 @@ async function espnProxy(request, url) {
       proj[w] = o;
     } catch (e) { /* skip that week */ }
   }));
-  return espnOut({ base: baseJson, proj });
+  return { base: baseJson, proj };
+}
+async function espnProxy(request, url) {
+  let league, year, s2, swid;
+  try {
+    if (request.method === "POST") {
+      const b = await request.json();
+      league = String(b.league || ""); year = parseInt(b.year, 10); s2 = b.s2 || ""; swid = b.swid || "";
+    } else if (request.method === "GET") {
+      league = url.searchParams.get("league") || ""; year = parseInt(url.searchParams.get("year"), 10);
+    } else {
+      return espnOut({ error: "method", msg: "That request type is not supported." }, 405);
+    }
+  } catch (e) {
+    return espnOut({ error: "bad_body", msg: "That request could not be read." }, 400);
+  }
+  if (!/^\d{4,12}$/.test(league)) return espnOut({ error: "bad_league", msg: "That doesn't look like a league ID." }, 400);
+  if (!(year >= 2018 && year <= 2035)) return espnOut({ error: "bad_year", msg: "That season looks wrong." }, 400);
+  if (espnBadCookie(s2, swid)) return espnOut({ error: "bad_cookie", msg: "Those login values don't look right." }, 400);
+  return espnOut(await espnFetchLeague(league, year, s2, swid));
+}
+
+// --- Encrypted KV storage for the "link once, refresh forever" feature. ---
+// Needs two things set up in the Cloudflare dashboard (not in code, see docs/ESPN_LINK_SETUP.md):
+//   - a KV namespace bound to this Pages project as ESPN_KV
+//   - a secret environment variable ESPN_ENC_KEY: 32 random bytes, base64-encoded
+async function espnCryptoKey(env) {
+  if (!env.ESPN_ENC_KEY) return null;
+  const raw = Uint8Array.from(atob(env.ESPN_ENC_KEY), (c) => c.charCodeAt(0));
+  if (raw.length !== 32) return null;
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+function espnB64(bytes) {
+  let s = ""; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function espnUnb64(s) {
+  s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "=";
+  return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+}
+async function espnEncrypt(env, plaintext) {
+  const key = await espnCryptoKey(env); if (!key) return null;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plaintext));
+  return espnB64(iv) + "." + espnB64(new Uint8Array(ct));
+}
+async function espnDecrypt(env, blob) {
+  const key = await espnCryptoKey(env); if (!key) return null;
+  const parts = String(blob || "").split(".");
+  if (parts.length !== 2) return null;
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: espnUnb64(parts[0]) }, key, espnUnb64(parts[1]));
+  return new TextDecoder().decode(pt);
+}
+function espnNewToken() {
+  return espnB64(crypto.getRandomValues(new Uint8Array(18)));
+}
+function espnTokenOk(t) {
+  return typeof t === "string" && /^[A-Za-z0-9_-]{10,40}$/.test(t);
+}
+
+async function espnLink(request, env) {
+  if (request.method !== "POST") return espnOut({ error: "method", msg: "That request type is not supported." }, 405);
+  if (!env.ESPN_KV || !env.ESPN_ENC_KEY) return espnOut({ error: "not_configured", msg: "Auto-refresh isn't set up on this server yet." }, 200);
+  let b;
+  try { b = await request.json(); } catch (e) { return espnOut({ error: "bad_body", msg: "That request could not be read." }, 400); }
+  const league = String(b.league || ""), year = parseInt(b.year, 10), s2 = b.s2 || "", swid = b.swid || "";
+  if (!/^\d{4,12}$/.test(league)) return espnOut({ error: "bad_league", msg: "That doesn't look like a league ID." }, 400);
+  if (!(year >= 2018 && year <= 2035)) return espnOut({ error: "bad_year", msg: "That season looks wrong." }, 400);
+  if (!s2 || !swid || espnBadCookie(s2, swid)) return espnOut({ error: "bad_cookie", msg: "Those login values don't look right." }, 400);
+  const check = await espnFetchLeague(league, year, s2, swid);
+  if (check.error) return espnOut(check, 200); // don't store cookies we haven't confirmed work
+  const blob = await espnEncrypt(env, JSON.stringify({ league, year, s2, swid }));
+  if (!blob) return espnOut({ error: "not_configured", msg: "Auto-refresh isn't set up on this server yet." }, 200);
+  const token = espnNewToken();
+  await env.ESPN_KV.put("link:" + token, blob);
+  return espnOut({ token, base: check.base, proj: check.proj });
+}
+
+async function espnRefresh(request, env) {
+  if (request.method !== "POST") return espnOut({ error: "method", msg: "That request type is not supported." }, 405);
+  if (!env.ESPN_KV) return espnOut({ error: "not_configured", msg: "Auto-refresh isn't set up on this server yet." }, 200);
+  let b;
+  try { b = await request.json(); } catch (e) { return espnOut({ error: "bad_body", msg: "That request could not be read." }, 400); }
+  const token = b.token;
+  if (!espnTokenOk(token)) return espnOut({ error: "bad_token", msg: "That link code doesn't look right." }, 400);
+  const blob = await env.ESPN_KV.get("link:" + token);
+  if (!blob) return espnOut({ error: "no_link", msg: "We don't have a league linked to that code. Set up auto-refresh again." }, 200);
+  let saved;
+  try { saved = JSON.parse(await espnDecrypt(env, blob)); } catch (e) { saved = null; }
+  if (!saved) return espnOut({ error: "bad_link", msg: "That saved link is damaged. Set up auto-refresh again." }, 200);
+  const out = await espnFetchLeague(saved.league, saved.year, saved.s2, saved.swid);
+  if (out.error === "private") return espnOut({ error: "expired", msg: "Your ESPN link has expired. Set up auto-refresh again to keep refreshing automatically." }, 200);
+  return espnOut(out);
+}
+
+async function espnUnlink(request, env) {
+  if (request.method !== "POST") return espnOut({ error: "method", msg: "That request type is not supported." }, 405);
+  if (env.ESPN_KV) {
+    let b; try { b = await request.json(); } catch (e) { b = {}; }
+    if (espnTokenOk(b.token)) await env.ESPN_KV.delete("link:" + b.token);
+  }
+  return espnOut({ ok: true });
 }
 
 // ---------- shared trade links: /trade/<a>-and-<b>-for-<c>/ (any players, any size, made on request) ----------
