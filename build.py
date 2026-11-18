@@ -7407,8 +7407,8 @@ function trEspnApply(m,d,swid){var E=m.querySelector('.espnErr'),r;
  lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')}
 function trEspnCall(m,body,btn){var E=m.querySelector('.espnErr');E.textContent='';btn.disabled=true;var t0=btn.textContent;btn.textContent='Reading your league…';
  var done=function(){btn.disabled=false;btn.textContent=t0};
- fetch('/api/espn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json().catch(function(){return {error:'failed',msg:'ESPN import is not available on this address. Open the live site (fantasymania.org) and try again.'}})}).then(function(j){done();
-  if(j.error){E.textContent=j.msg||'Could not read that league.';return}
+ fetch('/api/espn',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){var st=r.status;return r.json().catch(function(){return {error:'failed',msg:'Fantasy Mania\'s import service did not answer right (code '+st+'). Try again in a minute — if it keeps happening, tell us this code.'}})}).then(function(j){done();
+  if(j.error){E.textContent=(j.msg||'Could not read that league.')+(j.error&&j.error.indexOf('espn_')===0?' ('+j.error+')':'');return}
   trEspnApply(m,j,body.swid||'')}).catch(function(){done();E.textContent='Could not reach the import service. Check your connection and try again.'})}
 function trEspnBookmarklet(){var base=location.origin+location.pathname.replace(/[^\/]*$/,''),o=location.origin;
  var code="(function(){var H="+JSON.stringify(base+'#espnimport')+",O="+JSON.stringify(o)+";var m=location.href.match(/leagueId=(\\d+)/);if(!/espn\\.com$/.test(location.hostname)||!m){alert('Open your league on ESPN first (any page of the league), then tap this again.');return}"
