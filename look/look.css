@@ -726,31 +726,36 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #home .hhL h1{font-style:italic!important}
 /* search bar: soft rounded pill */
 #home .search.homeSearch,#home .search.homeSearch *{border-radius:16px!important}
-/* import-teams / ESPN-Sleeper pills up top: compact rounded pills instead of big list cards */
-#home .a2Tile{border-radius:999px!important;padding:10px 16px!important;box-shadow:none!important;border:1.5px solid var(--ink)!important}
-#home .a2Tile b{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.02em;font-size:14px!important}
-#home .a2Tile small{display:none!important}
-#home .a2Tile em{font-size:16px!important}
-#home .homeIm .newPill{border-radius:999px!important;box-shadow:none!important}
+/* import-teams / More pills up top: big bold pills like the mock, not the small default chip */
+#home .homeIm{gap:10px!important}
+#home .homeIm .newPill#homeEspn{border-radius:999px!important;padding:13px 18px!important;box-shadow:none!important;border:2px solid var(--ink)!important;background:#fff!important;height:auto!important}
+#home .homeIm .newPill#homeEspn .npT{flex-direction:row!important;align-items:center!important;gap:8px!important}
+#home .homeIm .newPill#homeEspn .npT small{display:none!important}
+#home .homeIm .newPill#homeEspn .npT b{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.02em;font-size:16px!important;color:var(--ink)!important}
+#home .homeIm .newPill#homeEspn .npT b::before{content:'\2191';display:inline-block;margin-right:7px;font-weight:900}
+#home #homeMore{border-radius:999px!important;padding:13px 16px!important;border:2px solid var(--ink)!important;background:#fff!important;height:auto!important;gap:8px!important}
+#home #homeMore .mi img{width:20px!important;height:20px!important}
+#home #homeMore{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.02em;font-size:16px!important;color:var(--ink)!important}
 /* "Who should I start?" card: navy-to-blue gradient, football photo bleeding in from the right, blue glow ring */
 #home .hmSS{
-  background:linear-gradient(100deg,rgba(6,16,41,.68) 0%,rgba(6,16,41,.3) 48%,rgba(6,16,41,.05) 68%),
+  background:linear-gradient(100deg,rgba(6,16,41,.94) 0%,rgba(6,16,41,.85) 30%,rgba(6,16,41,.55) 52%,rgba(6,16,41,.18) 72%,rgba(6,16,41,.05) 100%),
     url('/look/img/hero-football.jpg'),linear-gradient(135deg,#0a1530,#15316b)!important;
   background-size:cover,cover,cover!important;
   background-position:center,right center,center!important;
   background-repeat:no-repeat!important;
   border:1.5px solid #3f7cf0!important;
-  border-radius:20px!important;
-  box-shadow:0 0 0 1px rgba(63,124,240,.25),0 0 28px rgba(31,92,240,.45)!important;
-  padding:18px 18px 20px!important;
+  border-radius:22px!important;
+  box-shadow:0 0 0 1px rgba(63,124,240,.25),0 0 30px rgba(31,92,240,.5)!important;
+  padding:24px 22px 26px!important;
   text-align:left!important;
-  gap:12px!important;
+  gap:16px!important;
 }
-#home .hmSS .hsH{color:#fff!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;font-size:22px!important;text-transform:uppercase;letter-spacing:.01em;gap:10px!important}
+#home .hmSS .hsH{color:#fff!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;font-size:25px!important;text-transform:uppercase;letter-spacing:.01em;gap:10px!important;text-shadow:0 2px 10px rgba(0,0,0,.4)}
 #home .hmSS .hsH .hmIc svg{stroke:#fff!important}
-#home .hmSS .lkHsSub{color:rgba(255,255,255,.88)!important;font-size:13.5px!important;font-weight:500!important;margin:-4px 0 0}
-#home .hmSS .hsR input{border-radius:12px!important;border:0!important;height:46px!important;font-weight:600!important}
-#home .hmSS .hsGo{background:#1f5fe0!important;border-radius:12px!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.03em;font-size:16px!important;padding:14px!important;box-shadow:0 6px 18px -4px rgba(31,95,224,.7)!important}
+#home .hmSS .lkHsSub{color:rgba(255,255,255,.9)!important;font-size:14px!important;font-weight:500!important;margin:-8px 0 2px}
+#home .hmSS .hsR{gap:10px!important}
+#home .hmSS .hsR input{border-radius:12px!important;border:0!important;height:48px!important;font-weight:600!important;box-shadow:0 4px 14px -4px rgba(0,0,0,.35)!important}
+#home .hmSS .hsGo{background:#1f5fe0!important;border-radius:12px!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.03em;font-size:17px!important;padding:15px!important;margin-top:2px!important;box-shadow:0 8px 20px -4px rgba(31,95,224,.8)!important}
 #home .hmSS .hsMsg{color:#ffd1d1!important}
 /* Explore heading: bold italic with a rule running out to the edge. The hero's children are ordered
    with CSS `order` (not DOM position), so this needs its own slot right before the grid's. */
