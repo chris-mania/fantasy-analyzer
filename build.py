@@ -4070,7 +4070,7 @@ body.shot:not(.shotT) #cmpTeams{display:none!important}
 @media(display-mode:standalone){.a2Tile{display:none!important}}
 .a2{position:fixed;inset:0;z-index:500;background:rgba(10,16,32,.55);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}.a2[hidden]{display:none}
 .a2Box{position:relative;background:#fff;border-radius:24px;max-width:560px;width:100%;max-height:calc(100vh - 36px);overflow:auto;padding:26px 22px 22px;color:var(--ink)}
-.a2X{position:absolute;right:12px;top:10px;width:36px;height:36px;border-radius:50%;border:0;background:#eef2f7;font-size:22px;line-height:1;cursor:pointer;color:#3b4a63}
+.a2X{position:absolute;right:max(12px,env(safe-area-inset-right,0px) + 12px);top:max(10px,env(safe-area-inset-top,0px) + 10px);width:40px;height:40px;border-radius:50%;border:0;background:#eef2f7;font-size:22px;line-height:1;cursor:pointer;color:#3b4a63;z-index:5}
 .a2Ic{width:60px;height:60px;border-radius:15px;box-shadow:0 0 0 1px #e3e9f2,0 8px 18px -8px rgba(20,35,70,.3);display:block;margin-bottom:12px}
 .a2Box h2{margin:0 0 8px;font-size:23px;line-height:1.2;letter-spacing:-.035em;font-weight:800}
 .a2P{margin:0 0 16px;font-size:14.5px;line-height:1.55;color:#4a566b}
