@@ -130,4 +130,13 @@
     [].forEach.call(document.querySelectorAll('.bdgBtn.on'),function(b){b.classList.remove('on')});
   },true);
   setInterval(function(){if(!document.hidden)try{liInfo()}catch(e){}},500);
+
+  /* ===== homepage: match the new mock (subtitle on the Who-should-I-start card, Explore heading) ===== */
+  function homeMock(){try{
+    var ss=document.getElementById('hmSS');
+    if(ss){var h=ss.querySelector('.hsH');if(h&&!ss.querySelector('.lkHsSub')){var sub=document.createElement('div');sub.className='lkHsSub';sub.textContent='Compare two players for this week.';h.parentNode.insertBefore(sub,h.nextSibling)}}
+    var g=document.getElementById('hmGrid');
+    if(g&&!document.getElementById('lkExploreHd')){var hd=document.createElement('div');hd.id='lkExploreHd';hd.className='lkExploreHd';hd.textContent='Explore FantasyMania';g.parentNode.insertBefore(hd,g)}
+  }catch(e){}}
+  setInterval(function(){if(!document.hidden)homeMock()},800);
 })();

@@ -57,6 +57,12 @@ jobs:
         if: steps.b.outputs.ok == '1'
         run: python site_extras.py
 
+      - name: Apply the Scoreboard look to the real site (keep this step; before the Google pages step so they pick it up too)
+        if: steps.b.outputs.ok == '1'
+        continue-on-error: true
+        timeout-minutes: 3
+        run: python apply_look.py
+
       - name: Player, rankings and start/sit pages for Google (about once an hour; keep these steps)
         if: steps.b.outputs.ok == '1'
         # Makes no API calls: it only reads the page build.py just made. If it fails, runs long or it isn't
@@ -86,13 +92,6 @@ jobs:
             done
           fi
           ls public | head -40
-
-      - name: Side page at /preview/ with the new Scoreboard look (never blocks the real site; keep this step)
-        if: steps.b.outputs.ok == '1'
-        # Copies the finished page into public/preview/ and lays look/look.css + look/look.js on top. The real pages are not edited.
-        continue-on-error: true
-        timeout-minutes: 3
-        run: python look_preview.py
 
       - name: Check the page is real before publishing
         if: steps.b.outputs.ok == '1'

@@ -695,3 +695,76 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile #lkInfo span{justify-content:center!important}
 #profile #lkInfo>.liR{order:1}#profile #lkInfo>.liP{order:2}#profile #lkInfo>.liG{order:3}
 #profile #lkInfo.n3{grid-template-columns:.8fr 1.4fr 1fr!important}
+
+/* ===== pass 32: athletic redesign -- bold condensed italic voice, flat sharp numbers, clean band ===== */
+/* name, score numbers, panel headings, tabs/badges: one bold condensed *italic* voice everywhere they show up */
+#profile .hero2 .hid h1,#profile .dkNm .hid h1,
+#profile .hero2 .scorebig,.hs .scorebig,.comparePlayer .scorebig,
+#profile .panel h2,#profile .panel h3,#profile .vsBox h2,#profile .vsBox h3,.stHd,
+.vbtn,.tmT,.tsb,.pfTabs>*,
+#profile .hero2 .rankline i,#profile .dkNm .rankline i{
+  font-style:italic!important;font-weight:800!important
+}
+/* rating numbers: flat, sharp color -- no gradient fill, no drop-shadow glow. --l/--d already carry
+   the right grade color (green/orange/red); just stop clipping them into a soft-shadowed gradient. */
+#profile .hero2 .hs .scorebig,.hs .scorebig,#profile .hero2 .scorebig{
+  background:none!important;color:var(--l,#1fa85a)!important;-webkit-text-fill-color:var(--l,#1fa85a)!important;
+  -webkit-background-clip:initial!important;background-clip:initial!important;
+  filter:none!important;text-shadow:none!important;-webkit-text-stroke:0!important
+}
+/* clean gradient band: lose the giant faint team letters */
+#profile .lkWm{display:none!important}
+/* badges + chips: a touch more breathing room now that the lettering reads cleaner italic */
+#profile .hero2 .hol .outlook{letter-spacing:.06em!important}
+/* mania breakdown bars: same green/orange/red, calmer glow instead of a neon halo */
+#profile .fill[style*="22a45d"]{box-shadow:0 0 3px 1px rgba(34,190,100,.4),0 2px 6px -2px rgba(34,190,100,.4)!important}
+#profile .fill[style*="e3a21a"]{box-shadow:0 0 3px 1px rgba(240,170,20,.4),0 2px 6px -2px rgba(240,170,20,.4)!important}
+#profile .fill[style*="e2505b"]{box-shadow:0 0 3px 1px rgba(226,80,91,.4),0 2px 6px -2px rgba(226,80,91,.4)!important}
+
+/* ===== pass 33: homepage -- match the new mock (rounded cards, same bold italic voice, navy "who should I start") ===== */
+/* headline: same voice as the profile redesign */
+#home .hhL h1{font-style:italic!important}
+/* search bar: soft rounded pill */
+#home .search.homeSearch,#home .search.homeSearch *{border-radius:16px!important}
+/* import-teams / ESPN-Sleeper pills up top: compact rounded pills instead of big list cards */
+#home .a2Tile{border-radius:999px!important;padding:10px 16px!important;box-shadow:none!important;border:1.5px solid var(--ink)!important}
+#home .a2Tile b{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.02em;font-size:14px!important}
+#home .a2Tile small{display:none!important}
+#home .a2Tile em{font-size:16px!important}
+#home .homeIm .newPill{border-radius:999px!important;box-shadow:none!important}
+/* "Who should I start?" card: navy-to-blue gradient, football photo bleeding in from the right, blue glow ring */
+#home .hmSS{
+  background:linear-gradient(100deg,rgba(6,16,41,.68) 0%,rgba(6,16,41,.3) 48%,rgba(6,16,41,.05) 68%),
+    url('/look/img/hero-football.jpg'),linear-gradient(135deg,#0a1530,#15316b)!important;
+  background-size:cover,cover,cover!important;
+  background-position:center,right center,center!important;
+  background-repeat:no-repeat!important;
+  border:1.5px solid #3f7cf0!important;
+  border-radius:20px!important;
+  box-shadow:0 0 0 1px rgba(63,124,240,.25),0 0 28px rgba(31,92,240,.45)!important;
+  padding:18px 18px 20px!important;
+  text-align:left!important;
+  gap:12px!important;
+}
+#home .hmSS .hsH{color:#fff!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;font-size:22px!important;text-transform:uppercase;letter-spacing:.01em;gap:10px!important}
+#home .hmSS .hsH .hmIc svg{stroke:#fff!important}
+#home .hmSS .lkHsSub{color:rgba(255,255,255,.88)!important;font-size:13.5px!important;font-weight:500!important;margin:-4px 0 0}
+#home .hmSS .hsR input{border-radius:12px!important;border:0!important;height:46px!important;font-weight:600!important}
+#home .hmSS .hsGo{background:#1f5fe0!important;border-radius:12px!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.03em;font-size:16px!important;padding:14px!important;box-shadow:0 6px 18px -4px rgba(31,95,224,.7)!important}
+#home .hmSS .hsMsg{color:#ffd1d1!important}
+/* Explore heading: bold italic with a rule running out to the edge. The hero's children are ordered
+   with CSS `order` (not DOM position), so this needs its own slot right before the grid's. */
+#home .hhL #lkExploreHd{order:7!important}
+#home .hhL .hmGrid{order:8!important}
+#home .lkExploreHd{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;font-size:20px!important;letter-spacing:.01em;display:flex!important;align-items:center;gap:14px;margin:24px 0 10px;color:var(--ink)}
+#home .lkExploreHd::after{content:'';flex:1;height:3px;background:var(--blue)}
+/* 2-column icon-card grid like the mock, instead of the stacked list rows */
+#home .hmGrid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;border-top:0!important}
+#home .hmGrid .hmTl.hmSt{display:none!important}
+#home .hmGrid .hmTl{display:flex!important;align-items:flex-start!important;gap:10px!important;background:#fff!important;border:1px solid var(--line)!important;border-radius:16px!important;padding:14px!important;text-align:left!important}
+#home .hmGrid .hmTl::after{display:none!important}
+#home .hmGrid .hmTl .hmIc{width:30px!important;height:30px!important;flex:none!important;background:transparent!important;box-shadow:none!important}
+#home .hmGrid .hmTl .hmIc svg{stroke:var(--blue)!important;color:var(--blue)!important;width:26px!important;height:26px!important;filter:none!important}
+#home .hmGrid .hmTl>span:nth-child(2) span{font-style:italic!important;font-size:16px!important}
+#home .hmGrid .hmTl small{display:block!important;margin-top:2px!important}
+@media(min-width:821px){#home .hmGrid{grid-template-columns:repeat(3,1fr)!important}}
