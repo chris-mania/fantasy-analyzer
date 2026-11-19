@@ -153,8 +153,9 @@ for step in (home_extras, app_view_extras):
     except Exception as e:
         print("site_extras: skipped", step.__name__, repr(e)[:200])
 try:
-    if os.path.exists("og.png"):
-        _shutil.copyfile("og.png", "public/og.png")
+    import glob as _glob
+    for _og in ["og.png"] + sorted(_glob.glob("og-*.png")):
+        _shutil.copyfile(_og, "public/" + _og)
     open("public/llms.txt", "w").write(LLMS)
     open("public/404.html", "w").write(NOT_FOUND)
     open("public/%s.txt" % INDEXNOW_KEY, "w").write(INDEXNOW_KEY)

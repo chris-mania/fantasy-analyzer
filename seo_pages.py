@@ -159,6 +159,11 @@ def page(*, title, desc, path, crumbs, body_class, topbar, sprite, main, css_hre
         "@context": "https://schema.org", "@type": "BreadcrumbList",
         "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": n, "item": SITE + u}
                             for i, (n, u) in enumerate(crumbs)]}
+    og = ("og-gamelog.png" if path.startswith("/players/") and path.endswith("/game-log/") else
+          "og-player.png" if path.startswith("/players/") else "og-rankings.png" if path.startswith("/rankings/") else
+          "og-team.png" if path.startswith("/teams/") else "og-insights.png" if path.startswith("/insights/") else
+          "og-trade.png" if path.startswith("/trade/") else "og-compare.png" if path.startswith("/compare/") else
+          "og-myteam.png" if path.startswith("/team/") else "og.png")
     return (
         '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -167,7 +172,7 @@ def page(*, title, desc, path, crumbs, body_class, topbar, sprite, main, css_hre
         '<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania">'
         '<meta property="og:title" content="%s"><meta property="og:description" content="%s">'
         '<meta property="og:url" content="%s%s">'
-        '<meta property="og:image" content="https://fantasymania.org/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/og.png"><meta name="theme-color" content="#ffffff">'
+        '<meta property="og:image" content="https://fantasymania.org/%s"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/%s"><meta name="theme-color" content="#ffffff">'
         '<link rel="icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">'
         "%s"
         '<link rel="stylesheet" href="%s">'
@@ -180,7 +185,7 @@ def page(*, title, desc, path, crumbs, body_class, topbar, sprite, main, css_hre
         '<script type="application/ld+json">%s</script>'
         "%s"
         '</head><body class="%s" data-back="%s">%s%s<main class="wrap" id="seoMain">%s</main>%s</body></html>\n'
-    ) % (esc(title), esc(desc), SITE, path, esc(title), esc(desc), SITE, path, fonts, css_href,
+    ) % (esc(title), esc(desc), SITE, path, esc(title), esc(desc), SITE, path, og, og, fonts, css_href,
          json.dumps(ld, ensure_ascii=False).replace("</", "<\\/"),
          HANDOFF % {"site": SITE, "app": json.dumps(app_url)},
          esc(body_class), esc(back), sprite, topbar, main, extra)
