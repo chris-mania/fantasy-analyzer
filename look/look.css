@@ -785,17 +785,21 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #home .hmGrid .hmTl small{display:block!important;margin-top:2px!important}
 @media(min-width:821px){#home .hmGrid{grid-template-columns:repeat(3,1fr)!important}}
 
-/* ===== pass 34: condense the profile hero -- bigger bolder rating numbers, tighter everything ===== */
+/* ===== pass 34/38: condense the profile hero -- bold rating numbers sized to actually fit the
+   card, so the description line and the strip below never get covered ===== */
 #profile .hero2{padding-bottom:10px!important}
-#profile .hero2 .hs .scorebig{font-size:58px!important;line-height:.9!important}
-#profile .hero2 .hs .scorelab{font-size:13px!important;font-weight:800!important;letter-spacing:.1em!important;margin-top:4px!important}
-#profile .hero2 .hs .scoresub{font-weight:600!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#profile .hero2 .hs.left,#profile .hero2 .hs.right{height:auto!important;min-height:0!important;margin-bottom:-4px!important;padding:11px 6px 9px!important;box-shadow:0 10px 22px -10px rgba(10,20,50,.5)!important}
+#profile .hero2 .hs.left{border-radius:14px 0 0 14px!important}
+#profile .hero2 .hs.right{border-radius:0 14px 14px 0!important}
+#profile .hero2 .hs .scorebig{font-size:44px!important;line-height:.95!important;color:#0e8a43!important;-webkit-text-fill-color:#0e8a43!important;text-shadow:none!important;filter:none!important}
+#profile .hero2 .hs .scorelab{font-size:12.5px!important;font-weight:800!important;letter-spacing:.09em!important;margin-top:3px!important}
+#profile .hero2 .hs .scoresub{font-weight:600!important;font-size:11.5px!important;margin-top:1px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:100%!important}
 #profile .hero2 .bdgs{gap:6px!important;margin-top:4px!important}
 #profile .hero2 .bdgBtn{padding:5px 11px!important;font-size:11.5px!important;letter-spacing:.03em!important;background:rgba(0,0,0,.18)!important;border:1px solid rgba(255,255,255,.22)!important;color:#fff!important;border-radius:999px!important}
 #profile .hero2 .hid .meta{gap:5px!important}
 #profile .hero2 .hid .meta{text-transform:uppercase!important;font-weight:600!important;letter-spacing:.01em!important}
 @media(min-width:380px){
-  #profile .hero2 .hs .scorebig{font-size:64px!important}
+  #profile .hero2 .hs .scorebig{font-size:48px!important}
 }
 /* "games analyzed / week projection" strip directly under the hero: condensed 2-up boxes like the mock */
 #profile #lkInfo{margin-top:0!important}
@@ -820,6 +824,15 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 @media(max-width:360px){#home #lkTagline{font-size:10.5px!important}}
 #home .hhL h1{font-weight:900!important;font-size:28px!important;line-height:1.08!important;letter-spacing:-.005em!important;-webkit-text-stroke:.5px currentColor!important}
 @media(max-width:360px){#home .hhL h1{font-size:24px!important}}
+
+/* ===== pass 39: homepage -- bigger "Who should I start?" with a left margin, and a bigger tagline ===== */
+/* the box was centering its (icon+text) content within a max-width cap, so at the bigger font
+   the text overflowed equally on both sides and the ancestor's overflow:hidden ate the left edge
+   of the "W" -- switch to left-aligned content and widen the cap so it has room */
+#home .hmSS .hsH{font-size:30px!important;justify-content:flex-start!important;max-width:78%!important;padding-left:10px!important}
+@media(max-width:360px){#home .hmSS .hsH{font-size:25px!important;max-width:80%!important;padding-left:8px!important}}
+#home .hhL h1{font-size:32px!important}
+@media(max-width:360px){#home .hhL h1{font-size:27px!important}}
 /* pills: confident but not oversized -- matched to each other */
 #home .homeIm .newPill#homeEspn{padding:9px 14px!important;border-width:1.75px!important}
 #home .homeIm .newPill#homeEspn .npT b{font-size:13.5px!important}
