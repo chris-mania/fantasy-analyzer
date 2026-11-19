@@ -114,9 +114,9 @@
     if(el&&el.getAttribute('data-sig')===sig&&el.previousElementSibling===hero)return;
     if(el)el.remove();
     el=document.createElement('div');el.id='lkInfo';el.className='lkInfo n'+((proj?1:0)+(tag?1:0)+(gm?1:0));el.setAttribute('data-sig',sig);
-    el.innerHTML=(proj?'<button type="button" class="liP"><small>Wk '+wk+' projection</small><span><b>'+proj+'</b> <em>'+fmt+'</em> <i>\u203A</i></span></button>':'')
+    el.innerHTML=(proj?'<button type="button" class="liP"><small>Week '+wk+' projection</small><span><b>'+proj+'</b> <em>'+fmt+'</em> <i>\u203A</i></span></button>':'')
       +(tag?'<div class="liR"><small>This week</small><span><b>'+tag+'</b></span></div>':'')
-      +(gm?'<button type="button" class="liG'+(warn?' warn':'')+'"><small>Games counted</small><span><b>'+gm+'</b> <u>Edit</u></span></button>':'');
+      +(gm?'<button type="button" class="liG'+(warn?' warn':'')+'"><small>Games analyzed</small><span><b>'+gm+'</b> <u>Edit</u></span></button>':'');
     var p=el.querySelector('.liP');if(p)p.onclick=function(){if(pj)pj.click()};
     var g=el.querySelector('.liG');if(g)g.onclick=function(){var q=body.querySelector('.injMini');if(q)q.classList.add('lkShow');if(pm)pm.click()};
     hero.parentNode.insertBefore(el,hero.nextSibling);
@@ -137,6 +137,24 @@
     if(ss){var h=ss.querySelector('.hsH');if(h&&!ss.querySelector('.lkHsSub')){var sub=document.createElement('div');sub.className='lkHsSub';sub.textContent='Compare two players for this week.';h.parentNode.insertBefore(sub,h.nextSibling)}}
     var g=document.getElementById('hmGrid');
     if(g&&!document.getElementById('lkExploreHd')){var hd=document.createElement('div');hd.id='lkExploreHd';hd.className='lkExploreHd';hd.textContent='Explore FantasyMania';g.parentNode.insertBefore(hd,g)}
+    var h1=document.querySelector('#home .hhL>h1');
+    if(h1&&!document.getElementById('lkTagline')){var tl=document.createElement('div');tl.id='lkTagline';tl.textContent='Player ratings. Weekly projections. Smarter decisions.';h1.parentNode.insertBefore(tl,h1.nextSibling)}
+    if(h1&&!h1.dataset.lkWrap){
+      var tn=h1.firstChild;
+      if(tn&&tn.nodeType===3){
+        var t=tn.textContent,ix=t.toLowerCase().indexOf('accurate');
+        if(ix>-1){
+          ix+='accurate'.length;
+          var before=t.slice(0,ix),after=t.slice(ix);
+          tn.textContent=before;
+          var br1=document.createElement('br');h1.insertBefore(br1,tn.nextSibling);
+          h1.insertBefore(document.createTextNode(after),br1.nextSibling)
+        }
+      }
+      var span=h1.querySelector('.lkBl');
+      if(span){var br2=document.createElement('br');h1.insertBefore(br2,span)}
+      h1.dataset.lkWrap='1'
+    }
   }catch(e){}}
   setInterval(function(){if(!document.hidden)homeMock()},800);
 })();

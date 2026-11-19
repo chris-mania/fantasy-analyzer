@@ -36,3 +36,7 @@
   public/index.html and public/fantasy.html. continue-on-error, so a problem there never blocks the real site.
   There is no /preview/ side page anymore (removed, along with look_preview.py) -- style changes go straight
   to the real site via look/look.css and look/look.js.
+- build.py already links the Barlow Condensed Google Font (near the top of the big script, next to the
+  Outfit link) -- it must keep the `ital,wght@...` axis with the `1,` (italic) weights in it, or every
+  `font-style:italic` rule in look.css silently falls back to a synthesized/oblique slant instead of the
+  real italic cut.
