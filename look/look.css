@@ -697,15 +697,17 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile #lkInfo.n3{grid-template-columns:.8fr 1.4fr 1fr!important}
 
 /* ===== pass 32: athletic redesign -- bold condensed italic voice, flat sharp numbers, clean band ===== */
-/* name, score numbers, panel headings, tabs/badges: one bold condensed *italic* voice everywhere they show up */
+/* names, score numbers, panel headings, rank badges: bold condensed *italic* voice -- the editorial headline register */
 #profile .hero2 .hid h1,#profile .dkNm .hid h1,
 #profile .hero2 .scorebig,.hs .scorebig,.comparePlayer .scorebig,
 #profile .panel h2,#profile .panel h3,#profile .vsBox h2,#profile .vsBox h3,.stHd,
-.vbtn,.tmT,.tsb,.pfTabs>*,#profile .panel>.ph,#profile .panel .maniaPanel>.ph,
+#profile .panel>.ph,#profile .panel .maniaPanel>.ph,
 #profile .hero2 .rankline i,#profile .dkNm .rankline i{
-  font-style:italic!important;font-weight:800!important
+  font-style:italic!important;font-weight:900!important
 }
 #profile .panel>.ph{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase!important;letter-spacing:.01em!important}
+/* nav labels, tabs, buttons: same condensed bold voice but upright -- not part of the italic headline register */
+.vbtn,.tmT,.tsb,.pfTabs>*{font-style:normal!important;font-weight:800!important}
 /* rating numbers: flat, sharp color -- no gradient fill, no drop-shadow glow. --l/--d already carry
    the right grade color (green/orange/red); just stop clipping them into a soft-shadowed gradient. */
 #profile .hero2 .hs .scorebig,.hs .scorebig,#profile .hero2 .scorebig{
@@ -750,13 +752,14 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
   gap:7px!important;
 }
 #home .hmSS::before{
-  content:'';position:absolute;top:0;right:0;width:48%;height:72%;z-index:0;
+  content:'';position:absolute;top:0;right:0;width:42%;height:68%;z-index:0;
   background:url('/look/img/hero-football.jpg') top right/cover no-repeat;
-  -webkit-mask-image:radial-gradient(130% 130% at 100% 0%,rgba(255,255,255,1) 34%,rgba(255,255,255,.7) 58%,rgba(255,255,255,0) 92%);
-  mask-image:radial-gradient(130% 130% at 100% 0%,rgba(255,255,255,1) 34%,rgba(255,255,255,.7) 58%,rgba(255,255,255,0) 92%);
+  -webkit-mask-image:radial-gradient(130% 130% at 100% 0%,rgba(255,255,255,1) 30%,rgba(255,255,255,.65) 55%,rgba(255,255,255,0) 90%);
+  mask-image:radial-gradient(130% 130% at 100% 0%,rgba(255,255,255,1) 30%,rgba(255,255,255,.65) 55%,rgba(255,255,255,0) 90%);
 }
 #home .hmSS>*{position:relative;z-index:1}
-#home .hmSS .hsH{color:#fff!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;font-size:20px!important;text-transform:uppercase;letter-spacing:.01em;gap:9px!important;text-shadow:0 2px 10px rgba(0,0,0,.4);max-width:58%!important}
+#home .hmSS .hsH{color:#fff!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:900!important;font-style:italic!important;font-size:26px!important;line-height:1.05!important;text-transform:uppercase;letter-spacing:.01em;gap:9px!important;text-shadow:0 2px 10px rgba(0,0,0,.4);max-width:64%!important;padding-left:8px!important}
+@media(max-width:360px){#home .hmSS .hsH{font-size:22px!important}}
 #home .hmSS .hsH .hmIc svg{stroke:#fff!important}
 #home .hmSS .lkHsSub{color:rgba(255,255,255,.85)!important;font-size:13px!important;font-weight:500!important;margin:-4px 0 0}
 #home .hmSS .hsR{gap:8px!important}
@@ -769,7 +772,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
    with CSS `order` (not DOM position), so this needs its own slot right before the grid's. */
 #home .hhL #lkExploreHd{order:7!important}
 #home .hhL .hmGrid{order:8!important}
-#home .lkExploreHd{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;font-size:20px!important;letter-spacing:.01em;display:flex!important;align-items:center;gap:14px;margin:24px 0 10px;color:var(--ink)}
+#home .lkExploreHd{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:900!important;font-style:italic!important;text-transform:uppercase;font-size:20px!important;letter-spacing:.01em;display:flex!important;align-items:center;gap:14px;margin:24px 0 10px;color:var(--ink)}
 #home .lkExploreHd::after{content:'';flex:1;height:3px;background:var(--blue)}
 /* 2-column icon-card grid like the mock, instead of the stacked list rows */
 #home .hmGrid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;border-top:0!important}
@@ -790,29 +793,36 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile .hero2 .bdgs{gap:6px!important;margin-top:4px!important}
 #profile .hero2 .bdgBtn{padding:5px 11px!important;font-size:11.5px!important;letter-spacing:.03em!important;background:rgba(0,0,0,.18)!important;border:1px solid rgba(255,255,255,.22)!important;color:#fff!important;border-radius:999px!important}
 #profile .hero2 .hid .meta{gap:5px!important}
+#profile .hero2 .hid .meta{text-transform:uppercase!important;font-weight:600!important;letter-spacing:.01em!important}
 @media(min-width:380px){
   #profile .hero2 .hs .scorebig{font-size:64px!important}
 }
 /* "games analyzed / week projection" strip directly under the hero: condensed 2-up boxes like the mock */
 #profile #lkInfo{margin-top:0!important}
-#profile #lkInfo .liP,#profile #lkInfo .liG{padding:10px 12px!important}
+#profile #lkInfo .liP,#profile #lkInfo .liG,#profile #lkInfo .liR{padding:10px 12px!important}
 #profile #lkInfo small{font-size:10.5px!important;letter-spacing:.08em!important;text-transform:uppercase!important;font-weight:800!important}
+/* the middle "this week" tile (WR/RB/TE only) should read like a clean third box, not a loud green callout */
+#profile #lkInfo.n3{grid-template-columns:1fr 1fr 1fr!important}
+#profile #lkInfo .liR{background:#fff!important}
+#profile #lkInfo .liR b{color:var(--ink)!important}
 
-/* ===== pass 35: faint football-field texture behind the hero headline (yard lines + ghost numbers) ===== */
+/* ===== pass 35/37: football-field texture behind the hero headline -- evenly spaced yard lines, hash
+   ticks and two ghost yard numbers, like a broadcast scoreboard backdrop ===== */
 #home .hhL{
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='560'><g stroke='%23e7ebf3' stroke-width='3'><line x1='-80' y1='0' x2='300' y2='560'/><line x1='60' y1='0' x2='440' y2='560'/><line x1='200' y1='0' x2='580' y2='560'/><line x1='340' y1='0' x2='720' y2='560'/></g><text x='0' y='170' font-family='Arial, sans-serif' font-weight='900' font-size='110' fill='%23eef1f7' transform='rotate(-7 0 170)'>35</text><text x='320' y='480' font-family='Arial, sans-serif' font-weight='900' font-size='96' fill='%23eef1f7' transform='rotate(-7 320 480)'>D83</text></svg>")!important;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='700' height='620'><g stroke='%23e2e7f3' stroke-width='3'><line x1='-120' y1='0' x2='260' y2='620'/><line x1='0' y1='0' x2='380' y2='620'/><line x1='120' y1='0' x2='500' y2='620'/><line x1='240' y1='0' x2='620' y2='620'/><line x1='360' y1='0' x2='740' y2='620'/><line x1='480' y1='0' x2='860' y2='620'/></g><g stroke='%23e2e7f3' stroke-width='2'><line x1='-100' y1='40' x2='-72' y2='40'/><line x1='20' y1='40' x2='48' y2='40'/><line x1='140' y1='40' x2='168' y2='40'/><line x1='260' y1='40' x2='288' y2='40'/><line x1='-80' y1='580' x2='-52' y2='580'/><line x1='40' y1='580' x2='68' y2='580'/><line x1='160' y1='580' x2='188' y2='580'/></g><text x='-20' y='165' font-family='Arial, sans-serif' font-weight='900' font-size='128' fill='%23edf0f8' transform='rotate(-6 -20 165)'>40</text><text x='300' y='555' font-family='Arial, sans-serif' font-weight='900' font-size='104' fill='%23edf0f8' transform='rotate(-6 300 555)'>25</text></svg>")!important;
   background-repeat:no-repeat!important;
   background-size:100% 560px!important;
   background-position:top center!important;
 }
 
 /* ===== pass 36: lock in the mock -- bigger bolder top pills, headline weight, and the short tagline ===== */
-#home #lkTagline{order:1!important;display:block!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-style:italic!important;font-weight:700!important;text-transform:uppercase!important;font-size:11.5px!important;letter-spacing:.01em!important;color:#5a6174!important;margin:2px 0 4px!important;white-space:nowrap!important}
-@media(max-width:360px){#home #lkTagline{font-size:9.5px!important}}
-#home .hhL h1{font-weight:800!important;font-size:25px!important;line-height:1.1!important;letter-spacing:-.005em!important;-webkit-text-stroke:.5px currentColor!important}
-/* pills: back up to a confident size -- not the shrunken version */
-#home .homeIm .newPill#homeEspn{padding:12px 18px!important;border-width:2.25px!important}
-#home .homeIm .newPill#homeEspn .npT b{font-size:15.5px!important}
-#home #homeMore{padding:12px 16px!important;border-width:2.25px!important}
-#home #homeMore{font-size:15.5px!important}
-#home #homeMore .mi img{width:20px!important;height:20px!important}
+#home #lkTagline{order:1!important;display:block!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-style:italic!important;font-weight:700!important;text-transform:uppercase!important;font-size:12.5px!important;letter-spacing:.01em!important;color:#5a6174!important;margin:2px 0 6px!important;white-space:nowrap!important}
+@media(max-width:360px){#home #lkTagline{font-size:10.5px!important}}
+#home .hhL h1{font-weight:900!important;font-size:28px!important;line-height:1.08!important;letter-spacing:-.005em!important;-webkit-text-stroke:.5px currentColor!important}
+@media(max-width:360px){#home .hhL h1{font-size:24px!important}}
+/* pills: confident but not oversized -- matched to each other */
+#home .homeIm .newPill#homeEspn{padding:9px 14px!important;border-width:1.75px!important}
+#home .homeIm .newPill#homeEspn .npT b{font-size:13.5px!important}
+#home #homeMore{padding:9px 13px!important;border-width:1.75px!important}
+#home #homeMore{font-size:13.5px!important}
+#home #homeMore .mi img{width:17px!important;height:17px!important}

@@ -1,6 +1,6 @@
 (function(){
   try{
-    var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&display=swap';document.head.appendChild(l);
+    var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&display=swap';document.head.appendChild(l);
       }catch(e){}
 
   // ---- move intro paragraphs to an "About this page" note at the bottom of each page (content kept) ----
@@ -140,17 +140,6 @@
     var h1=document.querySelector('#home .hhL>h1');
     if(h1&&!document.getElementById('lkTagline')){var tl=document.createElement('div');tl.id='lkTagline';tl.textContent='Player ratings. Weekly projections. Smarter decisions.';h1.parentNode.insertBefore(tl,h1.nextSibling)}
     if(h1&&!h1.dataset.lkWrap){
-      var tn=h1.firstChild;
-      if(tn&&tn.nodeType===3){
-        var t=tn.textContent,ix=t.toLowerCase().indexOf('accurate');
-        if(ix>-1){
-          ix+='accurate'.length;
-          var before=t.slice(0,ix),after=t.slice(ix);
-          tn.textContent=before;
-          var br1=document.createElement('br');h1.insertBefore(br1,tn.nextSibling);
-          h1.insertBefore(document.createTextNode(after),br1.nextSibling)
-        }
-      }
       var span=h1.querySelector('.lkBl');
       if(span){var br2=document.createElement('br');h1.insertBefore(br2,span)}
       h1.dataset.lkWrap='1'
