@@ -695,3 +695,59 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile #lkInfo span{justify-content:center!important}
 #profile #lkInfo>.liR{order:1}#profile #lkInfo>.liP{order:2}#profile #lkInfo>.liG{order:3}
 #profile #lkInfo.n3{grid-template-columns:.8fr 1.4fr 1fr!important}
+
+/* pass 31: homepage redesign (preview only) */
+
+/* 1. let the "Week N Rating" note wrap instead of truncating with an ellipsis */
+#home #homeDisc{white-space:normal!important;overflow:visible!important;text-overflow:unset!important;cursor:default!important}
+
+/* 2. "Who should I start?" moved up next to search on mobile (lk.js relocates the node).
+   .hhL's children are reordered with CSS `order` (search=2, the quick start/sit box=5), so the
+   moved link needs its own order to actually land between them instead of falling into the
+   unordered tail with the other home CTAs. */
+#home .homeHero .hhL .hsMoved{order:3!important;display:inline-flex!important;align-self:flex-start;margin:10px 0 2px!important}
+
+/* 3. Top 5 overall: full-width rows instead of five narrow cards */
+#hmT5{display:flex!important;flex-direction:column!important;gap:0!important}
+.hmT{display:flex!important;align-items:center!important;gap:12px!important;text-align:left!important;background:transparent!important;border:0!important;border-bottom:1px solid #e4eaf3!important;border-radius:0!important;padding:10px 2px!important;min-width:0}
+.hmT:last-child{border-bottom:0!important}
+.hmT .portrait{margin:0!important;flex:none}
+.hmT .hr{order:-1;width:20px;flex:none;color:var(--muted);font-weight:700;font-size:12px!important}
+.hmT .hn{flex:1 1 auto;min-width:0;white-space:normal!important;overflow:visible!important;text-overflow:unset!important;text-align:left!important;font-size:14.5px!important;margin-top:0!important}
+.hmT .hs{flex:none;margin-left:auto}
+
+/* 4. de-glow + calm down the Fantasy App button and the ESPN/Sleeper import pill */
+#home .faNeon,#home .faNeon.mini{box-shadow:none!important;text-shadow:none!important;animation:none!important;background:#fff!important;color:#0b1830!important;border:1px solid #d9dfe7!important}
+#home .newPill{box-shadow:none!important;background:#eef2f8!important;color:#1d2b45!important}
+
+/* 5. de-glow portraits and Diamond badges on the homepage only */
+#home .portrait:before{filter:none!important}
+#home .portrait{box-shadow:none!important}
+#home .pbBadge svg{filter:none!important}
+#home .bsv.bdia{filter:none!important}
+
+/* 6. "About these ratings" — one heading over both notes */
+#home .lkAboutHd{margin:18px 0 6px}
+#home p.tinyDisc{margin-top:8px}
+
+/* 7. "Other apps" always visible, no toggle needed.
+   .moreApps previously sat at order:0 in .hhL for a toggle-reveal right under the import pill;
+   now that it's permanent, push it to the end of the hero instead of ahead of the headline. */
+#home .homeHero .hhL #moreAppsP{order:21!important;display:block!important;margin-top:22px;background:#fff;border:1px solid var(--line,#e4eaf3);border-radius:16px;padding:16px}
+#home #moreAppsP .maH{margin-bottom:10px}
+#home #homeMore{display:none!important}
+
+/* 8. sentence-case the directory headings instead of shouty caps */
+.fmExplore h3{text-transform:none!important;letter-spacing:0!important}
+
+/* 9. compact "Best at every position" cards */
+#home .pbc{padding:14px 8px 12px!important}
+#home .pbc .thumb{width:54px!important;height:54px!important}
+#home .pbName{font-size:16px!important;margin-top:3px!important}
+#home .pbScore{font-size:26px!important;margin-top:5px!important}
+#home .pbTag{font-size:11.5px!important}
+
+/* 10. "How Mania works" as one section with dividers instead of three cards */
+#home .how3{display:block!important;background:#fff;border:1px solid var(--line,#e4eaf3);border-radius:16px;box-shadow:none!important;overflow:hidden}
+#home .how3>div{border-bottom:1px solid #edf1f7!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;padding:18px 20px!important}
+#home .how3>div:last-child{border-bottom:0!important}

@@ -123,6 +123,67 @@
     liFit(el,'--if',15,9.5,.5,function(){var o=false;[].forEach.call(el.children,function(c){if(c.scrollWidth>c.clientWidth+1)o=true});return o||el.scrollWidth>el.clientWidth+1});
   }
 
+  /* ===== homepage redesign (preview only) ===== */
+
+  // 2. move "Who should I start?" up next to search on mobile, put it back on desktop
+  function hsMove(){try{
+    var home=document.getElementById('home');if(!home)return;
+    var link=home.querySelector('.homeActions a.cta[href="/start/"]');
+    var search=home.querySelector('.homeSearch');
+    if(!link||!search)return;
+    var mobile=window.innerWidth<=700;
+    if(mobile&&link.previousElementSibling!==search){
+      search.parentNode.insertBefore(link,search.nextSibling);link.classList.add('hsMoved')
+    }else if(!mobile&&link.classList.contains('hsMoved')){
+      var actions=home.querySelector('.homeActions'),anchor=actions&&actions.querySelector('#homeInsights');
+      if(actions){if(anchor&&anchor.nextSibling)actions.insertBefore(link,anchor.nextSibling);else actions.appendChild(link)}
+      link.classList.remove('hsMoved')
+    }
+  }catch(e){}}
+
+  // 3. Top 5 overall rows: show the full name now that each row is full width, not just the last name
+  function hmFullNames(){try{
+    var el=document.getElementById('hmT5');if(!el)return;
+    var top=typeof heroTop!=='undefined'?heroTop:null;if(!top||!top.length)return;
+    el.querySelectorAll('.hmT').forEach(function(c){
+      var i=+c.dataset.i,p=top[i],hn=c.querySelector('.hn');
+      if(!p||!hn)return;if(hn.textContent!==p.name)hn.textContent=p.name
+    })
+  }catch(e){}}
+
+  // 4. drop the shouty eyebrow labels on the Fantasy App button and the ESPN/Sleeper pill
+  function homeLabels(){try{
+    var fa=document.getElementById('homeFa');
+    if(fa&&!fa.dataset.lk){var sm=fa.querySelector('small');if(sm)sm.remove();fa.dataset.lk='1'}
+    var espn=document.getElementById('homeEspn');
+    if(espn&&!espn.dataset.lk){
+      var sm2=espn.querySelector('.npT small');if(sm2)sm2.textContent='ESPN or Sleeper';
+      espn.dataset.lk='1'
+    }
+  }catch(e){}}
+
+  // 6. one "About these ratings" heading over the Week-N note and the small-print note
+  function mergeRatingNotes(){try{
+    var disc=document.getElementById('homeDisc');
+    var tiny=document.querySelector('#home p.tinyDisc');
+    if(!disc||!tiny||disc.dataset.lk)return;
+    var hd=document.createElement('div');hd.className='sectionTitle lkAboutHd';hd.textContent='About these ratings';
+    disc.parentNode.insertBefore(hd,disc);
+    disc.parentNode.insertBefore(tiny,disc.nextSibling);
+    disc.dataset.lk='1'
+  }catch(e){}}
+
+  // 7. show "Other apps" as its own section instead of a hidden panel behind a toggle
+  function showOtherApps(){try{
+    var p=document.getElementById('moreAppsP');if(!p)return;
+    if(p.hidden)p.hidden=false;
+    if(!p.dataset.lk){var h=p.querySelector('.maH');if(h){h.textContent='Other apps';h.classList.add('sectionTitle')}p.dataset.lk='1'}
+  }catch(e){}}
+
+  function homeDesign(){if(!document.getElementById('home'))return;hsMove();hmFullNames();homeLabels();mergeRatingNotes();showOtherApps()}
+  setInterval(function(){if(!document.hidden)homeDesign()},800);
+  window.addEventListener('resize',function(){try{hsMove()}catch(e){}});
+
   /* tap anywhere outside a badge popup closes it */
   document.addEventListener('click',function(e){
     var t=e.target;if(t.closest&&(t.closest('.bdgBtn')||t.closest('.bdgD')))return;
