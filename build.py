@@ -954,16 +954,20 @@ if not AS_OF_WEEK:
                 top = grp.sort_values("attempts", ascending=False).iloc[0]
                 qb_starter[t_] = top["player_id"]
         qb_avail = {}
+        # g/gi only ever hold RB/WR/TE (built from stats filtered to those positions way above), so QBs
+        # are invisible to the "pid in gi.index" check below and to the ESPN name-matching further down
+        # (both keyed off g). Give them their own id set, sourced from the raw stats table, so an injured
+        # QB gets the same official-report baseline + ESPN-enriched status/return date as every other
+        # position instead of showing fully healthy everywhere in the app.
+        qb_ids = set(stats.loc[stats["position"] == "QB", "player_id"]) if "player_id" in stats.columns else set()
         for _, ir in inj.iterrows():
             a, label = _avail(ir.get("report_status"), ir.get("practice_status"))
             pid = ir.get("gsis_id")
             note = ir.get("report_primary_injury") if pd.notna(ir.get("report_primary_injury")) else ir.get("practice_primary_injury")
             note = str(note) if pd.notna(note) else ""
-            if ir.get("position") == "QB":
-                if qb_starter.get(ir.get("team")) == pid:
-                    qb_avail[ir.get("team")] = (a, label, str(ir.get("full_name")))
-                continue
-            if pid in gi.index and a < 1.0:
+            if ir.get("position") == "QB" and qb_starter.get(ir.get("team")) == pid:
+                qb_avail[ir.get("team")] = (a, label, str(ir.get("full_name")))
+            if (pid in gi.index or pid in qb_ids) and a < 1.0:
                 inj_by_pid[pid] = {"avail": a, "label": label, "note": note}
 
         for _nm in [x.strip() for x in os.environ.get("MANIA_FORCE_OUT", "").split(",") if x.strip()]:   # test hook
@@ -1020,6 +1024,12 @@ if not AS_OF_WEEK:
             _byname = {}
             for _pid_e, _nm_e, _ps_e in zip(g["player_id"], g["player_name"], g["position"]):
                 _byname.setdefault((_ek(_nm_e), _ps_e), []).append(_pid_e)
+            # g has no QBs (see note above) -- add them separately so ESPN's status/return date can
+            # still reach a QB's own profile, not just his receivers' ratings.
+            if "player_id" in stats.columns:
+                _qbn = stats.loc[stats["position"] == "QB", ["player_id", name_col]].drop_duplicates("player_id")
+                for _pid_e, _nm_e in zip(_qbn["player_id"], _qbn[name_col]):
+                    _byname.setdefault((_ek(_nm_e), "QB"), []).append(_pid_e)
             _ne = 0
             for _tm in _espn.get("injuries", []):
                 for _it in _tm.get("injuries", []):
@@ -1279,12 +1289,17 @@ if not AS_OF_WEEK:
                         item["ev"] = ev_
                     inj_why.setdefault(k, []).append(item)
                     inj_repl.setdefault(pid_i, []).append({"n": str(rows[k]["player_name"]), "pos": pos_k, "pts": round(pts, 1), "g": (ev_ or {}).get("games", 0)})
-            # A hurt starting QB hurts the whole passing game.
+            # A hurt starting QB hurts the whole passing game (his teammates' ratings only -- his own
+            # rating now gets its own direct injury penalty above, same as every other position, so
+            # skip him here to avoid counting his own injury against him twice).
             if team in qb_avail:
                 qa, qlabel, qname = qb_avail[team]
                 uq = 1.0 - qa
+                qb_pid = qb_starter.get(team)
                 if uq > 0:
                     for k, x in rows.items():
+                        if k == qb_pid:
+                            continue
                         d = -2.2 * uq if x["position"] == "WR" else (-1.6 * uq if x["position"] == "TE" else -0.5 * uq)
                         inj_boost[k] = inj_boost.get(k, 0.0) + d
                         inj_why.setdefault(k, []).append({"n": qname, "pos": "QB", "s": qlabel, "pts": round(d, 1), "kind": "qb"})
@@ -1297,7 +1312,7 @@ if not AS_OF_WEEK:
             inj_meta["updated"] = datetime.now(ZoneInfo("America/New_York")).strftime("%a %b %-d, %-I:%M %p ET")
         except Exception:
             inj_meta["updated"] = ""
-        print(f"   {inj_meta['n']} skill players flagged, {inj_meta['out']} out/doubtful.")
+        print(f"   {inj_meta['n']} players flagged (incl. QBs), {inj_meta['out']} out/doubtful.")
     except Exception as e:
         print("   Injury report unavailable; ratings use no injury data:", e)
         if os.environ.get("REQUIRE_SCHEDULE") == "1":
@@ -1320,18 +1335,28 @@ if inj_meta.get("ok"):
     gx = g.copy()
     gx["use_"] = gx["carries_pg"] + 1.5 * gx["targets_pg"]
     gx["urank"] = gx.groupby(["team", "position"])["use_"].rank(ascending=False, method="first")
+    # g (and gx) only ever hold RB/WR/TE, so an injured QB needs his name/team from the raw stats table instead.
+    _qb_lookup = (stats.loc[stats["position"] == "QB", ["player_id", name_col, team_col]]
+                  .drop_duplicates("player_id", keep="last").set_index("player_id")) if "player_id" in stats.columns else None
     for pid_, info_ in inj_by_pid.items():
-        rr = gx[gx["player_id"] == pid_]
-        if rr.empty:
-            continue
-        rr = rr.iloc[0]
-        lim_ = {"RB": 1, "WR": 3, "TE": 1}.get(rr["position"], 0)
-        if rr["urank"] <= lim_:
-            role_ = "Starter"
-        elif rr["use_"] >= 5:
-            role_ = "Rotation"
+        if pid_ in qb_ids:
+            if _qb_lookup is None or pid_ not in _qb_lookup.index:
+                continue
+            qrow_ = _qb_lookup.loc[pid_]
+            rr = pd.Series({"player_name": qrow_[name_col], "team": qrow_[team_col], "position": "QB"})
+            role_ = "Starter" if qb_starter.get(rr["team"]) == pid_ else "Rotation"
         else:
-            continue
+            rr = gx[gx["player_id"] == pid_]
+            if rr.empty:
+                continue
+            rr = rr.iloc[0]
+            lim_ = {"RB": 1, "WR": 3, "TE": 1}.get(rr["position"], 0)
+            if rr["urank"] <= lim_:
+                role_ = "Starter"
+            elif rr["use_"] >= 5:
+                role_ = "Rotation"
+            else:
+                continue
         rep_ = sorted(inj_repl.get(pid_, []), key=lambda x: -x["pts"])
         rep_ = [x for x in rep_ if x["pts"] >= 0.3][:3]
         inj_list.append({"id": pid_, "name": str(rr["player_name"]), "team": str(rr["team"]), "pos": str(rr["position"]),
@@ -1833,8 +1858,16 @@ if not AS_OF_WEEK and schedule_ok and week_has_games:
                               "ruy": round(float(r_["p_rushing_yards"])), "fx": {"script": round(float(r_["g_script"]), 1), "matchup": round(float(r_["g_matchup"]), 1), "inj": round(float(r_["g_injuries"]), 1)}}
                 if pid_ in VGQ:
                     x_["proj"]["vg"] = VGQ[pid_]
-                qa_ = _qa.get(r_["team"])
-                x_["inj"] = {"label": qa_[1], "avail": qa_[0], "who": qa_[2]} if qa_ and qa_[0] < 1.0 else None
+                # Prefer the same official-report + ESPN-enriched entry (status, note, estimated return
+                # date) every other position gets; qb_avail (team-keyed, no return date) is only a
+                # fallback for the rare case inj_by_pid has nothing for this QB.
+                _ib_ = inj_by_pid.get(pid_)
+                if _ib_:
+                    x_["inj"] = dict(_ib_)
+                else:
+                    qa_ = _qa.get(r_["team"])
+                    x_["inj"] = {"label": qa_[1], "avail": qa_[0], "who": qa_[2]} if qa_ and qa_[0] < 1.0 else None
+                x_["inj_why"] = inj_why_clean(pid_)
                 x_["played"] = PLAYED_QB.get(pid_)
                 if x_.get("mania") is not None:
                     x_["start"] = _qgrade(x_["proj"]["pts"])
@@ -1848,7 +1881,9 @@ if not AS_OF_WEEK and schedule_ok and week_has_games:
                 if pid_ in _have:
                     continue
                 x_ = _qrow(pid_, q_["name"], q_["team"])
-                x_.update({"opp": q_["opp"], "sub": False, "proj": None, "inj": None, "played": q_})
+                _ib_ = inj_by_pid.get(pid_)
+                x_.update({"opp": q_["opp"], "sub": False, "proj": None, "inj": dict(_ib_) if _ib_ else None, "played": q_})
+                x_["inj_why"] = inj_why_clean(pid_)
                 if x_.get("mania") is not None:
                     q_["grade"] = _qgrade(q_["ppr"])
                 QBS.append(x_)
@@ -1863,7 +1898,9 @@ if not AS_OF_WEEK and schedule_ok and week_has_games:
                 _tm_ = str(_nmq.loc[pid_, _tcq])
                 _tm_ = QB_MOVES_B.get(pid_, _tm_)
                 x_ = _qrow(pid_, str(_nmq.loc[pid_, _dnq]), _tm_)
-                x_.update({"opp": str(dict(opp_map).get(_tm_, "BYE")), "sub": False, "proj": None, "inj": None, "played": PLAYED_QB.get(pid_)})
+                _ib_ = inj_by_pid.get(pid_)
+                x_.update({"opp": str(dict(opp_map).get(_tm_, "BYE")), "sub": False, "proj": None, "inj": dict(_ib_) if _ib_ else None, "played": PLAYED_QB.get(pid_)})
+                x_["inj_why"] = inj_why_clean(pid_)
                 QBS.append(x_)
             _qr = sorted([q_["mania"] for q_ in QBS if q_.get("mania") is not None and q_.get("qual")], reverse=True)
             _qs_start = sorted([q_["start"] for q_ in QBS if q_.get("start") is not None and not q_.get("played")], reverse=True)
@@ -6086,7 +6123,7 @@ h1,.title,.cmpH,.sectionTitle,.hid h1,#home .hhL h1,.hhL h1,.homeBlock .sectionT
 <div class="insPane" id="ins-adv"><div class="kicker">Through Week <span class="advWk"></span></div><h1 class="title">Hands &amp; tackles</h1><p class="sub">Drops, broken tackles and yards after contact from Pro Football Reference, ranked against players with a similar workload. Tap a player to open his profile.</p><div class="dcSeg" id="advG"><button type="button" class="on" data-g="rec">Receivers</button><button type="button" data-g="rush">Running backs</button></div><div class="advCtl"><div class="dcSeg sm" id="advP"><button type="button" class="on" data-p="ALL">All</button><button type="button" data-p="WR">WR</button><button type="button" data-p="TE">TE</button></div></div><p class="dcNote" id="advNote"></p><div id="advBody"></div></div>
 <div class="insPane" id="ins-style"><div class="kicker">Through Week <span class="advWk"></span></div><h1 class="title">Team play style</h1><p class="sub">How each team actually plays, from play-by-play charting by FTN. Tap a column to sort.</p><div id="styBody"></div></div>
 <div class="insPane" id="ins-depth"><div class="kicker">Updated <span id="dcAsOf"></span></div><h1 class="title">Depth charts</h1><p class="sub">Who starts and who is next up at every position. Tap a fantasy player to open his profile. Arrows show moves since Week 1.</p><div id="dcTeams" class="dcTeams"></div><div class="dcSeg" id="dcSeg"><button type="button" class="on" data-s="off">Offense</button><button type="button" data-s="def">Defense</button><button type="button" data-s="st">Special teams</button></div><div class="dcSeg sm" id="dcNum"><button type="button" class="on" data-n="off">No numbers</button><button type="button" data-n="snap">Snap %</button><button type="button" data-n="use">Targets / rushes</button></div><div id="dcBody"></div></div>
-<div class="insPane" id="ins-injuries"><div class="kicker">Week <span class="nextWeekText"></span> report <span id="injUpd"></span></div><h1 class="title">Injuries</h1><p class="sub">Who is hurt, whether he is a starter, and who picks up the work. The points are the change to the replacement's Week rating, and they lean on how that player actually did in games the injured player missed.</p><div class="toolbar"><button class="pill injPos on" data-v="ALL">ALL</button><button class="pill injPos" data-v="RB">RB</button><button class="pill injPos" data-v="WR">WR</button><button class="pill injPos" data-v="TE">TE</button><span style="width:8px"></span><button class="pill injRole on" data-v="Starter">Starters</button><button class="pill injRole" data-v="ALL">All</button></div><div id="injBody"></div></div>
+<div class="insPane" id="ins-injuries"><div class="kicker">Week <span class="nextWeekText"></span> report <span id="injUpd"></span></div><h1 class="title">Injuries</h1><p class="sub">Who is hurt, whether he is a starter, and who picks up the work. The points are the change to the replacement's Week rating, and they lean on how that player actually did in games the injured player missed.</p><div class="toolbar"><button class="pill injPos on" data-v="ALL">ALL</button><button class="pill injPos" data-v="QB">QB</button><button class="pill injPos" data-v="RB">RB</button><button class="pill injPos" data-v="WR">WR</button><button class="pill injPos" data-v="TE">TE</button><span style="width:8px"></span><button class="pill injRole on" data-v="Starter">Starters</button><button class="pill injRole" data-v="ALL">All</button></div><div id="injBody"></div></div>
 <div class="insPane on" id="ins-share"><div class="kicker">Through Week <span id="shareWeek"></span></div><h1 class="title">Team Share</h1><p class="sub">See who is actually on the field and who is earning the offense each week. Every player name opens the full Fantasy Mania profile.</p><div class="teamControls"><select id="teamPick" class="teamSelect"></select><button class="pill shareMode on" data-share="snap">SNAP SHARE</button><button class="pill shareMode" data-share="target">TARGET / RUSH SHARE</button></div><div id="teamShareBody"></div></div>
 <div class="insPane" id="ins-defense"><div class="kicker">Through Week <span id="dvWeek"></span></div><h1 class="title">Defense vs. Position</h1><p class="sub">Pick a position and see how many fantasy points, yards and touchdowns each defense has given up to it, game by game, plus whether the matchup is easy or tough.</p><div class="toolbar"><button class="pill dvPos" data-v="QB">QB</button><button class="pill dvPos on" data-v="RB">RB</button><button class="pill dvPos" data-v="WR">WR</button><button class="pill dvPos" data-v="TE">TE</button></div><div class="shareNote">Sorted by points allowed, easiest defense first. Tap any column heading to sort by that instead.</div><div class="panel" id="defenseBody"></div></div>
 <div class="insPane" id="ins-schedule"><div class="kicker">Week <span id="scWeek"></span> onward</div><h1 class="title">Schedule Strength by Position</h1><p class="sub">Fantasy schedule strength, one position at a time. For each team's remaining games we look at how many points each opponent's defense has given up to quarterbacks, running backs, receivers or tight ends, so you can see whose players have the easy road and whose do not. Easiest first.</p><div class="toolbar"><button class="pill scPos" data-v="QB">QB</button><button class="pill scPos on" data-v="RB">RB</button><button class="pill scPos" data-v="WR">WR</button><button class="pill scPos" data-v="TE">TE</button><span style="width:8px"></span><button class="pill scWin on" data-v="next4">Next 4 weeks</button><button class="pill scWin" data-v="all">Rest of season</button><button class="pill scWin" data-v="playoffs">Weeks 15-17</button></div><div class="shareNote">Green is a defense allowing 10%+ more than usual to the position, red is 10%+ less. This early most defenses have only a few games behind them, so expect these to move.</div><div class="panel" id="scheduleBody"></div></div>
@@ -6109,7 +6146,7 @@ function vgNote(p,q){let v=q.vg;if(!v||!v.c)return '';let L={rec:['catches',1,.7
  return `<div class="projNote vgn"><b>Vegas lines included.</b> From usage alone: ${v.pre.toFixed(1)}. Sportsbook lines imply ${v.v.toFixed(1)}. Blended: <b>${q.pts.toFixed(1)}</b>. ${d.length?'Biggest gaps: ':'Right now he is '}${why}.</div>`}
 function projBox(p,q,line,title){let top=Math.max(q.hi*1.06,20),L=q.lo/top*100,W=(q.hi-q.lo)/top*100,M=q.pts/top*100,av=p.inj?p.inj.avail:1,risk=av<1&&p.pos!=='QB'?`<div class="projNote">${p.inj.label}: about ${Math.round(av*100)}% to play. Weighed for injury risk: <b>${(q.pts*av).toFixed(1)}</b>.</div>`:'',fx=(k,l)=>{let v=q.fx[k];return `<div class="pfx"><b class="${v>0.4?'good':v<-0.4?'bad':'muted'}">${Math.abs(v)<0.05?'0.0':sg(v)}</b><span>${l}</span></div>`};let dt=null;try{dt=typeof dvTier==='function'?dvTier(p.opp,p.pos):null}catch(e){}let mu=`<div class="pjMu"><div class="pjT">${tlogo(p.team,'big')}<b>${p.team}</b></div><div class="pjV">VS<small>PPR</small></div><div class="pjT">${tlogo(p.opp,'big')}<b>${p.opp}</b></div></div>`+(dt?`<div class="pjTier ${dt.cls}">${dt.cls==='g'?'Easy':dt.cls==='r'?'Tough':'Average'} matchup \u2022 ${p.opp} is #${dt.rk} in points allowed to ${p.pos}s</div>`:'');return `<div class="panel projBox"><div class="ph">${title}</div>${mu}<div class="projTop"><div class="projNum">${q.pts.toFixed(1)}</div><div class="projTxt"><b>projected points</b><span>${line}</span></div></div><div class="projBar"><i style="left:${L}%;width:${W}%"></i><u style="left:${M}%"></u></div><div class="projRng"><span>Floor ${q.lo.toFixed(1)}</span><span>4 of 5 games land here</span><span>Ceiling ${q.hi.toFixed(1)}</span></div>${risk}${q.adj?`<div class="projNote">Our adjustment: <b>${q.adj.pts>0?'+':''}${q.adj.pts}</b> pts. ${trEsc(q.adj.note||'')}</div>`:''}${vgNote(p,q)}<div class="projFx">${fx('script','Game script')}${fx('matchup','Matchup')}${fx('inj','Injuries')}</div><details class="how"><summary>How this is built</summary><div class="explain">Recent and last-season usage, the Vegas spread and total, how this defense treats his position, and the injury report (teammates out${p.pos==='QB'?', receivers out':', QB out'}). The three boxes show how many points each moved it. When sportsbook player lines are posted (Wednesday to Sunday) they are blended in, leaning on them most for new starters and players with few games. PPR scoring only${p.pos==='QB'?'; QBs get 4 per passing TD, 1 per 25 yards, -2 per INT':''}. Tested on past seasons it is about ${p.pos==='QB'?'10':'5'}% closer than a plain season average.</div></details></div>`}
 function projHTML(p){let q=p.proj;if(!q||p.out||p.played||p.opp==='BYE')return '';return projBox(p,q,`${p.pos==='QB'?'':(p.pos==='RB'||q.car>=1?`<b>Rushing</b> ${q.car} carries, <b>${Math.round(q.ruy)} yds</b> • `:'')+`<b>Receiving</b> ${q.tgt} targets, ${q.rec.toFixed(1)} catches, <b>${Math.round(q.ryd)} yds</b> • `}${q.td.toFixed(2)} TD`,'Week '+META.next_week+' projection')}
-function qbHTML(p){let out='';if(p.played){let q=p.played,d=p.proj?q.ppr-p.proj.pts:null;out+=`<div class="injBox playedBox qbCard"><div class="injHd">\u2713 Final \u2022 Week ${q.wk}</div><div class="injRow ${d==null||d>=0?'up':'o'}"><b>${resTxt(q)}</b> vs ${q.opp} \u2022 scored <b>${q.ppr}</b> PPR${d!=null?` (projected ${p.proj.pts.toFixed(1)}, ${d>=0?'+':''}${d.toFixed(1)})`:''}</div><div class="injRow q">${q.comp}/${q.att}, ${q.pyd} yds, ${q.ptd} TD, ${q.int} INT${q.ruy?', '+q.ruy+' rush yds':''}${q.rtd?', '+q.rtd+' rush TD':''}</div></div>`}let q=p.proj;if(!q)return out;if(!p.played)out+=projBox(p,q,`${q.pyd} pass yds, ${q.ptd.toFixed(1)} pass TD, ${q.int.toFixed(1)} INT \u2022 ${q.ruy} rush yds`,'Week '+META.next_week+' projection');return out+(p.sub?'<div class="projNote">Starter is out, so this is the backup (starter\'s volume, a little lower).</div>':'')+(p.inj?'<div class="projNote">'+p.inj.who+': '+p.inj.label+'.</div>':'')}
+function qbHTML(p){let out='';if(p.played){let q=p.played,d=p.proj?q.ppr-p.proj.pts:null;out+=`<div class="injBox playedBox qbCard"><div class="injHd">\u2713 Final \u2022 Week ${q.wk}</div><div class="injRow ${d==null||d>=0?'up':'o'}"><b>${resTxt(q)}</b> vs ${q.opp} \u2022 scored <b>${q.ppr}</b> PPR${d!=null?` (projected ${p.proj.pts.toFixed(1)}, ${d>=0?'+':''}${d.toFixed(1)})`:''}</div><div class="injRow q">${q.comp}/${q.att}, ${q.pyd} yds, ${q.ptd} TD, ${q.int} INT${q.ruy?', '+q.ruy+' rush yds':''}${q.rtd?', '+q.rtd+' rush TD':''}</div></div>`}let q=p.proj;if(!q)return out+injHTML(p);if(!p.played)out+=projBox(p,q,`${q.pyd} pass yds, ${q.ptd.toFixed(1)} pass TD, ${q.int.toFixed(1)} INT \u2022 ${q.ruy} rush yds`,'Week '+META.next_week+' projection');return out+(p.sub?'<div class="projNote">Starter is out, so this is the backup (starter\'s volume, a little lower).</div>':'')+injHTML(p)}
 function pv(p){return p.out?-1:p.played?p.played.ppr:p.proj?p.proj.pts:-2}
 function heroPj(p){if(p.played){let q=p.played,d=q.proj!=null?q.ppr-q.proj:null;return `<div class="heroPj">Projected <b>${q.proj!=null?q.proj.toFixed(1):'\u2014'}</b> \u2192 scored <b class="${d==null?'':d>=0?'good':'bad'}">${q.ppr}</b> PPR</div>`}if(p.out||!p.proj||p.opp==='BYE')return '';return `<div class="heroPj pjGo" role="button" tabindex="0" data-pjid="${p.id}" title="See where he sits in the Week ${META.next_week} projections">Week ${META.next_week} projection <b>${p.proj.pts.toFixed(1)}</b> PPR <span class="pjArr">&#8250;</span></div>`}
 function resTxt(q){let m=/(\d+), \w+ (\d+)/.exec(q.score||'');return m?`${q.res} ${m[1]}-${m[2]}`:q.res}
