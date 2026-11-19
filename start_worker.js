@@ -391,13 +391,8 @@ function snippet(d, v, a, b) {
 
 // What shows in a shared link (iMessage, X, Discord): the pick and both projections, not just the names.
 function shareTitle(d, v, a, b) {
-  const wk = d.next;
-  if (!v.w) return `${a.n} or ${b.n}: who should I start? (Week ${wk})`;
-  const w = v.w, l = w === a ? b : a;
-  const pw = pts(w), pl = pts(l);
-  return pw != null && pl != null && !l.out && !l.bye
-    ? `Start ${w.n} over ${l.n} · Week ${wk}: ${f1(pw)} vs ${f1(pl)} projected`
-    : `Start ${w.n} over ${l.n} · Week ${wk}`;
+  // No spoilers in shared links: just the two names and the question. The pick is inside the app.
+  return `${a.n} or ${b.n}: Who Should I Start? (Week ${d.next})`;
 }
 
 async function matchupApp(env, url, d, a, b) {
@@ -407,7 +402,7 @@ async function matchupApp(env, url, d, a, b) {
   const desc = v.w ? snippet(d, v, a, b) : v.line;
   const path = `/start/${[a.s, b.s].sort().join("-vs-")}/`;
   const ld = { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [["Fantasy Mania", "/"], ["Start/Sit", "/start/"], [both, path]].map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c[0], item: SITE + c[1] })) };
-  const headExtra = `${indexable(a, b) ? "" : '<meta name="robots" content="noindex,follow">'}<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(shareTitle(d, v, a, b))}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${SITE}${path}"><meta property="og:image" content="https://fantasymania.org/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/og.png"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script><style>${APP_CSS}</style>`;
+  const headExtra = `${indexable(a, b) ? "" : '<meta name="robots" content="noindex,follow">'}<meta property="og:type" content="website"><meta property="og:site_name" content="Fantasy Mania"><meta property="og:title" content="${esc(shareTitle(d, v, a, b))}"><meta property="og:description" content="${esc(`Week ${wk} PPR start/sit: see the pick, projections, matchups and game logs for both players on Fantasy Mania.`)}"><meta property="og:url" content="${SITE}${path}"><meta property="og:image" content="https://fantasymania.org/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://fantasymania.org/og.png"><script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script><style>${APP_CSS}</style>`;
   const app = await env.ASSETS.fetch(new Request(url.origin + "/index.html"));
   if (!app.ok) throw new Error("no app");
   const res = new HTMLRewriter()
