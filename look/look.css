@@ -58,7 +58,7 @@ h1{line-height:.95}
 
 /* ===== pass 4: tables, filters, nav, home ===== */
 .rcard .rn{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-size:20px!important;color:var(--muted)!important}
-.rcard .rname{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;text-transform:uppercase;letter-spacing:.01em;font-size:16px!important;line-height:1.1!important}
+.rcard .rname{font-family:'Google Sans Flex','Arial',sans-serif!important;font-weight:600!important;text-transform:none!important;letter-spacing:normal!important;font-size:16px!important;line-height:1.1!important}
 .rcard .rs{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important}
 .rcard .rs:nth-of-type(1),.rcard>.rs:first-of-type{background:var(--lk-pan);align-self:stretch;display:flex;align-items:center;justify-content:center}
 .rcHead{border-bottom:3px solid var(--ink)!important}
@@ -72,7 +72,9 @@ h1{line-height:.95}
 /* ===== pass 5 ===== */
 .homeHero .hhL .search,.homeHero .hhL .homeSearch{width:100%;max-width:640px;margin-left:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
 .homeHero .hhL .search input,.homeHero .hhL .homeSearch input{border:2px solid var(--ink)!important;background:#fff!important;color:var(--ink)!important;font-size:18px!important;padding:14px 16px!important}
-.rname,.stack .nm,.stack b{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;letter-spacing:.02em}
+.stack .nm,.stack b{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;letter-spacing:.02em}
+.rname{font-family:'Google Sans Flex','Arial',sans-serif!important;font-weight:600!important;text-transform:none!important;letter-spacing:normal!important}
+h2.cmpH{font-family:'Google Sans Flex','Arial',sans-serif!important;font-weight:600!important;letter-spacing:normal!important;text-transform:none!important}
 
 /* ===== pass 6 ===== */
 .homeHero .hhL .search input,.homeHero .hhL .homeSearch input{padding-left:46px!important}
@@ -420,7 +422,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 @media(max-width:700px){
 #rankings #rankTable .nmw{display:flex!important;align-items:center;gap:8px}
 #rankings #rankTable .nmt{display:flex!important;flex-wrap:wrap;align-items:center;gap:2px 5px;min-width:0}
-#rankings #rankTable .rname2,#rankings #rankTable .rname2.playerlink{flex:0 0 100%;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-size:15.5px!important;text-transform:uppercase;letter-spacing:.01em;line-height:1.05;color:var(--ink);white-space:nowrap}
+#rankings #rankTable .rname2,#rankings #rankTable .rname2.playerlink{flex:0 0 100%;font-family:'Google Sans Flex','Arial',sans-serif!important;font-weight:600!important;font-size:15.5px!important;text-transform:none!important;letter-spacing:normal!important;line-height:1.05;color:var(--ink);white-space:nowrap}
 #rankings #rankTable .tag{background:none!important;border:0!important;padding:0!important;margin:0!important;font-size:10.5px!important;font-weight:500!important;color:var(--mut)!important;text-transform:none;letter-spacing:0;border-radius:0!important}
 #rankings #rankTable .bi{display:inline-flex;flex-wrap:nowrap}
 #rankings #rankTable .bi i{width:13px!important;height:15px!important}
@@ -635,10 +637,10 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #players .plX h3{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-size:20px!important;letter-spacing:.04em!important;color:var(--ink)!important;border-top:3px solid var(--ink);padding-top:10px;margin:18px 0 10px!important;font-weight:800!important}
 #players .plX h3 small{font-family:inherit!important;font-size:12px!important;letter-spacing:.04em;color:#5a6882!important}
 #players .plRow{background:#fff!important;border-radius:0!important;box-shadow:0 8px 18px -14px rgba(20,35,70,.45)!important;border:1.5px solid #d9e0eb!important;border-left:4px solid var(--ink)!important;margin-bottom:8px!important;min-height:58px}
-#players .plRow .nm b{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-size:19px!important;font-weight:800!important;letter-spacing:.01em}
+#players .plRow .nm b{font-family:'Google Sans Flex','Arial',sans-serif!important;text-transform:none!important;font-size:19px!important;font-weight:600!important;letter-spacing:normal!important}
 #players .plRow .sc{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-size:24px!important;font-weight:800!important}
 #players .plRow .rk{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-size:17px!important}
-#players .plRec .chipP{border-radius:0!important;border:1.5px solid #d9e0eb!important;box-shadow:none!important;border-bottom:3px solid var(--ink)!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-size:16px!important;font-weight:800!important}
+#players .plRec .chipP{border-radius:0!important;border:1.5px solid #d9e0eb!important;box-shadow:none!important;border-bottom:3px solid var(--ink)!important;font-family:'Google Sans Flex','Arial',sans-serif!important;text-transform:none!important;font-size:16px!important;font-weight:600!important}
 #players .plX h3 small{display:block;margin-top:2px}
 
 /* pass 26: glowing green / yellow / red bars (rankings Breakdown + Stats, compare) like the classic site */
