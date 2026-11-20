@@ -46,7 +46,10 @@ h1{line-height:.95}
 .lkAbout>.lkL{display:block;font:800 12px 'Barlow Condensed','Arial Narrow',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
 .lkAbout>*:not(.lkL){margin:6px 0 0!important;font-size:14px!important;line-height:1.45!important;color:var(--muted)!important;text-align:left!important;max-width:none!important}
 /* section titles */
-.stHd,.sec h2,.view h2{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;letter-spacing:.03em;font-weight:800!important}
+.sec h2,.view h2{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;letter-spacing:.03em;font-weight:800!important}
+/* .stHd is part of the bold *italic* headline register (see pass 32 below), so it gets Archivo
+   Black on its own -- split out of the shared upright rule above. */
+.stHd{font-family:'Archivo Black','Arial Black',sans-serif!important;text-transform:uppercase;letter-spacing:.03em;font-weight:800!important}
 
 /* ===== pass 3 ===== */
 .pfTabs>*,.tmT,.vbtn,.tsb{white-space:nowrap!important}
@@ -120,7 +123,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 .hmGrid .hmTl::after{content:'\203A';color:var(--muted);font-size:18px}
 .hmGrid .hmTl .hmIc{background:transparent!important;border:0!important;box-shadow:none!important;width:44px!important;height:34px!important;display:flex!important;align-items:center;justify-content:center}
 .hmGrid .hmTl .hmIc svg{stroke:var(--blue)!important;color:var(--blue)!important;width:30px!important;height:30px!important;stroke-width:2.2!important;filter:drop-shadow(0 0 3px rgba(39,93,243,.45))}
-.hmGrid .hmTl>span:nth-child(2) span{display:block;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-size:18px!important;text-transform:uppercase;letter-spacing:.03em;color:var(--ink)!important}
+.hmGrid .hmTl>span:nth-child(2) span{display:block;font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:800!important;font-size:18px!important;text-transform:uppercase;letter-spacing:.03em;color:var(--ink)!important}
 .hmGrid .hmTl small{display:block;font-size:12.5px!important;color:var(--muted)!important;font-weight:500!important}
 @media(min-width:821px){
  .homeHero{max-width:1000px!important}
@@ -139,7 +142,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile .hero2 .bdgN,#profile .hero2 .bdgD{color:#fff!important}
 #profile .hero2 .hs.left,#profile .hero2 .hs.right{background:#fff!important;border:1px solid var(--line)!important;border-top:4px solid var(--blue)!important;color:var(--ink)!important;box-shadow:none!important;border-radius:0!important}
 #profile .hero2 .hpjW{background:#fff!important;color:var(--ink)!important;padding:8px!important;border-radius:0!important}
-.hs .scorebig{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;text-shadow:none!important}
+.hs .scorebig{font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:800!important;text-shadow:none!important}
 .hs .scorelab{color:var(--muted)!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;letter-spacing:.14em}
 .hs .scoresub{color:var(--muted)!important}
 @media(max-width:820px){#profile .hero2{grid-template-areas:"hid hid" "ol ol" "sl sr" "pj pj"!important}}
@@ -172,7 +175,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
  #profile .hero2 .portrait img{width:78px!important;height:78px!important}
  #profile .hero2 .portrait .initials{font-size:26px!important}
  #profile .hero2 .hid{grid-area:hid!important;text-align:left!important;padding-left:12px!important}
- #profile .hero2 .hid h1{font-size:30px!important;text-align:left!important;text-transform:uppercase;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;margin:0!important}
+ #profile .hero2 .hid h1{font-size:30px!important;text-align:left!important;text-transform:uppercase;font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:800!important;margin:0!important}
  #profile .hero2 .hid .meta{justify-content:flex-start!important;font-size:12.5px!important}
  #profile .hero2 .rankline{justify-content:flex-start!important;gap:4px!important}
  #profile .hero2 .rankline i{font-size:10.5px!important;padding:3px 6px!important;text-transform:uppercase;letter-spacing:.04em}
@@ -192,7 +195,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
  #profile .dkRing .hp{zoom:.62!important}
  #profile .dkLab{display:none!important}
  #profile .dkNm{grid-column:2;grid-row:1;background:transparent!important;display:block!important;padding:0!important;margin-top:6px}
- #profile .dkNm .hid h1{color:#fff!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;text-transform:uppercase;font-size:64px!important;letter-spacing:0!important}
+ #profile .dkNm .hid h1{color:#fff!important;font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:800!important;text-transform:uppercase;font-size:64px!important;letter-spacing:0!important}
  #profile .dkNm .hid .meta{color:#fff!important}
  #profile .dkNm .rankline i{background:rgba(255,255,255,.2)!important;color:#fff!important;text-transform:uppercase;font-size:11px!important;border-radius:0!important}
  #profile .dkBd{grid-column:2;grid-row:2;background:transparent!important;padding:0!important;box-shadow:none!important;align-self:start;margin-top:12px}
@@ -205,7 +208,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
  #profile .dkKp>.dkT:not(:first-child){border-radius:0!important;border-top:3px solid var(--blue)!important;background:#fff!important;border:1px solid var(--line)!important;border-top:3px solid var(--blue)!important}
  #profile .dkTb{grid-column:1/3;grid-row:4}
 }
-#home .hhL h1{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;text-transform:uppercase;line-height:1.02!important}
+#home .hhL h1{font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:800!important;text-transform:uppercase;line-height:1.02!important}
 #home .hhL h1 .lkBl{color:var(--blue)}
 @media(max-width:999px){#profile .hero2 .rankline{flex-wrap:wrap!important;font-size:10px!important}#profile .hero2 .rankline i{font-size:10px!important}}
 @media(min-width:1000px){#profile .dkBd .bdgs{gap:8px!important}#profile .dkBd .bdgBtn i,#profile .dkBd .bdgBtn svg{width:38px!important;height:44px!important}#profile .dkNm .rankline{font-size:13px!important}}
@@ -238,7 +241,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 }
 /* overview cards like the mock: white, blue top rule, condensed headings */
 #profile .panel,#profile .grid2>div>.panel,#profile .vsBox{border-radius:0!important;border:1px solid var(--line)!important;border-top:3px solid var(--blue)!important;box-shadow:none!important;background:#fff!important}
-#profile .panel h2,#profile .panel h3,#profile .vsBox h2,#profile .vsBox h3{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;font-weight:800!important;letter-spacing:.01em}
+#profile .panel h2,#profile .panel h3,#profile .vsBox h2,#profile .vsBox h3{font-family:'Archivo Black','Arial Black',sans-serif!important;text-transform:uppercase;font-weight:800!important;letter-spacing:.01em}
 #profile .panel .tablewrap,#profile .panel table{max-width:100%}
 #profile .panel .tablewrap{overflow-x:auto}
 #players .search,#players .search.lk-sq,#compare .search,#compare .search.lk-sq{border:1px solid #d5dbe8!important;border-radius:14px!important;background:#fff!important;box-shadow:none!important}
@@ -319,7 +322,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile .barrow{grid-template-columns:minmax(0,1fr) 48px!important;grid-template-areas:"l n" "t t"!important;row-gap:6px!important}
 #profile .barrow>span{grid-area:l!important}#profile .barrow>.track{grid-area:t!important}#profile .barrow>b{grid-area:n!important}
 /* ===== pass 12: top card closer to mock; kickers/defenses like the others ===== */
-#profile .hero2 .rankline i,#profile .dkNm .rankline i{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-size:12px!important;letter-spacing:.07em!important;padding:3px 7px!important;text-transform:uppercase}
+#profile .hero2 .rankline i,#profile .dkNm .rankline i{font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:800!important;font-size:12px!important;letter-spacing:.07em!important;padding:3px 7px!important;text-transform:uppercase}
 #profile .hero2 .hid .meta,#profile .dkNm .meta{font-size:14px!important;font-weight:500!important;opacity:.95}
 @media(max-width:999px){#profile .hero2 .portrait{width:98px!important;height:98px!important}#profile .hero2 .portrait img{width:90px!important;height:90px!important}}
 #kdBoard .lkKdTabs{display:flex;gap:0;border-bottom:2px solid var(--line);margin:10px 0 6px}
@@ -394,7 +397,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 .links .navb span{font-size:12px!important;font-weight:800!important;letter-spacing:.02em!important;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:clip;max-width:100%;display:block}
 }
 #home .hhL h1 .lkBl,#home .hhL h1 .lkBl *{font-family:inherit!important;font-weight:inherit!important;font-style:italic;letter-spacing:inherit}
-#home .hhL h1,#home .hhL h1 *{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important}
+#home .hhL h1,#home .hhL h1 *{font-family:'Archivo Black','Arial Black',sans-serif!important}
 @media(max-width:999px){
 #profile .pgTop,#profile .pgTop.min{margin:0 0 4px!important}
 #profile .pgMin{padding:5px 4px!important;min-height:0!important}
@@ -711,7 +714,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile .hero2 .rankline i,#profile .dkNm .rankline i{
   font-style:italic!important;font-weight:900!important
 }
-#profile .panel>.ph{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase!important;letter-spacing:.01em!important}
+#profile .panel>.ph{font-family:'Archivo Black','Arial Black',sans-serif!important;text-transform:uppercase!important;letter-spacing:.01em!important}
 /* nav labels, tabs, buttons: same condensed bold voice but upright -- not part of the italic headline register */
 .vbtn,.tmT,.tsb,.pfTabs>*{font-style:normal!important;font-weight:800!important}
 /* rating numbers: flat, sharp color -- no gradient fill, no drop-shadow glow. --l/--d already carry
@@ -740,11 +743,11 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #home .homeIm .newPill#homeEspn{border-radius:999px!important;padding:10px 16px!important;box-shadow:none!important;border:1.5px solid var(--ink)!important;background:#fff!important;height:auto!important}
 #home .homeIm .newPill#homeEspn .npT{flex-direction:row!important;align-items:center!important;gap:8px!important}
 #home .homeIm .newPill#homeEspn .npT small{display:none!important}
-#home .homeIm .newPill#homeEspn .npT b{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.02em;font-size:14.5px!important;color:var(--ink)!important}
+#home .homeIm .newPill#homeEspn .npT b{font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.02em;font-size:14.5px!important;color:var(--ink)!important}
 #home .homeIm .newPill#homeEspn .npT b::before{content:'\2191';display:inline-block;margin-right:6px;font-weight:900}
 #home #homeMore{border-radius:999px!important;padding:10px 14px!important;border:1.5px solid var(--ink)!important;background:#fff!important;height:auto!important;gap:7px!important}
 #home #homeMore .mi img{width:18px!important;height:18px!important}
-#home #homeMore{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.02em;font-size:14.5px!important;color:var(--ink)!important}
+#home #homeMore{font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.02em;font-size:14.5px!important;color:var(--ink)!important}
 /* "Who should I start?" card: skinny solid-navy card, the blue football tucked into the top-right corner only */
 #home .hmSS{
   position:relative;
@@ -769,7 +772,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
   mask-image:radial-gradient(130% 130% at 100% 0%,rgba(255,255,255,1) 30%,rgba(255,255,255,.65) 55%,rgba(255,255,255,0) 90%);
 }
 #home .hmSS>*{position:relative;z-index:1}
-#home .hmSS .hsH{color:#fff!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:900!important;font-style:italic!important;font-size:26px!important;line-height:1.05!important;text-transform:uppercase;letter-spacing:.01em;gap:9px!important;text-shadow:0 2px 10px rgba(0,0,0,.4);max-width:64%!important;padding-left:8px!important}
+#home .hmSS .hsH{color:#fff!important;font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:900!important;font-style:italic!important;font-size:26px!important;line-height:1.05!important;text-transform:uppercase;letter-spacing:.01em;gap:9px!important;text-shadow:0 2px 10px rgba(0,0,0,.4);max-width:64%!important;padding-left:8px!important}
 @media(max-width:360px){#home .hmSS .hsH{font-size:22px!important}}
 #home .hmSS .hsH .hmIc svg{stroke:#fff!important}
 #home .hmSS .lkHsSub{color:rgba(255,255,255,.85)!important;font-size:13px!important;font-weight:500!important;margin:-4px 0 0}
@@ -782,13 +785,13 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #home .hmSS .hsR input{border-radius:11px!important;border:0!important;height:42px!important;font-weight:600!important;padding-left:34px!important;box-shadow:0 4px 14px -4px rgba(0,0,0,.35)!important;
   background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%235b6780" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg>')!important;
   background-repeat:no-repeat!important;background-position:10px center!important;background-size:16px 16px!important}
-#home .hmSS .hsGo{background:#1f5fe0!important;border-radius:11px!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.03em;font-size:15.5px!important;padding:12px!important;margin-top:0!important;box-shadow:0 8px 20px -4px rgba(31,95,224,.8)!important}
+#home .hmSS .hsGo{background:#1f5fe0!important;border-radius:11px!important;font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:800!important;font-style:italic!important;text-transform:uppercase;letter-spacing:.03em;font-size:15.5px!important;padding:12px!important;margin-top:0!important;box-shadow:0 8px 20px -4px rgba(31,95,224,.8)!important}
 #home .hmSS .hsMsg{color:#ffd1d1!important}
 /* Explore heading: bold italic with a rule running out to the edge. The hero's children are ordered
    with CSS `order` (not DOM position), so this needs its own slot right before the grid's. */
 #home .hhL #lkExploreHd{order:7!important}
 #home .hhL .hmGrid{order:8!important}
-#home .lkExploreHd{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:900!important;font-style:italic!important;text-transform:uppercase;font-size:20px!important;letter-spacing:.01em;display:flex!important;align-items:center;gap:14px;margin:24px 0 10px;color:var(--ink)}
+#home .lkExploreHd{font-family:'Archivo Black','Arial Black',sans-serif!important;font-weight:900!important;font-style:italic!important;text-transform:uppercase;font-size:20px!important;letter-spacing:.01em;display:flex!important;align-items:center;gap:14px;margin:24px 0 10px;color:var(--ink)}
 #home .lkExploreHd::after{content:'';flex:1;height:3px;background:var(--blue)}
 /* 2-column icon-card grid like the mock, instead of the stacked list rows */
 #home .hmGrid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;border-top:0!important}
@@ -837,7 +840,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 }
 
 /* ===== pass 36: lock in the mock -- bigger bolder top pills, headline weight, and the short tagline ===== */
-#home #lkTagline{order:1!important;display:block!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-style:italic!important;font-weight:700!important;text-transform:uppercase!important;font-size:12.5px!important;letter-spacing:.01em!important;color:#5a6174!important;margin:2px 0 6px!important;white-space:nowrap!important}
+#home #lkTagline{order:1!important;display:block!important;font-family:'Archivo Black','Arial Black',sans-serif!important;font-style:italic!important;font-weight:700!important;text-transform:uppercase!important;font-size:12.5px!important;letter-spacing:.01em!important;color:#5a6174!important;margin:2px 0 6px!important;white-space:nowrap!important}
 @media(max-width:360px){#home #lkTagline{font-size:10.5px!important}}
 #home .hhL h1{font-weight:900!important;font-size:28px!important;line-height:1.08!important;letter-spacing:-.005em!important;-webkit-text-stroke:.5px currentColor!important}
 @media(max-width:360px){#home .hhL h1{font-size:24px!important}}
@@ -870,4 +873,19 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 @media(min-width:821px){
  #home .hmSS{max-width:900px!important}
  #home .hmSS .hsH{font-size:18px!important;max-width:none!important;padding-left:2px!important}
+}
+
+/* ===== pass 41: Archivo Black for the bold *slanted* headline register (was Barlow Condensed
+   here; the upright nav/table/button register above stays on Barlow Condensed, untouched).
+   Archivo Black ships one real weight and one real italic cut -- no 600-900 weight range like
+   Barlow Condensed had -- so font-synthesis:none stops the browser from faking extra bold on
+   top of an already-black face no matter what font-weight number a rule above asks for. */
+#profile .hero2 .hid h1,#profile .dkNm .hid h1,
+#profile .hero2 .scorebig,.hs .scorebig,.comparePlayer .scorebig,
+#profile .panel h2,#profile .panel h3,#profile .vsBox h2,#profile .vsBox h3,.stHd,
+#profile .panel>.ph,#profile .hero2 .rankline i,#profile .dkNm .rankline i,
+#home .hhL h1,#home .hhL h1 *,#home .homeIm .newPill#homeEspn .npT b,#home #homeMore,
+#home .hmGrid .hmTl>span:nth-child(2) span,#home .hmSS .hsH,#home .hmSS .hsGo,
+#home .lkExploreHd,#home #lkTagline{
+  font-synthesis:none!important;
 }
