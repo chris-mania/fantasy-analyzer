@@ -892,13 +892,3 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #home .lkExploreHd,#home #lkTagline{
   font-synthesis:none!important;
 }
-
-/* ===== pass 42: profile rating numbers only (.scorebig -- the big hero score like "93.9") get Google
-   Sans Flex Bold 700, upright, pulled out of the Roboto Condensed bold-italic headline register above.
-   Everything else in that register (names, panel headings, rank text) stays untouched. */
-#profile .hero2 .scorebig,.hs .scorebig,.comparePlayer .scorebig,
-#profile .hero2 .hs .scorebig{
-  font-family:'Google Sans Flex','Arial',sans-serif!important;
-  font-weight:700!important;
-  font-style:normal!important;
-}
