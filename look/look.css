@@ -829,14 +829,11 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile #lkInfo .liR{background:#fff!important}
 #profile #lkInfo .liR b{color:var(--ink)!important}
 
-/* ===== pass 35/37: two ghost yard numbers behind the hero headline, like a broadcast scoreboard
-   backdrop -- originally also had diagonal yard-line hatching ("the field") across the whole hero,
-   removed per request so just the soft "25"/"25" numbers remain ===== */
+/* ===== pass 35/37: originally a football-field texture behind the hero headline (diagonal yard
+   lines, then just two ghost "25"/"25" numbers once the lines were removed) -- dropped entirely
+   per request, no backdrop graphic behind the headline anymore ===== */
 #home .hhL{
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='700' height='620'><text x='28' y='235' font-family='Arial, sans-serif' font-weight='900' font-size='128' fill='%23edf0f8' transform='rotate(-6 28 235)'>25</text><text x='472' y='235' font-family='Arial, sans-serif' font-weight='900' font-size='128' fill='%23edf0f8' transform='rotate(6 472 235)'>25</text></svg>")!important;
-  background-repeat:no-repeat!important;
-  background-size:100% 560px!important;
-  background-position:top center!important;
+  background-image:none!important;
 }
 
 /* ===== pass 36: lock in the mock -- bigger bolder top pills, headline weight, and the short tagline ===== */
