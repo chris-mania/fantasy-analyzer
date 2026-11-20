@@ -859,6 +859,11 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #home #homeMore{padding:9px 13px!important;border-width:1.75px!important}
 #home #homeMore{font-size:13.5px!important}
 #home #homeMore .mi img{width:17px!important;height:17px!important}
+/* shrink the Import Teams / More pill boxes themselves (padding only, not the text) */
+#home .homeIm .newPill#homeEspn{padding:6px 11px!important}
+#home #homeMore{padding:6px 10px!important}
+/* make sure "COMPARE PLAYERS" sits dead-center in its button */
+#home .hmSS .hsGo{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important}
 
 /* ===== pass 40: lock the desktop (>=821px) single-row "Who should I start?" widget's title size.
    Earlier unscoped rules (26px/30px font-size, max-width:64%, padding-left:8px) were written for
@@ -886,4 +891,14 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #home .hmGrid .hmTl>span:nth-child(2) span,#home .hmSS .hsH,#home .hmSS .hsGo,
 #home .lkExploreHd,#home #lkTagline{
   font-synthesis:none!important;
+}
+
+/* ===== pass 42: profile rating numbers only (.scorebig -- the big hero score like "93.9") get Google
+   Sans Flex Bold 700, upright, pulled out of the Roboto Condensed bold-italic headline register above.
+   Everything else in that register (names, panel headings, rank text) stays untouched. */
+#profile .hero2 .scorebig,.hs .scorebig,.comparePlayer .scorebig,
+#profile .hero2 .hs .scorebig{
+  font-family:'Google Sans Flex','Arial',sans-serif!important;
+  font-weight:700!important;
+  font-style:normal!important;
 }
