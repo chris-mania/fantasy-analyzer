@@ -7065,8 +7065,10 @@ var TRV={lv:'now',lm:'proj'},TRSHOWF=null,TRSUM='',TRSUG=false;
    breakdown (lineups, needs, season outlook, other deals) waits for an explicit click, so it always
    uses the current logic instead of showing a stale grade the moment you tap a second player. A trade
    someone shared with you (TR.shared) or a league-saved trade skips the click and opens unlocked. */
-var TRTC={key:'',on:false};
-document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('#trTcGo');if(!t)return;TRTC.on=true;trRenderAll()});
+var TRTC={key:'',on:false,busy:false};
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('#trTcGo');if(!t)return;TRTC.busy=true;trRenderAll();
+ var stages=['Checking lineups...','Checking depth and injuries...','Checking rest-of-season outlook...','Checking other deals...'],k=0;
+ (function step(){var b=document.getElementById('trTcBar'),tx=document.getElementById('trTcTxt');if(b)b.style.width=Math.round(100*(k+1)/stages.length)+'%';if(tx)tx.textContent=stages[k];k++;if(k<stages.length)setTimeout(step,380);else setTimeout(function(){TRTC.busy=false;TRTC.on=true;trRenderAll()},280)})()});
 function trGainStars(owner,id){let v=trCtx().V[id],pos=v.p.pos,wk=Math.max(1,trWeeks('ros').length),g=trMarg(owner,id,'ros')/wk,sc=pos==='QB'?(TR.sf?1:.75):pos==='TE'?1.2:1,x=g*sc,P=[[0,0],[.15,.5],[.5,1.5],[1,2.5],[1.6,3.5],[2.4,4.5],[3.4,5]],st=5;if(x<=0)st=0;else for(let i=1;i<P.length;i++)if(x<=P[i][0]){let a=P[i-1],b=P[i];st=a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);break}
  let fl=trStarN(trCV(trMarg(owner,id),id))*.7;return {stars:Math.round(Math.max(st,fl)*2)/2,g}}
 function trValsFor(owner,ids,who){let V=trCtx().V,o={};ids.forEach(i=>{if(V[i]&&!V[i].pl.gone){let q=trGainStars(owner,i);o[i]={val:trCV(trMarg(owner,i),i),stars:q.stars,g:q.g,who}}});return o}
@@ -7342,20 +7344,27 @@ function lgReal(my,their,ia,ib,myA,thA,M,T){let V=trCtx().V,b=lgBase(my),bt=lgBa
   for(const pos of ['RB','WR']){if(sent.some(i=>V[i]&&V[i].p.pos===pos)&&t1[pos].n<t0[pos].n&&t1[pos].thin)return false}
   return true};
  return side(my,myA,ia,b,M.d,0)&&side(their,thA,ib,bt,T.d,1)}
-function lgEval(my,their,ia,ib,mn,rx){if(mn==null)mn=.05;let sa=new Set(ia),sb=new Set(ib),myA=my.filter(i=>!sa.has(i)).concat(ib),thA=their.filter(i=>!sb.has(i)).concat(ia);
- /* Depth floor is a soft check now, not a hard filter: a trade that thins out your RB/WR room still
-    shows up, just ranked below the floor-safe version and flagged (unless it's offset by a big enough
-    lineup gain or a true star coming back, which trDepthOK's own gain/star relaxation already covers). */
- let myGaps=[],theirGaps=[];
- if(!trDepthOK(my,myA)){let g1=lgBase(myA).L.tot-lgBase(my).L.tot;if(!trDepthOK(my,myA,g1,'my'))myGaps=trDepthGaps(my,myA)}
+function lgEval(my,their,ia,ib,mn,rx){if(mn==null)mn=.05;let sa=new Set(ia),sb=new Set(ib),myA=my.filter(i=>!sa.has(i)).concat(ib),thA=their.filter(i=>!sb.has(i)).concat(ia),V=trCtx().V;
+ /* Depth floor is a soft check, not a hard filter: a trade that thins out your RB/WR room still shows
+    up, ranked below the floor-safe version. A big lineup gain only softens the PENALTY, never hides
+    the warning outright -- a trade that empties your RB room still has to say so, even when the gain
+    on paper looks huge (a big "gain" can itself just be an injured player's full-health number). */
+ let myGaps=[],theirGaps=[],myOff=false,theirOff=false;
+ if(!trDepthOK(my,myA)){myGaps=trDepthGaps(my,myA);let g1=lgBase(myA).L.tot-lgBase(my).L.tot;myOff=trDepthOK(my,myA,g1,'my')}
  {let V1=trCtx().V,st0=lgBase(my).st;if(ia.some(i=>{let v=V1[i];return v&&v.role&&v.role.k==='cuff'&&!st0.has(i)&&st0.has(v.role.st.p.id)&&ia.indexOf(v.role.st.p.id)<0}))return null}
- let ba=lgBase(myA),bb=lgBase(my);if(ba.L.tot-bb.L.tot<mn)return null;if(!trDepthOK(their,thA)){let g2=lgBase(thA).L.tot-lgBase(their).L.tot;if(!trDepthOK(their,thA,g2,'their'))theirGaps=trDepthGaps(their,thA)};
- let dPen=(myGaps.length?.6:0)+(theirGaps.length?.6:0),dNote=(myGaps.length?' Heads up: you would only have '+myGaps.map(g=>g.n+' startable '+g.pos+(g.n===1?'':'s')).join(' and ')+' left.':'')+(theirGaps.length?' Heads up: they would only have '+theirGaps.map(g=>g.n+' startable '+g.pos+(g.n===1?'':'s')).join(' and ')+' left.':'');
+ let ba=lgBase(myA),bb=lgBase(my);if(ba.L.tot-bb.L.tot<mn)return null;if(!trDepthOK(their,thA)){theirGaps=trDepthGaps(their,thA);let g2=lgBase(thA).L.tot-lgBase(their).L.tot;theirOff=trDepthOK(their,thA,g2,'their')}
+ let dPen=(myGaps.length?(myOff?.3:.7):0)+(theirGaps.length?(theirOff?.3:.7):0),
+  dNote=(myGaps.length?' Heads up: you would only have '+myGaps.map(g=>g.n+' startable '+g.pos+(g.n===1?'':'s')).join(' and ')+' left'+(myOff?', though your lineup gain here may be worth that risk.':'.'):'')+(theirGaps.length?' Heads up: they would only have '+theirGaps.map(g=>g.n+' startable '+g.pos+(g.n===1?'':'s')).join(' and ')+' left'+(theirOff?', though their gain may offset it.':'.'):''),
+  hurtNote=(ids,label)=>{let h=ids.map(i=>V[i]).filter(v=>v&&v.pl&&v.pl.R>0);return h.length?' Heads up: '+h.map(v=>v.p.name+' is '+(v.pl.label||'out')+(v.retW&&v.retW<=TRLAST?', expected back ~Week '+v.retW:'')).join('; ')+' -- '+label+' until then.':''},
+  iNote=hurtNote(ib,'does not help you')+hurtNote(ia,'does not help them');
  let M=lgSideEv(my,myA,ib,ia),T;
- if(rx){if(M.hi>.8||M.d<-.3||M.junk>0)return null;T=lgSideEv(their,thA,ia,ib);if(LGSTRICT===true&&!lgReal(my,their,ia,ib,myA,thA,M,T))return null;if(LGSTRICT===true&&M.d<.3){let q0=lgThin(my),q1=lgThin(myA);if(!['RB','WR'].some(p=>q0[p].thin&&q1[p].n>q0[p].n))return null}let th0=lgThin(their),V0=trCtx().V;if(T.hi>.8||T.d<-.3||!(T.ns.some(v=>ia.indexOf(v.p.id)>=0)||ia.some(i=>V0[i]&&th0[V0[i].p.pos]&&th0[V0[i].p.pos].thin)))return null;let nm0=a=>a.map(v=>v.p.name).join(', ');return {la:M.d,lb:T.d,eM:M.d,eT:T.d,tier:5,score:1.5*T.d+M.d-dPen,why:(M.ns.length?'You start '+nm0(M.ns)+'. ':'Your starters stay the same. ')+(T.d>=.1?'Their lineup improves.':'Their starters stay about the same.')+dNote,depthWarn:dPen>0,M,T}}
+ if(rx){if(M.hi>.8||M.d<-.3||M.junk>0)return null;T=lgSideEv(their,thA,ia,ib);if(LGSTRICT===true&&!lgReal(my,their,ia,ib,myA,thA,M,T))return null;if(LGSTRICT===true&&M.d<.3){let q0=lgThin(my),q1=lgThin(myA);if(!['RB','WR'].some(p=>q0[p].thin&&q1[p].n>q0[p].n))return null}let th0=lgThin(their),V0=trCtx().V;if(T.hi>.8||T.d<-.3||!(T.ns.some(v=>ia.indexOf(v.p.id)>=0)||ia.some(i=>V0[i]&&th0[V0[i].p.pos]&&th0[V0[i].p.pos].thin)))return null;let nm0=a=>a.map(v=>v.p.name).join(', ');return {la:M.d,lb:T.d,eM:M.d,eT:T.d,tier:5,score:1.5*T.d+M.d-dPen,why:(M.ns.length?'You start '+nm0(M.ns)+'. ':'Your starters stay the same. ')+(T.d>=.1?'Their lineup improves.':'Their starters stay about the same.')+dNote+iNote,depthWarn:dPen>0,M,T}}
  if(M.junk||M.hi>.8)return null;T=lgSideEv(their,thA,ia,ib);if(T.junk||T.hi>.8)return null;if(LGSTRICT===true&&!lgReal(my,their,ia,ib,myA,thA,M,T))return null;
  let eM=M.d+.25*M.wd+(M.ins?.2:0),eT=T.d+.25*T.wd+(T.ins?.4:0),tier=(eM>=.3&&eT>=.3)?1:(eM>=.3&&eT>=-.1)?2:(eM>=.3&&eT>=-.5&&T.hi<=.3)?2.5:4,nm=a=>a.map(v=>v.p.name).join(', ');
- let why=(M.ns.length?'You start '+nm(M.ns)+'. ':'Your starters stay the same. ')+(T.ns.length?'They start '+nm(T.ns)+'.':'Their starters stay the same.')+(M.ins?' You lock up the backup for your RB.':'')+(T.ins?' They get insurance for their RB.':'')+dNote;
+ let why=(M.ns.length?'You start '+nm(M.ns)+'. ':'Your starters stay the same. ')+(T.ns.length?'They start '+nm(T.ns)+'.':'Their starters stay the same.')+(M.ins?' You lock up the backup for your RB.':'')+(T.ins?' They get insurance for their RB.':'')+dNote+iNote;
+ /* A trade that genuinely guts your (or their) depth never gets to wear the "both lineups improve"
+    tier badge -- that claim has to be about the whole roster, not just this week's starters. */
+ if(tier===1&&((myGaps.length&&!myOff)||(theirGaps.length&&!theirOff)))tier=2;
  return {la:M.d,lb:T.d,eM,eT,tier,score:2*Math.min(eM,eT)+eM+eT-dPen,why,depthWarn:dPen>0,M,T}}
 function lgKind(A,B,E){if(E&&E.M.ins&&!E.T.ins)return 'Handcuff';if(E&&E.T.ins&&!E.M.ins)return 'Handcuff sale';let pa=Array.from(new Set(A.map(x=>x.p.pos))).sort().join(),pb=Array.from(new Set(B.map(x=>x.p.pos))).sort().join();
  if(A.length<B.length)return 'Star for depth';if(A.length>B.length)return pa.indexOf(',')>=0&&pa!==pb?'Sweetener':'Consolidation';return pa!==pb?'Position swap':'Upgrade'}
@@ -7627,8 +7636,8 @@ function trFull(){if(TR.solo)return trFullSolo();let a=trRoster('my','Your team'
    ;let T_lineups=trD('flineups','Lineups after the trade',`you ${trN(A0n.tot)} → ${trN(A1n.tot)} • they ${trN(B0n.tot)} → ${trN(B1n.tot)} this week`,`${trLnKnobs()}<div class="trLnW">${trLnBlock('Your team',myAfter,mark(sb))}${trLnBlock('Their team',thAfter,mark(sa))}</div>`,true)
    ;let T_needs=trD('fneeds2','Needs and depth: before → after','what each position becomes',`<div class="trCols"><div><div class="tsec">You</div>${trNeedsDiffHTML(TR.my,myAfter)}</div><div><div class="tsec">Them</div>${trNeedsDiffHTML(TR.their,thAfter)}</div></div><p class="tnote">Grades compare the starters at each position with the average starter in a ${TR.n}-team league, at full strength (healthy players, byes ignored).</p>`,true)
    ;let T_deals=trD('fdeals','Other deals that help both teams','tap to test',trDealsHTML(),false);
-   let tcKey=sa.join()+'|'+sb.join();if(TRTC.key!==tcKey)TRTC={key:tcKey,on:!!TR.shared};
-   res=TRTC.on?trTabsHTML(D,{T_sides,T_season,T_lineups,T_needs,T_deals}):`<div class="trVerdict even"><div class="trvK">Trade check</div><strong>${ov}</strong><div class="trvS">${ovT} Tap below to run our full trade logic on this deal: lineups, needs and depth, rest-of-season outlook, and other deals to consider.</div></div><div class="trFoot" style="justify-content:center"><button type="button" class="trAsk" id="trTcGo">Load Trade Analysis</button></div>`}}
+   let tcKey=sa.join()+'|'+sb.join();if(TRTC.key!==tcKey)TRTC={key:tcKey,on:!!TR.shared,busy:false};
+   res=TRTC.on?trTabsHTML(D,{T_sides,T_season,T_lineups,T_needs,T_deals}):TRTC.busy?`<div class="trVerdict even"><div class="trvK">Trade check</div><strong>Checking this trade</strong><div class="trvS" id="trTcTxt">Checking lineups...</div></div><div class="trDpB" style="margin:10px 2px"><i id="trTcBar" style="width:5%"></i></div>`:`<div class="trVerdict even"><div class="trvK">Trade check</div><strong>${ov}</strong><div class="trvS">${ovT} Tap below to run our full trade logic on this deal: lineups, needs and depth, rest-of-season outlook, and other deals to consider.</div></div><div class="trFoot" style="justify-content:center"><button type="button" class="trAsk" id="trTcGo">Load Trade Analysis</button></div>`}}
  else res=`<div class="trVerdict even"><div class="trvK">Trade check</div><strong>Enter both teams</strong><div class="trvS">Add every player on each roster, injured players too. Then you can ask for a suggested fair trade or tap Trade on the players who would move.</div></div>`;
  if(TR.shared){let tn=trEsc(TR.shared.tn||'Team A'),on=trEsc(TR.shared.on||'Team B');return `<div class="trSoloNote"><b>${tn} and ${on}</b>: a trade shared with you. The result is first. Below it you can change who moves and see the new result. Your own saved league is not touched. In this page, "your team" means ${tn} and "their team" means ${on}.</div>${res}<div class="tsec" style="margin-top:18px">Change the trade</div><div class="trCols">${a}${b}</div>`}
  return `${trFullTog()}${trLgBar()}<div class="trCols">${a}${b}</div>${res}<div class="trFoot"><button type="button" class="reset" id="trSamp2">Try a sample</button><button type="button" class="reset" id="trClrAll">Clear all</button></div>`}
