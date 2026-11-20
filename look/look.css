@@ -258,8 +258,14 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 @media(min-width:821px){
  #home .hmSS{display:flex!important;flex-direction:row!important;align-items:center!important;gap:12px!important;width:100%!important;max-width:760px!important;align-self:center!important;margin:0 auto!important;padding:8px 10px 8px 16px!important;background:#fff!important;border:1px solid var(--line)!important;border-left:4px solid var(--blue)!important;box-shadow:none!important;text-align:left!important}
  #home .hmSS .hsH{margin:0!important;font-size:18px!important;white-space:nowrap!important;flex:0 0 auto}
+ /* the subtitle ("Compare two players for this week.") that look.js injects after the title had
+    no width limit here, so it ate into this row and crushed both player inputs down to ~48px --
+    which made their autocomplete dropdown (sized off the input) render too narrow to read. Hide
+    the subtitle on this compact single-line desktop widget and give the inputs a real floor. */
+ #home .hmSS .lkHsSub{display:none!important}
  #home .hmSS .hsR{display:flex!important;flex:1 1 auto;gap:8px!important;align-items:center;margin:0!important;min-width:0}
- #home .hmSS .hsR input{flex:1 1 0;min-width:0;height:38px!important}
+ #home .hmSS .hsR .search{flex:1 1 0;min-width:130px}
+ #home .hmSS .hsR input{width:100%;height:38px!important}
  #home .hmSS .hsGo{flex:0 0 auto;height:38px!important;white-space:nowrap}
  #home .hmSS .hsMsg{display:none!important}
 }
@@ -828,8 +834,11 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 /* ===== pass 39: homepage -- bigger "Who should I start?" with a left margin, and a bigger tagline ===== */
 /* the box was centering its (icon+text) content within a max-width cap, so at the bigger font
    the text overflowed equally on both sides and the ancestor's overflow:hidden ate the left edge
-   of the "W" -- switch to left-aligned content and widen the cap so it has room */
-#home .hmSS .hsH{font-size:30px!important;justify-content:flex-start!important;max-width:78%!important;padding-left:2px!important}
+   of the "W" -- switch to left-aligned content and widen the cap so it has room.
+   Scoped to the stacked mobile card only (max-width:820px) -- this had no media guard before,
+   so it was also clobbering the desktop single-row widget's own font-size:18px (same selector,
+   later in the file wins), ballooning the title there and squeezing the two player inputs. */
+@media(max-width:820px){#home .hmSS .hsH{font-size:30px!important;justify-content:flex-start!important;max-width:78%!important;padding-left:2px!important}}
 @media(max-width:360px){#home .hmSS .hsH{font-size:25px!important;max-width:80%!important;padding-left:2px!important}}
 #home .hhL h1{font-size:35px!important}
 @media(max-width:360px){#home .hhL h1{font-size:29px!important}}
@@ -839,3 +848,15 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #home #homeMore{padding:9px 13px!important;border-width:1.75px!important}
 #home #homeMore{font-size:13.5px!important}
 #home #homeMore .mi img{width:17px!important;height:17px!important}
+
+/* ===== pass 40: lock the desktop (>=821px) single-row "Who should I start?" widget's title size.
+   Earlier unscoped rules (26px/30px font-size, max-width:64%, padding-left:8px) were written for
+   the stacked mobile card and, having no media guard, were still winning the cascade here too --
+   ballooning the title to ~340-385px wide and starving the two player-search inputs (and their
+   autocomplete dropdowns, which are sized off the input) down to an unreadable ~49px. Pin the
+   desktop title size here, last, and give the row a bit more breathing room as a buffer against
+   any other unscoped mobile rule nudging the total width up. */
+@media(min-width:821px){
+ #home .hmSS{max-width:900px!important}
+ #home .hmSS .hsH{font-size:18px!important;max-width:none!important;padding-left:2px!important}
+}
