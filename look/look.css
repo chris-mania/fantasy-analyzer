@@ -748,7 +748,6 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 /* "Who should I start?" card: skinny solid-navy card, the blue football tucked into the top-right corner only */
 #home .hmSS{
   position:relative;
-  overflow:hidden;
   background:#0a1430!important;
   border:1.5px solid #2f6bff!important;
   border-radius:20px!important;
@@ -757,8 +756,14 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
   text-align:left!important;
   gap:7px!important;
 }
+/* was overflow:hidden on .hmSS itself, just to round the football image's top-right corner to
+   match the card -- but that also clipped the player-search autocomplete dropdown, which has to
+   render below the card's own bottom edge to show its suggestion rows (on both mobile and desktop,
+   since this rule isn't breakpoint-scoped). Round the image's own corner instead so the card can
+   stay overflow:visible and the dropdown can escape. */
 #home .hmSS::before{
   content:'';position:absolute;top:0;right:0;width:42%;height:68%;z-index:0;
+  border-radius:0 18.5px 0 0;
   background:url('/look/img/hero-football.jpg') top right/cover no-repeat;
   -webkit-mask-image:radial-gradient(130% 130% at 100% 0%,rgba(255,255,255,1) 30%,rgba(255,255,255,.65) 55%,rgba(255,255,255,0) 90%);
   mask-image:radial-gradient(130% 130% at 100% 0%,rgba(255,255,255,1) 30%,rgba(255,255,255,.65) 55%,rgba(255,255,255,0) 90%);
@@ -768,7 +773,12 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 @media(max-width:360px){#home .hmSS .hsH{font-size:22px!important}}
 #home .hmSS .hsH .hmIc svg{stroke:#fff!important}
 #home .hmSS .lkHsSub{color:rgba(255,255,255,.85)!important;font-size:13px!important;font-weight:500!important;margin:-4px 0 0}
-#home .hmSS .hsR{gap:8px!important}
+/* .hmSS>* gives every direct child the same z-index:1, so when two children tie, later DOM
+   order wins the paint -- and .hsGo (the button) comes after .hsR in the markup, so on the
+   stacked mobile layout (button sits directly below the input row) it was painting on top of
+   the autocomplete dropdown that lives inside .hsR. Now that the dropdown can actually escape
+   .hmSS (see the overflow fix above), it needs to out-rank the button here. */
+#home .hmSS .hsR{gap:8px!important;z-index:5!important}
 #home .hmSS .hsR input{border-radius:11px!important;border:0!important;height:42px!important;font-weight:600!important;padding-left:34px!important;box-shadow:0 4px 14px -4px rgba(0,0,0,.35)!important;
   background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%235b6780" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg>')!important;
   background-repeat:no-repeat!important;background-position:10px center!important;background-size:16px 16px!important}
