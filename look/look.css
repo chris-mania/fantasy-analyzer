@@ -813,7 +813,7 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 /* ===== pass 35/37: football-field texture behind the hero headline -- evenly spaced yard lines, hash
    ticks and two ghost yard numbers, like a broadcast scoreboard backdrop ===== */
 #home .hhL{
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='700' height='620'><g stroke='%23e2e7f3' stroke-width='3'><line x1='-120' y1='0' x2='260' y2='620'/><line x1='0' y1='0' x2='380' y2='620'/><line x1='120' y1='0' x2='500' y2='620'/><line x1='240' y1='0' x2='620' y2='620'/><line x1='360' y1='0' x2='740' y2='620'/><line x1='480' y1='0' x2='860' y2='620'/></g><g stroke='%23e2e7f3' stroke-width='2'><line x1='-100' y1='40' x2='-72' y2='40'/><line x1='20' y1='40' x2='48' y2='40'/><line x1='140' y1='40' x2='168' y2='40'/><line x1='260' y1='40' x2='288' y2='40'/><line x1='-80' y1='580' x2='-52' y2='580'/><line x1='40' y1='580' x2='68' y2='580'/><line x1='160' y1='580' x2='188' y2='580'/></g><text x='-20' y='165' font-family='Arial, sans-serif' font-weight='900' font-size='128' fill='%23edf0f8' transform='rotate(-6 -20 165)'>40</text><text x='300' y='555' font-family='Arial, sans-serif' font-weight='900' font-size='104' fill='%23edf0f8' transform='rotate(-6 300 555)'>25</text></svg>")!important;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='700' height='620'><g stroke='%23e2e7f3' stroke-width='3'><line x1='-120' y1='0' x2='260' y2='620'/><line x1='0' y1='0' x2='380' y2='620'/><line x1='120' y1='0' x2='500' y2='620'/><line x1='240' y1='0' x2='620' y2='620'/><line x1='360' y1='0' x2='740' y2='620'/><line x1='480' y1='0' x2='860' y2='620'/></g><g stroke='%23e2e7f3' stroke-width='2'><line x1='-100' y1='40' x2='-72' y2='40'/><line x1='20' y1='40' x2='48' y2='40'/><line x1='140' y1='40' x2='168' y2='40'/><line x1='260' y1='40' x2='288' y2='40'/><line x1='-80' y1='580' x2='-52' y2='580'/><line x1='40' y1='580' x2='68' y2='580'/><line x1='160' y1='580' x2='188' y2='580'/></g><text x='28' y='235' font-family='Arial, sans-serif' font-weight='900' font-size='128' fill='%23edf0f8' transform='rotate(-6 28 235)'>25</text><text x='472' y='235' font-family='Arial, sans-serif' font-weight='900' font-size='128' fill='%23edf0f8' transform='rotate(6 472 235)'>25</text></svg>")!important;
   background-repeat:no-repeat!important;
   background-size:100% 560px!important;
   background-position:top center!important;
@@ -829,10 +829,10 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 /* the box was centering its (icon+text) content within a max-width cap, so at the bigger font
    the text overflowed equally on both sides and the ancestor's overflow:hidden ate the left edge
    of the "W" -- switch to left-aligned content and widen the cap so it has room */
-#home .hmSS .hsH{font-size:30px!important;justify-content:flex-start!important;max-width:78%!important;padding-left:10px!important}
-@media(max-width:360px){#home .hmSS .hsH{font-size:25px!important;max-width:80%!important;padding-left:8px!important}}
-#home .hhL h1{font-size:32px!important}
-@media(max-width:360px){#home .hhL h1{font-size:27px!important}}
+#home .hmSS .hsH{font-size:30px!important;justify-content:flex-start!important;max-width:78%!important;padding-left:2px!important}
+@media(max-width:360px){#home .hmSS .hsH{font-size:25px!important;max-width:80%!important;padding-left:2px!important}}
+#home .hhL h1{font-size:35px!important}
+@media(max-width:360px){#home .hhL h1{font-size:29px!important}}
 /* pills: confident but not oversized -- matched to each other */
 #home .homeIm .newPill#homeEspn{padding:9px 14px!important;border-width:1.75px!important}
 #home .homeIm .newPill#homeEspn .npT b{font-size:13.5px!important}
