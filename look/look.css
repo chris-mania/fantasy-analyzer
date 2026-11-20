@@ -1,6 +1,6 @@
 /* Fantasy Mania - "Scoreboard" look (light). Layer on top of the finished site; no content changes. */
 html:root{--bg:#fff;--surface:#fff;--surface2:#F3F6FB;--line:#D6DCE5;--ink:#0A0A0C;--muted:#5B6472;--blue:#275DF3;--blue2:#1B47C4;--green:#0B8A47;--red:#D12B3A;--shadow:none;--lk-blue:#275DF3;--lk-pan:#EEF2FB}
-html,body{background:#fff!important;color:var(--ink)}
+html,body{background:#fff!important;color:var(--ink);overscroll-behavior-y:none!important}
 body{font-family:'Barlow',Inter,ui-sans-serif,system-ui,sans-serif!important}
 h1,h2,.h1,.h2,.pageTitle{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;letter-spacing:.01em;font-weight:800!important}
 h1{line-height:.95}
