@@ -2872,7 +2872,7 @@ except Exception as _e:
 
 # ---------- data file for the separate weekly-rankings graphics tool (public/graphics/) ----------
 # Same projections the app shows. Keep GFX_OUT in step with FMOUT in the page script (name -> first week back; 99 = out for the year).
-GFX_OUT = {"Lamar Jackson": 99, "Michael Wilson": 99, "De'Von Achane": 99, "Gardner Minshew": 99, "Josh Jacobs": 14, "Puka Nacua": 14}
+GFX_OUT = {"Lamar Jackson": 99, "Michael Wilson": 99, "De'Von Achane": 99, "Gardner Minshew": 99, "Puka Nacua": 99, "Josh Jacobs": 14}
 try:
     _gx = {"week": next_week, "season": SEASON, "built": BUILT_AT, "pos": {}}
 
@@ -6841,7 +6841,7 @@ function trSave(){if(TR.shared)return;if(TR.lg[TR.lgi])TR.lg[TR.lgi].ids=TR.thei
 const trSoft=x=>1.4*Math.log(1+Math.exp(x/1.4)),trN=v=>v==null||isNaN(v)?'—':Math.abs(v)>=10?String(Math.round(v)):(Math.round(v*10)/10).toFixed(1).replace(/\.0$/,'');
 function trGameWeeks(team){let o=(META.opps||{})[team]||{},a=[];for(let w=META.next_week;w<=TRLAST;w++)if(o[w])a.push(w);return a}
 function trBye(team){let o=(META.opps||{})[team]||{};for(let w=1;w<=18;w++)if(!o[w])return w;return 0}
-var FMOUT={"Lamar Jackson":{gone:1,label:"Out for the year"},"Michael Wilson":{gone:1,label:"Out for the year"},"De'Von Achane":{gone:1,label:"Out for the year"},"Gardner Minshew":{gone:1,label:"Out for the year"},"Josh Jacobs":{back:14,label:"Out at least 4 weeks"},"Puka Nacua":{back:14,label:"Out at least 4 weeks"}};
+var FMOUT={"Lamar Jackson":{gone:1,label:"Out for the year"},"Michael Wilson":{gone:1,label:"Out for the year"},"De'Von Achane":{gone:1,label:"Out for the year"},"Gardner Minshew":{gone:1,label:"Out for the year"},"Puka Nacua":{gone:1,label:"Out for the year"},"Josh Jacobs":{back:14,label:"Out at least 4 weeks"}};
 function fmManual(p){var m=p&&FMOUT[p.name];if(!m)return null;if(m.gone)return {out:true,R:99,gone:true,label:m.label,missed:0};var R=Math.max(0,m.back-(META.next_week||0));return R>0?{out:true,R:R,gone:false,label:m.label,missed:0}:null}
 function trPlan(p){let mo=fmManual(p);if(mo)return mo;let i=p.inj,lab=((i&&i.label)||''),l=lab.toLowerCase(),out=!!p.out||(i&&i.avail!=null&&i.avail<=.1),R=0,gone=false,lw=0,missed=0;(p.logs||[]).forEach(x=>{if(x.w>lw&&x.snap>0)lw=x.w});if(lw>0)missed=Math.max(0,(META.week||0)-lw);
  if(out){R=/injured/.test(l)?Math.max(1,5-missed):/doubtful/.test(l)?1:Math.max(1,2-missed);if(/inactive/.test(l))R=1;if(/released|retired|exempt/.test(l)){gone=true;R=99}}
