@@ -826,10 +826,11 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #profile #lkInfo .liR{background:#fff!important}
 #profile #lkInfo .liR b{color:var(--ink)!important}
 
-/* ===== pass 35/37: football-field texture behind the hero headline -- evenly spaced yard lines, hash
-   ticks and two ghost yard numbers, like a broadcast scoreboard backdrop ===== */
+/* ===== pass 35/37: two ghost yard numbers behind the hero headline, like a broadcast scoreboard
+   backdrop -- originally also had diagonal yard-line hatching ("the field") across the whole hero,
+   removed per request so just the soft "25"/"25" numbers remain ===== */
 #home .hhL{
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='700' height='620'><g stroke='%23e2e7f3' stroke-width='3'><line x1='-120' y1='0' x2='260' y2='620'/><line x1='0' y1='0' x2='380' y2='620'/><line x1='120' y1='0' x2='500' y2='620'/><line x1='240' y1='0' x2='620' y2='620'/><line x1='360' y1='0' x2='740' y2='620'/><line x1='480' y1='0' x2='860' y2='620'/></g><g stroke='%23e2e7f3' stroke-width='2'><line x1='-100' y1='40' x2='-72' y2='40'/><line x1='20' y1='40' x2='48' y2='40'/><line x1='140' y1='40' x2='168' y2='40'/><line x1='260' y1='40' x2='288' y2='40'/><line x1='-80' y1='580' x2='-52' y2='580'/><line x1='40' y1='580' x2='68' y2='580'/><line x1='160' y1='580' x2='188' y2='580'/></g><text x='28' y='235' font-family='Arial, sans-serif' font-weight='900' font-size='128' fill='%23edf0f8' transform='rotate(-6 28 235)'>25</text><text x='472' y='235' font-family='Arial, sans-serif' font-weight='900' font-size='128' fill='%23edf0f8' transform='rotate(6 472 235)'>25</text></svg>")!important;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='700' height='620'><text x='28' y='235' font-family='Arial, sans-serif' font-weight='900' font-size='128' fill='%23edf0f8' transform='rotate(-6 28 235)'>25</text><text x='472' y='235' font-family='Arial, sans-serif' font-weight='900' font-size='128' fill='%23edf0f8' transform='rotate(6 472 235)'>25</text></svg>")!important;
   background-repeat:no-repeat!important;
   background-size:100% 560px!important;
   background-position:top center!important;
