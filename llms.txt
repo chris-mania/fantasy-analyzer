@@ -1,0 +1,14 @@
+# Fantasy Mania
+
+> Free fantasy football ratings, weekly projections, start/sit answers and trade help (PPR). Every player gets a 0-100 Mania Rating, an overall grade like a Madden overall, built from production, usage, role, high-value chances and efficiency, plus a projection for this week.
+
+## Main pages
+- [Home](https://fantasymania.org/): ratings, projections and tools
+- [Who should I start?](https://fantasymania.org/start/): pick any two players for a start/sit answer; matchup pages live at /start/<player>-vs-<player>/
+- [Rankings](https://fantasymania.org/rankings/): overall plus [QB](https://fantasymania.org/rankings/qb/), [RB](https://fantasymania.org/rankings/rb/), [WR](https://fantasymania.org/rankings/wr/), [TE](https://fantasymania.org/rankings/te/), [K](https://fantasymania.org/rankings/k/), [D/ST](https://fantasymania.org/rankings/dst/)
+- Player pages: /players/<player-name>/ (for example https://fantasymania.org/players/jahmyr-gibbs/)
+- [Trade analyzer](https://fantasymania.org/trade/), [Player compare](https://fantasymania.org/compare/), [Team analyzer](https://fantasymania.org/team/), [Insights](https://fantasymania.org/insights/)
+
+## Notes
+- Scoring is PPR. Numbers update during the week; projections are estimates, not guarantees.
+- Full page lists: https://fantasymania.org/sitemap.xml and https://fantasymania.org/sitemap-start.xml
