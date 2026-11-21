@@ -7506,7 +7506,9 @@ function trEspnPdfClean(raw){var i=raw.indexOf('{');if(i>0)raw=raw.slice(i);raw=
  function top(){return stack[stack.length-1]}
  function afterVal(){var t=top();if(t)t.state='COMMA'}
  for(var k=0;k<raw.length;k++){var ch=raw[k];
-  if(ch==='\n'||ch==='\r'||ch==='\t'||ch==='\f')continue;
+  if(ch==='\n'||ch==='\r'||ch==='\t'||ch==='\f'){
+   if(inStr){var last=out[out.length-1];if(last!==' '&&last!=='"')out.push(' ')}
+   continue}
   if(inStr){out.push(ch);if(escape)escape=false;else if(ch==='\\')escape=true;else if(ch==='"'){inStr=false;var t=top();if(t&&t.type==='obj'&&t.state==='KEY')t.state='COLON';else afterVal()}continue}
   if(inBareTok){if(ch===':')continue;if(BARE.test(ch)){out.push(ch);continue}inBareTok=false;afterVal()}
   if(ch===' ')continue;
