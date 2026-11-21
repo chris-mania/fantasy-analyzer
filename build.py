@@ -7539,14 +7539,20 @@ function trEspnModal(){
  (ph.oninput=function(){var u=trEspnPhoneUrl(ph.value);if(u){phGo.href=u;try{localStorage.setItem('fmEspnLg',ph.value.trim())}catch(e){}}else phGo.removeAttribute('href')})();
  phGo.onclick=function(){if(!phGo.getAttribute('href'))m.querySelector('.espnErrPriv').textContent='First paste your league\'s web address or league ID in step 2.'};
  var FALLBACK=' If this keeps not working, use a computer instead — scroll up to the first section on this page.';
- function trEspnPhoneFileGo(f,E){
-  var isPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name||'');
-  if(isPdf){E.textContent='Reading your PDF…';
-   if(!window.trEspnPdfExtract){E.textContent='This browser can\'t read PDF files here yet. Try again in a moment, or paste the text in the box instead.'+FALLBACK;return}
-   window.trEspnPdfExtract(f).then(function(raw){return trEspnPhonePaste(m,trEspnPdfClean(raw),E)}).catch(function(){E.textContent='Could not read that PDF. Try again, or paste the text in the box instead.'+FALLBACK});
-   return}
-  E.textContent='Reading your file…';
+ function trEspnPhoneFileText(f,E){E.textContent='Reading your file…';
   f.text().then(function(txt){txt=txt.replace(/^﻿/,'').trim();if(/^\s*\{/.test(txt))return trEspnPhonePaste(m,txt,E);E.textContent='That file did not look like your league data. Try again, or paste the text in the box instead.'+FALLBACK}).catch(function(){E.textContent='Could not read that file. Try again, or paste the text in the box instead.'+FALLBACK})}
+ function trEspnPhoneFilePdf(f,E){E.textContent='Reading your PDF…';
+  if(!window.trEspnPdfExtract){E.textContent='This browser can\'t read PDF files here yet. Try again in a moment, or paste the text in the box instead.'+FALLBACK;return}
+  window.trEspnPdfExtract(f).then(function(raw){return trEspnPhonePaste(m,trEspnPdfClean(raw),E)}).catch(function(){E.textContent='Could not read that PDF. Try again, or paste the text in the box instead.'+FALLBACK})}
+ function trEspnPhoneFileGo(f,E){
+  var looksLikePdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name||'');
+  if(looksLikePdf)return trEspnPhoneFilePdf(f,E);
+  // iOS sometimes saves the "Send As PDF" file with no .pdf extension and no usable type, so the
+  // name/type check above can miss a real PDF -- sniff the first bytes (PDFs always start "%PDF-") too.
+  (f.slice?f.slice(0,5):f).text().then(function(sig){
+   if(sig==='%PDF-')return trEspnPhoneFilePdf(f,E);
+   trEspnPhoneFileText(f,E)
+  }).catch(function(){trEspnPhoneFileText(f,E)})}
  var phFile=m.querySelector('.espnPhFile');if(phFile)phFile.onchange=function(){var f=phFile.files&&phFile.files[0];if(!f)return;trEspnPhoneFileGo(f,m.querySelector('.espnErrPriv'))};
  m.querySelector('.espnPasteGo').onclick=function(){var E=m.querySelector('.espnErrPriv'),pf=phFile&&phFile.files&&phFile.files[0];if(pf)return trEspnPhoneFileGo(pf,E);
   var ta=m.querySelector('.espnPasteRoster');if(/^\s*\{/.test(ta.value))return trEspnPhonePaste(m,ta.value,E);var r=trEspnParse(ta.value,Object.values(trCtx().V).map(function(v){return v.p}));
