@@ -7409,12 +7409,26 @@ function lgIdeasAll(ids,fp,only){let D3=LGDEEP==='all',D=LGDEEP===true||LGDEEP==
     LGSTRICT='bench';let E=lgEval(ids,their,ia,ib,-99,true);LGSTRICT=D3?'all':true;if(!E||E.M.d<-.1)return;seen.add(k);
     let aT=A.filter(x=>thn.has(x.p.pos)).length,bM=B.filter(x=>myN.has(x.p.pos)).length;
     loc.push({ti,t,A,B,la:E.la,lb:E.lb,gap:(gb-ga)/mx,score:E.score-.6*Math.abs((gb-ga)/mx)+(b.later-bestB)*.3+.35*A.length+(aT?.5:0)+(bM?.5:0)+A.filter(x=>x.p.pos==='RB').length*(th4.RB&&th4.RB.thin?.5:.15)+A.filter(x=>(hc4[x.p.id]||[]).some(sid=>their.indexOf(sid)>=0)).length*.8,tn,tier:6,rx:1,kind:'Bench upgrade',why:'None of the players you send are in your lineup. '+B.map(x=>x.p.name).join(' and ')+' could be a starter for you down the road. '+(E.T.d>=.1?'Their lineup improves.':'Their starters stay about the same.')+(aT?' They need '+Array.from(new Set(A.filter(x=>thn.has(x.p.pos)).map(x=>x.p.pos))).join(' and ')+', so your bench helps them.':''),pos:Array.from(new Set(B.map(x=>x.p.pos))),key:k})})})}
+  {/* Win-win by overall value: the same yardstick the manual trade checker uses (both sides' value
+      up by more than E), so deals that add rest-of-season value -- even off your bench, without changing
+      this week's starters -- surface here too, which the lineup-only checks above would drop. Tiered last
+      and capped, so it never floods the better, lineup-improving trades above. */
+   let E8=.3,wN8=.3,vP=pool.slice().sort((a,b)=>b.raw-a.raw).slice(0,7),tP=pl.slice(0,7),ev8=0,
+     vS8=(a,af)=>{let wk=trLineup(af,'now').tot-trLineup(a,'now').tot;return wN8*(.6*wk+.4*trTVd(a,af,'now'))+(1-wN8)*trTVd(a,af,'ros')};
+   lgSubs(vP,2).forEach(A=>{if(ev8>45)return;let ia=A.map(x=>x.p.id),ga=trSide(ia).tot;lgSubs(tP,2).forEach(B=>{if(ev8>45)return;
+     let ib=B.map(x=>x.p.id);if(ia.length+ib.length>3)return;let k=ia.join()+'>'+ib.join();if(seen.has(k))return;
+     let gb=trSide(ib).tot,mx=Math.max(ga,gb);if(mx<=0||Math.abs(ga-gb)/mx>.25)return;
+     if(A.some(x=>x.pl.R>0)||B.some(x=>x.pl.R>0))return;ev8++;
+     let myA=ids.filter(i=>ia.indexOf(i)<0).concat(ib),thA=their.filter(i=>ib.indexOf(i)<0).concat(ia),sm=vS8(ids,myA),st=vS8(their,thA);
+     if(sm<=E8||st<=E8)return;seen.add(k);
+     let wkUp=trLineup(myA,'now').tot>trLineup(ids,'now').tot+.3;
+     loc.push({ti,t,A,B,la:trTVd(ids,myA,'ros'),lb:trTVd(their,thA,'ros'),gap:(gb-ga)/mx,score:2*Math.min(sm,st)+sm+st,tn,tier:8,rx:1,kind:'Win-win',why:'Both rosters come out ahead on rest-of-season value.'+(wkUp?' Your lineup improves too.':' It adds value off your bench without changing this week\'s starters.'),pos:Array.from(new Set(B.map(x=>x.p.pos))),key:k})})})}
   if(!TR.sf){let mq=Math.max.apply(null,ids.map(i=>V[i]).filter(v=>v&&!v.pl.gone&&v.p.pos==='QB').map(v=>v.later).concat(0));loc=loc.filter(d=>{let iq=Math.max.apply(null,d.B.filter(x=>x.p.pos==='QB').map(x=>x.later).concat(0));return !iq||!mq||iq-mq>=1.5})}
   loc=loc.filter(d=>{if(d.A.some(x=>x.pl.R>0)||d.B.some(x=>x.pl.R>0)||d.A.length!==1||d.B.length!==1)return true;return d.A[0].p.pos!==d.B[0].p.pos});
   loc.forEach(d=>{d.ty=lgType(d.A,d.B,their)});
   loc.sort((x,y)=>x.tier-y.tier||y.score-x.score);
   if(D){loc.slice(0,60).forEach(d=>res.push(d));return}
-  loc.filter(d=>d.tier!==3&&d.tier!==5).slice(0,14).concat(loc.filter(d=>d.tier===3).slice(0,6),loc.filter(d=>d.tier===5).slice(0,10),loc.filter(d=>d.tier===6).slice(0,10),loc.filter(d=>d.tier===7).slice(0,8)).forEach(d=>res.push(d))});
+  loc.filter(d=>d.tier!==3&&d.tier!==5&&d.tier!==8).slice(0,14).concat(loc.filter(d=>d.tier===3).slice(0,6),loc.filter(d=>d.tier===5).slice(0,10),loc.filter(d=>d.tier===6).slice(0,10),loc.filter(d=>d.tier===7).slice(0,8),loc.filter(d=>d.tier===8).slice(0,6)).forEach(d=>res.push(d))});
  LGSTRICT=false;if(!D)LGI={key,res};return res}
 function lgStarThr(){let V=trCtx().V,a=TR.my.map(i=>V[i]).filter(v=>v&&!v.pl.gone).map(v=>v.raw).sort((x,y)=>y-x);return (a[2]||a[a.length-1]||0)*.9}
 function lgType(A,B,their){let t=lgStarThr(),V=trCtx().V,t3=new Set((their||[]).map(i=>V[i]).filter(v=>v&&!v.pl.gone).sort((a,b)=>b.raw-a.raw).slice(0,3).map(v=>v.p.id));return (A.some(x=>x.raw>=t)?'s':'d')+(B.some(x=>x.raw>=t||t3.has(x.p.id))?'s':'d')}
