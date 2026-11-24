@@ -7325,17 +7325,17 @@ function poTeamModalBody(PO,r){
   let firstK=r.byeProven==='clinched'?0:r.byeProven==='eliminated'?null:(r.byeBreakdown.find(x=>x.p>=.97)||{}).k,
    loPc=Math.min(100,Math.max(0,Math.round((r.byeLoseOut||0)*100))),
    loseRow=`<div class="poBdRow loseOut"><span>Loses out the rest of the way (0-${r.rg})</span><span>${loPc}%</span></div>`,
-   rows=r.byeBreakdown.map(x=>{let hi=firstK!=null&&x.k===firstK,pc=r.byeProven==='clinched'?100:r.byeProven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Win at least 0 (overall odds)':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
+   rows=r.byeBreakdown.map(x=>{let hi=firstK!=null&&x.k===firstK,pc=r.byeProven==='clinched'?100:r.byeProven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Overall odds right now':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
   return `<p class="lgNote" style="margin:0 0 8px">${poByePct(r)} chance of a top-${PO.byeCount} seed and a first-round bye. ${trEsc(r.byeScen)}.</p>
    <div class="poBdRow hd"><span>Scenario</span><span>Bye odds</span></div>${loseRow}${rows}
-   <p class="lgNote">The top row is the real "what if it loses every game left" number. The rows below ask "what if it wins AT LEAST this many" -- the first one (win at least 0) is just the overall odds again, since every outcome wins at least 0 games, so it is not the same as losing out.</p>`;
+   <p class="lgNote">"Overall odds right now" is this team's real, full odds today -- the same simulation as everywhere else in this app, using its actual remaining opponents, their lineups, and real variance. The top row asks the opposite question: what if it loses every game left.</p>`;
  }
  let firstClinchK=r.proven==='clinched'?0:r.proven==='eliminated'?null:(r.breakdown.find(x=>x.p>=.97)||{}).k;
  let loPc2=Math.min(100,Math.max(0,Math.round((r.loseOut||0)*100))),
   loseRow2=`<div class="poBdRow loseOut"><span>Loses out the rest of the way (0-${r.rg})</span><span>${loPc2}%</span></div>`,
-  bdRows=r.breakdown.map(x=>{let hi=firstClinchK!=null&&x.k===firstClinchK,pc=r.proven==='clinched'?100:r.proven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Win at least 0 (overall odds)':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
+  bdRows=r.breakdown.map(x=>{let hi=firstClinchK!=null&&x.k===firstClinchK,pc=r.proven==='clinched'?100:r.proven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Overall odds right now':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
  return `<div class="poBdRow hd"><span>Scenario</span><span>Odds in</span></div>${loseRow2}${bdRows}
-  <p class="lgNote">The top row is the real "what if it loses every game left" number. The rows below ask "what if it wins AT LEAST this many of its remaining games" -- the first one (win at least 0) is just the overall odds again, since every outcome wins at least 0 games, so it is not the same as losing out.</p>`;
+  <p class="lgNote">"Overall odds right now" is this team's real, full odds today -- the same simulation as everywhere else in this app, using its actual remaining opponents, their lineups, and real variance. The top row asks the opposite question: what if it loses every game left.</p>`;
 }
 function poTeamModalInner(PO,r){
  let tabBar=PO.byeCount>0?`<div class="poTabs"><button type="button" class="tmT poSubT poModT${TRPOT==='make'?' on':''}" data-k="make">Make Playoffs</button><button type="button" class="tmT poSubT poModT${TRPOT==='bye'?' on':''}" data-k="bye">Get the Bye</button></div>`:'';
