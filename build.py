@@ -4738,6 +4738,8 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 .espnLb img{max-width:92vw;max-height:88vh;border-radius:10px;box-shadow:0 20px 60px -15px rgba(0,0,0,.6);cursor:zoom-out}
 .espnLbX{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:14px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.95);color:#0b1830;border:0;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}
 .espnWarn{color:#b42318!important;font-weight:700!important;background:#fdecea;border:1px solid #f3b7af;border-radius:8px;padding:8px 10px;margin:6px 0!important}.espnWarn b{color:#b42318}
+.espnBigWarn{color:#b42318!important;font-weight:700!important;font-size:14px!important;line-height:1.4;background:#fdecea;border:1.5px solid #f3b7af;border-radius:10px;padding:10px 12px;margin:2px 0 10px!important}.espnBigWarn b{color:#b42318}
+.espnAdvNote{background:#eef3ff;border-radius:10px;padding:8px 10px;margin:8px 0 2px!important;color:#2457b8!important;font-weight:600!important}.espnAdvNote b{color:#1f5fe0}
 .lgHow{margin:6px 0 10px}.lgHow p{margin:6px 0}.lgHow ol{margin:4px 0 6px;padding-left:20px;font-size:14px;line-height:1.55;color:#3d4f6d}
 .lgMob{margin:6px 0;background:#f3f6fb;border-radius:12px;padding:8px 12px}.lgMob summary{cursor:pointer;font-weight:800;color:#2457b8;font-size:14px}
 .lgKeep{font-size:12.5px!important;color:#6b7a94!important;margin:8px 0 0!important}
@@ -7204,6 +7206,11 @@ function poBuild(){
  let A=TR.espnAdv;if(!A||!A.sched||!A.sched.length||!A.regWeeks||!A.playoffTeamCount)return null;
  let all=TR.lgAll||[],N=all.length,me=TR.lgMe;if(me<0||!all[me])return null;
  let wk=META.next_week,regEnd=A.regWeeks,playoffTeamCount=A.playoffTeamCount;
+ /* First-round byes: ESPN seeds the bracket at the next power of 2 that holds playoffTeamCount teams
+    (6 playoff teams -> an 8-slot bracket), and the top seeds get a bye into the next round to fill the
+    gap. byeCount is that gap; 0 when playoffTeamCount is already a power of 2 (4, 8, ...), since then
+    every team plays in round 1 and there is no bye to chase. */
+ let bracket=1;while(bracket<playoffTeamCount)bracket*=2;let byeCount=playoffTeamCount>1?bracket-playoffTeamCount:0;
  if(wk>regEnd)return null;
  let ck=wk+'|'+regEnd+'|'+N+'|'+me+'|'+(TR.lgTs||0);
  if(POR&&POR.ck===ck)return POR.v;
@@ -7225,8 +7232,12 @@ function poBuild(){
  function ceilW(i){return floorW(i)+remGamesFor(i)}
  function provenClinched(i){let f=floorW(i),dang=0;for(let j=0;j<N;j++){if(j===i)continue;if(ceilW(j)>=f)dang++}return dang<playoffTeamCount}
  function provenEliminated(i){let c=ceilW(i),ahead=0;for(let j=0;j<N;j++){if(j===i)continue;if(floorW(j)>c)ahead++}return ahead>=playoffTeamCount}
- let TRIALS=2500,sg=.22,made=new Array(N).fill(0),seedSum=new Array(N).fill(0),
-  addWins=Array.from({length:N},()=>new Array(TRIALS)),madeArr=Array.from({length:N},()=>new Array(TRIALS));
+ /* Same two proofs, but against byeCount instead of playoffTeamCount -- for whether a team can be
+    proven in or out of the top seeds that get a first-round bye. */
+ function provenByeClinched(i){if(byeCount<=0)return false;let f=floorW(i),dang=0;for(let j=0;j<N;j++){if(j===i)continue;if(ceilW(j)>=f)dang++}return dang<byeCount}
+ function provenByeEliminated(i){if(byeCount<=0)return true;let c=ceilW(i),ahead=0;for(let j=0;j<N;j++){if(j===i)continue;if(floorW(j)>c)ahead++}return ahead>=byeCount}
+ let TRIALS=2500,sg=.22,made=new Array(N).fill(0),seedSum=new Array(N).fill(0),byeMade=new Array(N).fill(0),
+  addWins=Array.from({length:N},()=>new Array(TRIALS)),madeArr=Array.from({length:N},()=>new Array(TRIALS)),byeArr=Array.from({length:N},()=>new Array(TRIALS));
  for(let tr=0;tr<TRIALS;tr++){
   let rec=all.map(t=>({w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0}));
   for(let w=wk;w<=regEnd;w++)sched.filter(g=>g.w===w).forEach(g=>{
@@ -7235,25 +7246,31 @@ function poBuild(){
    if(sh>sa)rec[g.h].w++;else if(sa>sh)rec[g.a].w++;else{rec[g.h].t++;rec[g.a].t++}
   });
   let order=rec.map((r,i)=>({i,r})).sort((a,b)=>{let wa=a.r.w+.5*a.r.t,wb=b.r.w+.5*b.r.t;return (wb-wa)||(b.r.pf-a.r.pf)});
-  order.forEach((o,k)=>{let mk=k<playoffTeamCount;made[o.i]+=mk?1:0;seedSum[o.i]+=k+1;addWins[o.i][tr]=rec[o.i].w-(+all[o.i].w||0);madeArr[o.i][tr]=mk});
+  order.forEach((o,k)=>{let mk=k<playoffTeamCount,bk=k<byeCount;made[o.i]+=mk?1:0;byeMade[o.i]+=bk?1:0;seedSum[o.i]+=k+1;addWins[o.i][tr]=rec[o.i].w-(+all[o.i].w||0);madeArr[o.i][tr]=mk;byeArr[o.i][tr]=bk});
  }
- let odds=made.map(x=>x/TRIALS),avgSeed=seedSum.map(x=>x/TRIALS);
+ let odds=made.map(x=>x/TRIALS),avgSeed=seedSum.map(x=>x/TRIALS),byeOdds=byeMade.map(x=>x/TRIALS);
  /* breakdownFor: for k=0..remaining games, what fraction of simulations where this team won AT LEAST k
     more games still made the playoffs -- the detailed "what if he only wins 2, not 3" table, not just a
     single threshold sentence. */
  function breakdownFor(i){let rg=remGamesFor(i),out=[];for(let k=0;k<=rg;k++){let tot=0,mdd=0;for(let tr=0;tr<TRIALS;tr++)if(addWins[i][tr]>=k){tot++;if(madeArr[i][tr])mdd++}out.push({k,p:tot>0?mdd/tot:(out.length?out[out.length-1].p:odds[i])})}return out}
+ function byeBreakdownFor(i){if(byeCount<=0)return [];let rg=remGamesFor(i),out=[];for(let k=0;k<=rg;k++){let tot=0,mdd=0;for(let tr=0;tr<TRIALS;tr++)if(addWins[i][tr]>=k){tot++;if(byeArr[i][tr])mdd++}out.push({k,p:tot>0?mdd/tot:(out.length?out[out.length-1].p:byeOdds[i])})}return out}
  let rows=all.map((t,i)=>{
   let rg=remGamesFor(i),o=odds[i],bd=breakdownFor(i),clinched=provenClinched(i),eliminated=!clinched&&provenEliminated(i),
    k=clinched?0:eliminated?null:(bd.find(x=>x.p>=.97)||{}).k,
    proven=clinched?'clinched':eliminated?'eliminated':null,
-   scen=clinched?'Clinched a playoff spot':eliminated?'Eliminated from playoff contention':k==null?'Needs help even winning out':k===0?'Controls its own destiny':('Win '+k+' of its last '+rg+' to clinch');
-  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen,proven,breakdown:bd};
+   scen=clinched?'Clinched a playoff spot':eliminated?'Eliminated from playoff contention':k==null?'Needs help even winning out':k===0?'Controls its own destiny':('Win '+k+' of its last '+rg+' to clinch'),
+   byeBd=byeBreakdownFor(i),byeClinched=byeCount>0&&provenByeClinched(i),byeEliminated=byeCount>0&&!byeClinched&&provenByeEliminated(i),
+   byeK=byeClinched?0:byeEliminated?null:(byeBd.find(x=>x.p>=.97)||{}).k,
+   byeProven=byeCount<=0?null:byeClinched?'clinched':byeEliminated?'eliminated':null,
+   byeScen=byeCount<=0?'':byeClinched?'Clinched the first-round bye':byeEliminated?'Eliminated from bye contention':byeK==null?'Needs help even winning out':byeK===0?'Controls its own destiny for the bye':('Win '+byeK+' of its last '+rg+' to clinch the bye');
+  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen,proven,breakdown:bd,
+   byeOdds:byeOdds[i],byeProven,byeScen,byeBreakdown:byeBd};
  });
  let sos=all.map((t,i)=>{
   let ws=[];for(let w=wk;w<=regEnd;w++){let o=oppOf(i,w);if(o==null)continue;ws.push(wTot(o,w)/(avgByWeek[w]||1))}
   return {i,n:t.n||'',me:i===me,sos:ws.length?ws.reduce((s,x)=>s+x,0)/ws.length:1,rg:ws.length};
  });
- let v={wk,regEnd,playoffTeamCount,rows,
+ let v={wk,regEnd,playoffTeamCount,byeCount,rows,
   odds:rows.slice().sort((a,b)=>b.odds-a.odds||a.seed-b.seed),
   standings:rows.slice().sort((a,b)=>(b.w+.5*b.t)-(a.w+.5*a.t)||b.pf-a.pf),
   sos:sos.slice().sort((a,b)=>a.sos-b.sos),
@@ -7261,6 +7278,7 @@ function poBuild(){
  POR={ck,v};return v;
 }
 function poPct(r){return r.proven==='clinched'?'100%':r.proven==='eliminated'?'0%':Math.min(99,Math.max(1,Math.round(r.odds*100)))+'%'}
+function poByePct(r){return r.byeProven==='clinched'?'100%':r.byeProven==='eliminated'?'0%':Math.min(99,Math.max(1,Math.round((r.byeOdds||0)*100)))+'%'}
 function poPanelHTML(PO){
  if(!PO||!PO.me)return '';
  let me=PO.me,N=PO.standings.length;
@@ -7279,21 +7297,43 @@ function poPanelHTML(PO){
  }
  return `<div class="lgPw poPanel"><p class="lgNote" style="margin:0 0 10px;color:#8a97ad;font-weight:800;text-transform:uppercase;font-size:10.5px;letter-spacing:.06em">Advanced import only</p>${hero}${bar}${body}</div>`;
 }
-function poTeamModal(i){
- let PO=poBuild();if(!PO)return;let r=PO.rows.find(x=>x.i===i);if(!r)return;
+function poTeamModalSched(i,PO){
  let A=TR.espnAdv,sched=(A&&A.sched||[]).filter(g=>g.w>=PO.wk&&g.w<=PO.regEnd&&(g.h===i||g.a===i)).sort((a,b)=>a.w-b.w),
   all=TR.lgAll||[],nameOf=j=>trEsc((all[j]&&all[j].n)||'?');
- let rowsHtml=r.breakdown.map(x=>{let on=r.proven==='clinched'?x.k===0:r.proven==='eliminated'?false:(!x.hit&&x.p>=.97);return '';}).join('');
+ return sched.map(g=>{let home=g.h===i,opp=home?g.a:g.h;return `<div class="poBdRow"><span>Week ${g.w}</span><span>${home?'vs':'at'} ${nameOf(opp)}</span></div>`}).join('')||'<p class="lgNote">No games left on the board.</p>';
+}
+function poTeamModalBody(PO,r){
+ if(TRPOT==='bye'&&PO.byeCount>0){
+  let firstK=r.byeProven==='clinched'?0:r.byeProven==='eliminated'?null:(r.byeBreakdown.find(x=>x.p>=.97)||{}).k,
+   rows=r.byeBreakdown.map(x=>{let hi=firstK!=null&&x.k===firstK,pc=r.byeProven==='clinched'?100:r.byeProven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Win 0 more (as-is)':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
+  return `<p class="lgNote" style="margin:0 0 8px">${poByePct(r)} chance of a top-${PO.byeCount} seed and a first-round bye. ${trEsc(r.byeScen)}.</p>
+   <div class="poBdRow hd"><span>If it wins&hellip;</span><span>Bye odds</span></div>${rows}
+   <p class="lgNote">Same read as the playoff table, but for finishing in the top ${PO.byeCount} seed${PO.byeCount===1?'':'s'} and skipping the first round of the playoffs.</p>`;
+ }
  let firstClinchK=r.proven==='clinched'?0:r.proven==='eliminated'?null:(r.breakdown.find(x=>x.p>=.97)||{}).k;
  let bdRows=r.breakdown.map(x=>{let hi=firstClinchK!=null&&x.k===firstClinchK,pc=r.proven==='clinched'?100:r.proven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Win 0 more (as-is)':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
- let schedHtml=sched.map(g=>{let home=g.h===i,opp=home?g.a:g.h;return `<div class="poBdRow"><span>Week ${g.w}</span><span>${home?'vs':'at'} ${nameOf(opp)}</span></div>`}).join('')||'<p class="lgNote">No games left on the board.</p>';
+ return `<div class="poBdRow hd"><span>If it wins&hellip;</span><span>Odds in</span></div>${bdRows}
+  <p class="lgNote">Reading this: each row asks "what if it wins at least this many of its remaining games" -- winning one fewer than the highlighted row does not guarantee a spot, it just lowers the odds to whatever that row shows.</p>`;
+}
+function poTeamModalInner(PO,r){
+ let tabBar=PO.byeCount>0?`<div class="poTabs"><button type="button" class="tmT poSubT poModT${TRPOT==='make'?' on':''}" data-k="make">Make Playoffs</button><button type="button" class="tmT poSubT poModT${TRPOT==='bye'?' on':''}" data-k="bye">Get the Bye</button></div>`:'';
+ return `<div class="lgPw" style="margin:0"><div class="lgPwH"><b>${trEsc(r.n)}</b><small>${r.w}-${r.l}${r.t?'-'+r.t:''} &middot; ${Math.round(r.pf)} PF &middot; ${poPct(r)} to make the playoffs. ${trEsc(r.scen)}.</small></div>
+  ${tabBar}
+  <div class="poModBody">${poTeamModalBody(PO,r)}</div>
+  <div class="poBdRow hd"><span>Remaining schedule</span><span></span></div>${poTeamModalSched(r.i,PO)}
+  </div>`;
+}
+function poTeamModal(i){
+ let PO=poBuild();if(!PO)return;let r=PO.rows.find(x=>x.i===i);if(!r)return;
+ TRPOTI=i;if(PO.byeCount<=0)TRPOT='make';
  let m=document.createElement('div');m.className='trModal';
- m.innerHTML=`<div class="trModalB"><div class="lgPw" style="margin:0"><div class="lgPwH"><b>${trEsc(r.n)}</b><small>${r.w}-${r.l}${r.t?'-'+r.t:''} &middot; ${Math.round(r.pf)} PF &middot; ${poPct(r)} to make the playoffs. ${trEsc(r.scen)}.</small></div>
-  <div class="poBdRow hd"><span>If it wins&hellip;</span><span>Odds in</span></div>${bdRows}
-  <p class="lgNote">Reading this: each row asks "what if it wins at least this many of its remaining games" -- winning one fewer than the highlighted row does not guarantee a spot, it just lowers the odds to whatever that row shows.</p>
-  <div class="poBdRow hd"><span>Remaining schedule</span><span></span></div>${schedHtml}
-  </div></div>`;
- m.onclick=e=>{if(e.target===m)m.remove()};document.body.appendChild(m);
+ m.innerHTML=`<div class="trModalB">${poTeamModalInner(PO,r)}</div>`;
+ m.onclick=e=>{if(e.target===m){m.remove();return}
+  let t=e.target.closest&&e.target.closest('.poModT');if(!t)return;TRPOT=t.dataset.k;
+  let PO2=poBuild();if(!PO2)return;let r2=PO2.rows.find(x=>x.i===TRPOTI);if(!r2)return;
+  let b=m.querySelector('.trModalB');if(b)b.innerHTML=poTeamModalInner(PO2,r2);
+ };
+ document.body.appendChild(m);
 }
 document.addEventListener('click',e=>{let t=e.target.closest&&e.target.closest('.lgSo');if(!t)return;LGR.sort=t.dataset.k;let b=t.closest('.lgSt');if(b)b.outerHTML=lgStandHTML()});
 function lgBox(cx){let LS=TR.leagues||[],TD=!cx||cx==='trade';
@@ -7678,9 +7718,9 @@ function trEspnPhonePaste(m,txt,E){var d;try{d=JSON.parse(txt)}catch(e){E.textCo
 function trEspnPreviewOk(){return true}
 function trEspnModal(){
  var m=document.createElement('div'),yr=trEspnSeason();m.className='trModal';
- m.innerHTML='<div class="trModalB espnM"><b>Import your ESPN league</b><p class="espnSub">Choose the kind of league you have.</p>'
+ m.innerHTML='<div class="trModalB espnM"><b>Import your ESPN league</b><p class="espnSub">Choose the kind of league you have.</p><p class="espnBigWarn"><b>Use a normal (not private/incognito) browser tab or window for all of this.</b> Private browsing does not save anything, so your import will disappear and nothing here will work.</p>'
  +'<div class="espnTabs"><button type="button" class="on" data-k="priv">My league is private</button><button type="button" data-k="pub">My league is public</button></div>'
- +'<div class="espnP" data-k="priv"><div class="lgHow"><div class="espnBmBox"><p><b>On a computer &mdash; the easy way</b></p><ol><li>Drag this button up to your bookmarks bar: <a class="espnBm">ESPN &rarr; Fantasy Mania</a></li><li>On ESPN, open your league (make sure you are logged in) &mdash; any page of it.</li><li>Click the bookmark. Your whole league imports here on its own, with every team and ESPN&rsquo;s own week-by-week projections.</li></ol><p class="espnSm">The button runs on ESPN using the login you already have there, and sends back only your league data. Your ESPN email, password and login never reach Fantasy Mania.</p></div><p><b>Get your league data</b></p><ol class="espnSteps"><li>Log in to ESPN in your browser (not the ESPN app), then find your league under the <b>Fantasy</b> menu.<img class="espnHelpImg onlyMobile" src="/img/espn-help/find-your-league.jpg" alt="ESPN Fantasy menu with your team listed"><p class="espnWarn onlyMobile">If a link opens the ESPN app instead of your browser: don&rsquo;t tap it. Go back, <b>press and hold</b> the link, then tap <b>Open in New Tab</b> &mdash; like this:</p><img class="espnHelpImg onlyMobile" src="/img/espn-help/open-in-new-tab.jpg" alt="Press and hold a link, then tap Open in New Tab"></li></ol><div class="espnOS onlyMobile"><button type="button" class="on" data-way="easy">Easy way</button><button type="button" data-way="adv">Advanced way</button></div><div class="espnWay" data-way="easy"><ol class="espnSteps"><li>Go to <b>League &rsaquo; Rosters</b>.<img class="espnHelpImg" src="/img/espn-help/league-rosters.jpg" alt="League menu with Rosters highlighted"></li><li>Tap and hold anywhere on the page, tap <b>Select All</b>, then <b>Copy</b>.<img class="espnHelpImg" src="/img/espn-help/select-all-copy.jpg" alt="Copy button after selecting all the page text"></li><li>Paste it in the box below, then tap Import league.</li></ol><p class="espnSm">Fewer steps, but less detail than the Advanced way below.</p></div><div class="espnWay" data-way="adv" hidden><ol class="espnSteps"><li>Copy your league\'s web address and paste it here. Just the number after <b>leagueId=</b> works too.<input class="espnPhId" placeholder="League web address or league ID" autocapitalize="off" autocorrect="off"></li><li>Tap <a class="espnPhGo" target="_blank" rel="noopener">Open my league data</a>. A page of data opens.<img class="espnHelpImg onlyMobile" src="/img/espn-help/league-data-share.jpg" alt="Raw league data page with the Share icon circled"></li><li class="onlyMobile">Tap <b>Share</b> (the box with an up arrow) &rarr; <b>Options</b> &rarr; <b>PDF</b>. Make sure <b>PDF</b> is checked &mdash; not Automatic or Reader PDF.<img class="espnHelpImg" src="/img/espn-help/share-options.jpg" alt="Share sheet Options screen with PDF selected"></li><li class="onlyMobile">Tap <b>Save to Files</b>.<img class="espnHelpImg" src="/img/espn-help/save-to-files.jpg" alt="Share sheet with Save to Files highlighted"></li><li class="onlyMobile">Come back here, tap Choose File below and pick the PDF you just saved, then tap Import league.<input type="file" class="espnPhFile"></li><li class="onlyDesktop">Select all (Ctrl+A, or Cmd+A on a Mac) and copy it (Ctrl+C or Cmd+C).</li><li class="onlyDesktop">Paste it in the box below, then click Import league.</li></ol></div><p class="lgKeep">Your ESPN login stays with ESPN. Fantasy Mania only reads the file or text you give it.</p><p class="lgKeep">Your league is saved on this device only. Add Fantasy Mania to your Home Screen and do not use a private tab, or your browser will forget it. Import again any time to refresh rosters.</p></div><textarea class="trImpT espnPasteRoster" rows="5" placeholder="Paste the whole Rosters page, or your league data from the phone steps"></textarea><p class="trImpE espnErrPriv"></p><button type="button" class="trAsk espnPasteGo">Import league</button></div>'
+ +'<div class="espnP" data-k="priv"><div class="lgHow"><div class="espnBmBox"><p><b>On a computer &mdash; the easy way</b></p><ol><li>Drag this button up to your bookmarks bar: <a class="espnBm">ESPN &rarr; Fantasy Mania</a></li><li>On ESPN, open your league (make sure you are logged in) &mdash; any page of it.</li><li>Click the bookmark. Your whole league imports here on its own, with every team and ESPN&rsquo;s own week-by-week projections.</li></ol><p class="espnSm">The button runs on ESPN using the login you already have there, and sends back only your league data. Your ESPN email, password and login never reach Fantasy Mania.</p></div><p><b>Get your league data</b></p><ol class="espnSteps"><li>Log in to ESPN in your browser (not the ESPN app), then find your league under the <b>Fantasy</b> menu.<img class="espnHelpImg onlyMobile" src="/img/espn-help/find-your-league.jpg" alt="ESPN Fantasy menu with your team listed"><p class="espnWarn onlyMobile">If a link opens the ESPN app instead of your browser: don&rsquo;t tap it. Go back, <b>press and hold</b> the link, then tap <b>Open in New Tab</b> &mdash; like this:</p><img class="espnHelpImg onlyMobile" src="/img/espn-help/open-in-new-tab.jpg" alt="Press and hold a link, then tap Open in New Tab"></li></ol><div class="espnOS onlyMobile"><button type="button" class="on" data-way="easy">Easy way</button><button type="button" data-way="adv">Advanced way</button></div><p class="espnSm espnAdvNote onlyMobile">The <b>Advanced way</b> unlocks more for your team: very accurate playoff odds and chances, plus schedule strength &mdash; and we\'re adding more.</p><div class="espnWay" data-way="easy"><ol class="espnSteps"><li>Go to <b>League &rsaquo; Rosters</b>.<img class="espnHelpImg" src="/img/espn-help/league-rosters.jpg" alt="League menu with Rosters highlighted"></li><li>Tap and hold anywhere on the page, tap <b>Select All</b>, then <b>Copy</b>.<img class="espnHelpImg" src="/img/espn-help/select-all-copy.jpg" alt="Copy button after selecting all the page text"></li><li>Paste it in the box below, then tap Import league.</li></ol><p class="espnSm">Fewer steps, but less detail than the Advanced way below.</p></div><div class="espnWay" data-way="adv" hidden><ol class="espnSteps"><li>Copy your league\'s web address and paste it here. Just the number after <b>leagueId=</b> works too.<input class="espnPhId" placeholder="League web address or league ID" autocapitalize="off" autocorrect="off"></li><li>Tap <a class="espnPhGo" target="_blank" rel="noopener">Open my league data</a>. A page of data opens.<img class="espnHelpImg onlyMobile" src="/img/espn-help/league-data-share.jpg" alt="Raw league data page with the Share icon circled"></li><li class="onlyMobile">Tap <b>Share</b> (the box with an up arrow) &rarr; <b>Options</b> &rarr; <b>PDF</b>. Make sure <b>PDF</b> is checked &mdash; not Automatic or Reader PDF.<img class="espnHelpImg" src="/img/espn-help/share-options.jpg" alt="Share sheet Options screen with PDF selected"></li><li class="onlyMobile">Tap <b>Save to Files</b>.<img class="espnHelpImg" src="/img/espn-help/save-to-files.jpg" alt="Share sheet with Save to Files highlighted"></li><li class="onlyMobile">Come back here, tap Choose File below and pick the PDF you just saved, then tap Import league.<input type="file" class="espnPhFile"></li><li class="onlyDesktop">Select all (Ctrl+A, or Cmd+A on a Mac) and copy it (Ctrl+C or Cmd+C).</li><li class="onlyDesktop">Paste it in the box below, then click Import league.</li></ol></div><p class="lgKeep">Your ESPN login stays with ESPN. Fantasy Mania only reads the file or text you give it.</p><p class="lgKeep">Your league is saved on this device only. Add Fantasy Mania to your Home Screen and do not use a private tab, or your browser will forget it. Import again any time to refresh rosters.</p></div><textarea class="trImpT espnPasteRoster" rows="5" placeholder="Paste the whole Rosters page, or your league data from the phone steps"></textarea><p class="trImpE espnErrPriv"></p><button type="button" class="trAsk espnPasteGo">Import league</button></div>'
  +'<div class="espnP" data-k="pub" hidden><p>Since your league is public, there\'s nothing to sign into. Just enter the league ID — it\'s the number after <b>leagueId=</b> in your ESPN league\'s web address.</p><input class="espnId" inputmode="numeric" placeholder="League ID, like 2073417915"><label class="espnYr">Season <input class="espnY" inputmode="numeric" value="'+yr+'"></label><button type="button" class="trAsk espnGo" data-k="pub">Import league</button><p class="trImpE espnErr"></p></div>'
  +'</div>';
  m.onclick=function(e){if(e.target===m)m.remove()};
@@ -8099,7 +8139,7 @@ function trShotOpen(){document.querySelectorAll('.trShot').forEach(x=>x.remove()
   box.querySelectorAll('.shO').forEach(b=>b.onclick=()=>{TRSH.sw[+b.dataset.i]=b.dataset.id;TRSH.edit=null;draw()})};
  el.onclick=e=>{if(TRSH.hide&&(e.target===el||e.target===box||e.target.closest('.shCard'))){TRSH.hide=false;draw()}else if(e.target===el)cl()};draw()}
 function trNameBox(){return `<div class="kdBox trTop${window.TRNB?' open':''}"><button type="button" class="trSetT"><span>Team settings</span><i>${trEsc(TR.tname||'Name your team')}${KD.on?' \u2022 K + DEF counted':''}</i><em>\u25BE</em></button><label class="trNameL"><span>Team name</span><input type="text" class="trName" maxlength="22" placeholder="Name your team" value="${trEsc(TR.tname)}"></label>${kdInner()}</div>`}
-var TRTO={},TRMT='ov',TRPO='standings';
+var TRTO={},TRMT='ov',TRPO='standings',TRPOT='make',TRPOTI=-1;
 function trPv(k,ids,nd,Ll){let c=trCtx(),kd=kdAdd(),w=META.next_week,f1=x=>x==null?'—':(+x).toFixed(1);
  if(k==='plan'){let wk=trWeeks('ros').slice(0,10),A=trAvgTeam(),tot=wk.map(x=>({w:x,t:trLineupWD(ids,x).tot+kdAdd(ids,x),a:(x===w?A.proj:A.later)+kd})),mx=Math.max(1,...tot.map(d=>Math.max(d.t,d.a)))*1.05,L0=trLineupWD(ids,w),V=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone),inS=new Set(L0.st.filter(x=>x.v).map(x=>x.v.p.id)),
    bnA=V.filter(v=>!inS.has(v.p.id)&&v.pl.R===0).map(v=>({v,pp:trWeekPpgD(v,w)})),bn=bnA.filter(e=>e.pp!=null).sort((a,b)=>b.pp-a.pp).slice(0,4),lastE=bnA.find(e=>e.v.p.id===TR.last),ir0=V.filter(v=>v.pl.R>0),ir=ir0.slice(0,2),d0=L0.tot+kdAdd(ids,w)-((w===w?A.proj:A.later)+kd);
