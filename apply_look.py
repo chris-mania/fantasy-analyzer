@@ -46,7 +46,7 @@ def boost(css):
     return rules(css)
 
 
-def apply_to(path, tag):
+def apply_to(path, head_tag, body_tag):
     if not os.path.exists(path):
         print("apply_look: missing", path)
         return
@@ -54,11 +54,18 @@ def apply_to(path, tag):
     if "look/look.css" in h:
         print("apply_look: already applied to", path)
         return
+    j = h.rfind("</head>")
     i = h.rfind("</body>")
-    if i < 0:
-        print("apply_look:", path, "has no </body>; skipping")
+    if j < 0 or i < 0:
+        print("apply_look:", path, "has no </head> or </body>; skipping")
         return
-    h = h[:i] + tag + h[i:]
+    # look.css goes in <head> (render-blocking, like any normal stylesheet) so the browser applies
+    # the "Scoreboard" look before first paint instead of flashing the plain base look and then
+    # visibly swapping to it a moment later. look.js stays at the end of <body>: it patches DOM the
+    # main app script just built, so it still needs to run after that script.
+    h = h[:j] + head_tag + h[j:]
+    i = h.rfind("</body>")
+    h = h[:i] + body_tag + h[i:]
     open(path, "w", encoding="utf-8").write(h)
     print("apply_look: patched", path)
 
@@ -73,9 +80,16 @@ def main():
     img_src = os.path.join(SRC, "img")
     if os.path.isdir(img_src):
         shutil.copytree(img_src, os.path.join(PUB, "look", "img"), dirs_exist_ok=True)
-    tag = '<link rel="stylesheet" href="/look/look.css?v=' + v + '"><script src="/look/look.js?v=' + v + '"></script>'
-    apply_to(os.path.join(PUB, "index.html"), tag)
-    apply_to(os.path.join(PUB, "fantasy.html"), tag)
+    # The Barlow font used to be added by a <link> that look.js injected at runtime -- by the time
+    # that script tag was even reached (end of body) and then fetched the font, the page had already
+    # painted with a fallback font and look.css's colors, so the body text visibly swapped fonts a
+    # moment later. Loading it as a normal <link> in <head> lets the browser fetch it in parallel
+    # with everything else, right alongside the stylesheet that names it.
+    font_tag = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&display=swap">'
+    head_tag = font_tag + '<link rel="stylesheet" href="/look/look.css?v=' + v + '">'
+    body_tag = '<script src="/look/look.js?v=' + v + '"></script>'
+    apply_to(os.path.join(PUB, "index.html"), head_tag, body_tag)
+    apply_to(os.path.join(PUB, "fantasy.html"), head_tag, body_tag)
     print("apply_look: wrote public/look/ (%d bytes css, %d bytes js)" % (len(css), len(js)))
     return 0
 

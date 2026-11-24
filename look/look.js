@@ -1,7 +1,8 @@
 (function(){
-  try{
-    var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&display=swap';document.head.appendChild(l);
-      }catch(e){}
+  // The Barlow font link used to be injected here at runtime -- by the time this script tag was
+  // even reached (end of body) and its request went out, the page had already painted once with a
+  // fallback font, so text visibly re-flowed a moment later. apply_look.py now puts that same
+  // <link> in <head> instead, loaded in parallel with everything else, so there is nothing to do here.
 
   // ---- move intro paragraphs to an "About this page" note at the bottom of each page (content kept) ----
   function leaf(sec,re){var out=[];sec.querySelectorAll('div,p').forEach(function(d){if(d.closest('.lkAbout'))return;var own=[].slice.call(d.childNodes).filter(function(n){return n.nodeType===3}).map(function(n){return n.nodeValue}).join('').trim();if(re.test(own)&&d.querySelector('button,input,section')===null&&d.children.length<=3)out.push(d)});return out}
@@ -30,7 +31,7 @@
   var pend=false,added=[];
   new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1)added.push(n)})});
     if(pend)return;pend=true;setTimeout(function(){pend=false;lift();var a=added;added=[];a.forEach(function(n){if(document.body.contains(n))sq(n)})},350)}).observe(document.body,{childList:true,subtree:true});
-  setTimeout(function(){lift();sq(document.body)},1200);
+  setTimeout(function(){lift();sq(document.body)},60);
   var sv=window.showView; if(typeof sv==='function'){window.showView=function(){var r=sv.apply(this,arguments);setTimeout(function(){lift();sq(document.body)},600);return r}}
   var ct;document.addEventListener('click',function(){clearTimeout(ct);ct=setTimeout(function(){lift();sq(document.body)},700)},true);
 
