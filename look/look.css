@@ -56,6 +56,16 @@ h1{line-height:.95}
 @media(max-width:820px){.viewSeg,.tmTabs,.tseg,.pfTabs{gap:12px!important}.vbtn,.tmT,.tsb,.pfTabs>*{font-size:14px!important;letter-spacing:.04em!important}.pfTabs>* svg{display:none}}
 .ihc,.cmpSl,.cmpAT,.cmpBackB,.cmpBackT{border-radius:0!important}
 
+/* team tab bar (Overview/Lineup/Roster/Trades/League/Playoffs) + playoff sub-tabs: small separated
+   boxes/chips instead of underline tabs, so a 6th tab still fits on one line and reads as distinct.
+   .tmTabs stays sticky (position:sticky from the base CSS) while scrolling, so it needs an opaque
+   background -- otherwise scrolled content shows through the transparent gaps between chips. */
+.tmTabs,.poTabs{display:grid!important;gap:5px!important;background:var(--bg)!important;border:0!important;border-bottom:1px solid var(--line)!important;padding:4px 0 8px!important}
+.tmTabs .tmT,.poTabs .tmT{background:var(--surface2)!important;color:var(--muted)!important;border:1px solid var(--line)!important;border-radius:9px!important;box-shadow:none!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;text-transform:uppercase;letter-spacing:.02em;font-weight:800!important;font-size:12.5px!important;padding:7px 2px!important;margin-bottom:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.tmTabs .tmT.on,.poTabs .tmT.on{background:var(--ink)!important;color:#fff!important;border-color:var(--ink)!important}
+.tmTabsN .tmT{font-size:10.5px!important;padding:6px 1px!important;letter-spacing:0!important}
+@media(max-width:380px){.tmTabsN .tmT{font-size:9.5px!important}}
+
 /* ===== pass 4: tables, filters, nav, home ===== */
 .rcard .rn{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-weight:800!important;font-size:20px!important;color:var(--muted)!important}
 .rcard .rname{font-family:'Google Sans Flex','Arial',sans-serif!important;font-weight:600!important;text-transform:none!important;letter-spacing:normal!important;font-size:16px!important;line-height:1.1!important}

@@ -4757,6 +4757,7 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 .lgHow b,.lgUl b{font-size:15px!important}.newPill{align-self:flex-start}
 .lgSr{display:grid;grid-template-columns:22px minmax(0,1fr) 54px 48px 44px;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #eef2f8;font-size:13.5px;text-align:right}.lgSr>span:nth-child(2){text-align:left}.lgSr>span:first-child{text-align:left}
 .lgSr.lgSh{border-top:0;font-size:11px;font-weight:800;color:#8a97ad;letter-spacing:.06em;text-transform:uppercase;padding-bottom:2px}.lgSr.me{background:#f1f8f4;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px}
+.poBdRow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid #eef2f8;font-size:13.5px}.poBdRow>span:first-child{text-align:left;min-width:0}.poBdRow>span:last-child{text-align:right;font-weight:800;flex:none}.poBdRow.hd{border-top:0;font-size:11px;font-weight:800;color:#8a97ad;letter-spacing:.06em;text-transform:uppercase;padding-bottom:2px}.poBdRow.me{background:#f1f8f4;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px}
 .lgNote{font-size:12px;color:#6b7a94;margin:10px 0 6px;line-height:1.5}.lgRc{font-size:11px;color:#8a97ad;font-weight:700;margin-left:4px}
 .lgIT{font-weight:800;font-size:14px;color:#16213a;margin:14px 0 4px}.lgIT em{font-style:normal;font-weight:700;font-size:12px;color:#b45309;background:#fff3e0;border-radius:999px;padding:2px 8px;margin-left:4px}.lgIT em.rx{color:#5b6b85;background:#eef2f8}
 .trfReal{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#16213a;margin:4px 0 10px}.trfTeam{font:inherit;font-size:14px;padding:8px 12px;border-radius:12px;border:1px solid #c7d5ee;background:#fff;max-width:100%}
@@ -4803,7 +4804,10 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 .tmTabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#e4eaf3;border-radius:14px;padding:4px;margin:12px 0 14px;position:sticky;top:50px;z-index:20}
 .tmT{border:0;background:transparent;border-radius:11px;padding:10px 0;font-size:12.5px;font-weight:800;color:#51607a;cursor:pointer;min-width:0}
 .tmT.on{background:#0b1220;color:#fff;box-shadow:0 4px 10px -4px rgba(10,20,40,.4)}
-.poTabs{grid-template-columns:repeat(3,1fr)!important}
+.poTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#e4eaf3;border-radius:14px;padding:4px;margin:12px 0 14px}
+.tmTabsN{grid-template-columns:repeat(6,1fr)!important}
+.tmTabsN .tmT{font-size:10.5px!important;padding:8px 0!important}
+.poRow{cursor:pointer}
 .tmFull{display:block!important;grid-column:1/-1;padding:0!important;background:transparent!important;box-shadow:none!important;border:0!important;min-height:0!important}
 .tmFull .pfull{display:block!important;padding:0!important}.tmFull .trD>summary{display:none}.tmFull .trDB{padding:0!important}
 .tmFull .ptx,.tmFull .pprev{display:none!important}
@@ -7192,7 +7196,20 @@ function poBuild(){
  let avgByWeek={};
  for(let w=wk;w<=regEnd;w++){let s=0;for(let i=0;i<N;i++)s+=wTot(i,w);avgByWeek[w]=N?s/N:0}
  function oppOf(ti,w){let g=sched.find(x=>x.w===w&&(x.h===ti||x.a===ti));return g?(g.h===ti?g.a:g.h):null}
- let TRIALS=600,sg=.22,made=new Array(N).fill(0),seedSum=new Array(N).fill(0),
+ function remGamesFor(i){return sched.filter(g=>g.h===i||g.a===i).length}
+ /* Sound (never a false positive) proof of mathematically clinched/eliminated, independent of the
+    simulation below -- a "magic number" check like real sports use, so a team never shows 100%/0% (or
+    gets called Clinched/Eliminated) off simulation noise alone. provenClinched: count every other team
+    that could *possibly* finish with at least as many wins as team i's floor (i loses out); if fewer than
+    playoffTeamCount of them can, i can't be caught. provenEliminated: count every other team that is
+    *guaranteed* to finish with strictly more wins than team i's ceiling (i wins out); if playoffTeamCount
+    or more are, i can't catch up no matter what. Ties count against the team being checked, so both are
+    conservative (may miss some edge-case proofs, but never wrong). */
+ function floorW(i){return(+all[i].w||0)+.5*(+all[i].t||0)}
+ function ceilW(i){return floorW(i)+remGamesFor(i)}
+ function provenClinched(i){let f=floorW(i),dang=0;for(let j=0;j<N;j++){if(j===i)continue;if(ceilW(j)>=f)dang++}return dang<playoffTeamCount}
+ function provenEliminated(i){let c=ceilW(i),ahead=0;for(let j=0;j<N;j++){if(j===i)continue;if(floorW(j)>c)ahead++}return ahead>=playoffTeamCount}
+ let TRIALS=2500,sg=.22,made=new Array(N).fill(0),seedSum=new Array(N).fill(0),
   addWins=Array.from({length:N},()=>new Array(TRIALS)),madeArr=Array.from({length:N},()=>new Array(TRIALS));
  for(let tr=0;tr<TRIALS;tr++){
   let rec=all.map(t=>({w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0}));
@@ -7205,42 +7222,62 @@ function poBuild(){
   order.forEach((o,k)=>{let mk=k<playoffTeamCount;made[o.i]+=mk?1:0;seedSum[o.i]+=k+1;addWins[o.i][tr]=rec[o.i].w-(+all[o.i].w||0);madeArr[o.i][tr]=mk});
  }
  let odds=made.map(x=>x/TRIALS),avgSeed=seedSum.map(x=>x/TRIALS);
- function remGamesFor(i){return sched.filter(g=>g.h===i||g.a===i).length}
- function clinchFor(i){let rg=remGamesFor(i);for(let k=0;k<=rg;k++){let tot=0,mdd=0;for(let tr=0;tr<TRIALS;tr++)if(addWins[i][tr]>=k){tot++;if(madeArr[i][tr])mdd++}if(tot>0&&mdd/tot>=.97)return k}return null}
+ /* breakdownFor: for k=0..remaining games, what fraction of simulations where this team won AT LEAST k
+    more games still made the playoffs -- the detailed "what if he only wins 2, not 3" table, not just a
+    single threshold sentence. */
+ function breakdownFor(i){let rg=remGamesFor(i),out=[];for(let k=0;k<=rg;k++){let tot=0,mdd=0;for(let tr=0;tr<TRIALS;tr++)if(addWins[i][tr]>=k){tot++;if(madeArr[i][tr])mdd++}out.push({k,p:tot>0?mdd/tot:(out.length?out[out.length-1].p:odds[i])})}return out}
  let rows=all.map((t,i)=>{
-  let rg=remGamesFor(i),o=odds[i],k=clinchFor(i),
-   scen=o>=.999?'Clinched a playoff spot':o<=.003?'Eliminated from playoff contention':k==null?'Needs help even winning out':k===0?'Controls its own destiny':('Win '+k+' of its last '+rg+' to clinch');
-  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen};
+  let rg=remGamesFor(i),o=odds[i],bd=breakdownFor(i),clinched=provenClinched(i),eliminated=!clinched&&provenEliminated(i),
+   k=clinched?0:eliminated?null:(bd.find(x=>x.p>=.97)||{}).k,
+   proven=clinched?'clinched':eliminated?'eliminated':null,
+   scen=clinched?'Clinched a playoff spot':eliminated?'Eliminated from playoff contention':k==null?'Needs help even winning out':k===0?'Controls its own destiny':('Win '+k+' of its last '+rg+' to clinch');
+  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen,proven,breakdown:bd};
  });
  let sos=all.map((t,i)=>{
   let ws=[];for(let w=wk;w<=regEnd;w++){let o=oppOf(i,w);if(o==null)continue;ws.push(wTot(o,w)/(avgByWeek[w]||1))}
   return {i,n:t.n||'',me:i===me,sos:ws.length?ws.reduce((s,x)=>s+x,0)/ws.length:1,rg:ws.length};
  });
- let v={wk,regEnd,playoffTeamCount,
+ let v={wk,regEnd,playoffTeamCount,rows,
   odds:rows.slice().sort((a,b)=>b.odds-a.odds||a.seed-b.seed),
   standings:rows.slice().sort((a,b)=>(b.w+.5*b.t)-(a.w+.5*a.t)||b.pf-a.pf),
   sos:sos.slice().sort((a,b)=>a.sos-b.sos),
   me:rows.find(r=>r.me)};
  POR={ck,v};return v;
 }
+function poPct(r){return r.proven==='clinched'?'100%':r.proven==='eliminated'?'0%':Math.min(99,Math.max(1,Math.round(r.odds*100)))+'%'}
 function poPanelHTML(PO){
  if(!PO||!PO.me)return '';
  let me=PO.me,N=PO.standings.length;
- const pct=o=>o>=.995?'100%':o<=.004?'0%':Math.round(o*100)+'%';
  const sosLbl=v=>v<.94?'an easier than average':v>1.06?'a harder than average':'an about average';
  let meSos=(PO.sos.find(s=>s.me)||{}).sos||1,meSeed=PO.standings.findIndex(r=>r.me)+1;
- let hero=`<div class="lgPwH"><b>Your playoff odds: ${pct(me.odds)}</b><small>Currently seed <b>#${meSeed}</b> of ${N} at <b>${me.w}-${me.l}${me.t?'-'+me.t:''}</b>, projected finish seed <b>#${Math.round(me.seed)}</b>. ${trEsc(me.scen)}. The rest of the way has ${sosLbl(meSos)} schedule.</small></div>`,
-  tabs=[['standings','Standings'],['odds','Playoff picture'],['sos','Schedule strength']],
-  bar=`<div class="tmTabs poTabs">${tabs.map(([k,t])=>`<button type="button" class="tmT poSubT${TRPO===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div>`,
+ let hero=`<div class="lgPwH"><b>Your playoff odds: ${poPct(me)}</b><small>Currently seed <b>#${meSeed}</b> of ${N} at <b>${me.w}-${me.l}${me.t?'-'+me.t:''}</b>, projected finish seed <b>#${Math.round(me.seed)}</b>. ${trEsc(me.scen)}. The rest of the way has ${sosLbl(meSos)} schedule.</small></div>`,
+  tabs=[['standings','Standings'],['odds','Odds'],['sos','Strength']],
+  bar=`<div class="poTabs">${tabs.map(([k,t])=>`<button type="button" class="tmT poSubT${TRPO===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div>`,
   body='';
  if(TRPO==='odds'){
-  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>Odds</span><span>Seed</span></div>${PO.odds.map((r,k)=>`<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}<small style="display:block;color:#8a97ad;font-weight:700">${trEsc(r.scen)}</small></span><span>${pct(r.odds)}</span><span>${Math.round(r.seed)}</span></div>`).join('')}<p class="lgNote">Odds and projected seed come from simulating the rest of the season thousands of times with each team's optimal projected lineup each week plus real variance, then applying your league's own tiebreaker (wins, then total points for). <b>Scenario</b> is how close each team is to clinching or being eliminated.</p>`;
+  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>Odds</span><span>Seed</span></div>${PO.odds.map((r,k)=>`<div class="lgSr poRow${r.me?' me':''}" data-i="${r.i}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}<small style="display:block;color:#8a97ad;font-weight:700">${trEsc(r.scen)} &rsaquo;</small></span><span>${poPct(r)}</span><span>${Math.round(r.seed)}</span></div>`).join('')}<p class="lgNote">Odds and projected seed come from simulating the rest of the season thousands of times with each team's optimal projected lineup each week plus real variance, then applying your league's own tiebreaker (wins, then total points for). A team only shows 100%/0% once it is mathematically proven, not just heavily favored. Tap a team for the full breakdown.</p>`;
  }else if(TRPO==='sos'){
-  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>SOS</span></div>${PO.sos.map((r,k)=>`<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}</span><span>${r.sos.toFixed(2)}</span></div>`).join('')}<p class="lgNote">Strength of schedule averages each remaining opponent's projected weekly output against the league average that week. Below <b>1.00</b> is an easier remaining schedule, above is harder.</p>`;
+  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>SOS</span></div>${PO.sos.map((r,k)=>{let c=r.sos<.94?'#0B8A47':r.sos>1.06?'#D12B3A':'#5b6b85';return `<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}</span><span style="color:${c};font-weight:800">${r.sos.toFixed(2)}</span></div>`}).join('')}<p class="lgNote">Strength of schedule averages each remaining opponent's projected weekly output against the league average that week. <b style="color:#0B8A47">Green</b> (below 1.00) is an easier remaining schedule, <b style="color:#D12B3A">red</b> (above 1.00) is harder.</p>`;
  }else{
   body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>Rec</span><span>PF</span></div>${PO.standings.map((r,k)=>`<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}</span><span>${r.w}-${r.l}${r.t?'-'+r.t:''}</span><span>${Math.round(r.pf)}</span></div>`).join('')}<p class="lgNote">Standings use your league's real records from your last import and your own tiebreaker: most total points for (PF).</p>`;
  }
  return `<div class="lgPw poPanel"><p class="lgNote" style="margin:0 0 10px;color:#8a97ad;font-weight:800;text-transform:uppercase;font-size:10.5px;letter-spacing:.06em">Advanced import only</p>${hero}${bar}${body}</div>`;
+}
+function poTeamModal(i){
+ let PO=poBuild();if(!PO)return;let r=PO.rows.find(x=>x.i===i);if(!r)return;
+ let A=TR.espnAdv,sched=(A&&A.sched||[]).filter(g=>g.w>=PO.wk&&g.w<=PO.regEnd&&(g.h===i||g.a===i)).sort((a,b)=>a.w-b.w),
+  all=TR.lgAll||[],nameOf=j=>trEsc((all[j]&&all[j].n)||'?');
+ let rowsHtml=r.breakdown.map(x=>{let on=r.proven==='clinched'?x.k===0:r.proven==='eliminated'?false:(!x.hit&&x.p>=.97);return '';}).join('');
+ let firstClinchK=r.proven==='clinched'?0:r.proven==='eliminated'?null:(r.breakdown.find(x=>x.p>=.97)||{}).k;
+ let bdRows=r.breakdown.map(x=>{let hi=firstClinchK!=null&&x.k===firstClinchK,pc=r.proven==='clinched'?100:r.proven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Win 0 more (as-is)':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
+ let schedHtml=sched.map(g=>{let home=g.h===i,opp=home?g.a:g.h;return `<div class="poBdRow"><span>Week ${g.w}</span><span>${home?'vs':'at'} ${nameOf(opp)}</span></div>`}).join('')||'<p class="lgNote">No games left on the board.</p>';
+ let m=document.createElement('div');m.className='trModal';
+ m.innerHTML=`<div class="trModalB"><div class="lgPw" style="margin:0"><div class="lgPwH"><b>${trEsc(r.n)}</b><small>${r.w}-${r.l}${r.t?'-'+r.t:''} &middot; ${Math.round(r.pf)} PF &middot; ${poPct(r)} to make the playoffs. ${trEsc(r.scen)}.</small></div>
+  <div class="poBdRow hd"><span>If it wins&hellip;</span><span>Odds in</span></div>${bdRows}
+  <p class="lgNote">Reading this: each row asks "what if it wins at least this many of its remaining games" -- winning one fewer than the highlighted row does not guarantee a spot, it just lowers the odds to whatever that row shows.</p>
+  <div class="poBdRow hd"><span>Remaining schedule</span><span></span></div>${schedHtml}
+  </div></div>`;
+ m.onclick=e=>{if(e.target===m)m.remove()};document.body.appendChild(m);
 }
 document.addEventListener('click',e=>{let t=e.target.closest&&e.target.closest('.lgSo');if(!t)return;LGR.sort=t.dataset.k;let b=t.closest('.lgSt');if(b)b.outerHTML=lgStandHTML()});
 function lgBox(cx){let LS=TR.leagues||[],TD=!cx||cx==='trade';
@@ -8068,7 +8105,7 @@ function trMineRaw(){let ids=TR.my,out=trRoster('my','Your roster',false);TRCVma
   TT=TRMT||'ov',full=(id,k,t,sb,body,nop)=>`<div class="ptile trT${nop?'':' open'} tmFull" data-k="${k}" id="${id}"><div class="pfull trSec"><details class="trD" data-k="${k}" open><summary><span>${t}</span><i>${sb||''}</i></summary><div class="trDB">${body}</div></details></div></div>`,
   PO=poBuild(),
   tabs=[['ov','Overview'],['lineup','Lineup'],['roster','Roster'],['trades','Trades'],['league','League']].concat(PO?[['playoffs','Playoffs']]:[]),
-  bar=`<div class="tmTabs">${tabs.map(([k,t])=>`<button type="button" class="tmT${TT===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div>`,
+  bar=`<div class="tmTabs${tabs.length>5?' tmTabsN':''}" style="grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k,t])=>`<button type="button" class="tmT${TT===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div>`,
   P={ov:`<div class="trAct"><button type="button" class="trShotB">${ICO.cam} Mania view</button></div>`+report+full('trSecPos','mpos','Position breakdown','vs league average',trPosBars(ids,nd,Ll)),
    lineup:full('trSecLineup','plan','Lineup planner','week by week, byes and injuries',`<button type="button" class="trShotB trMVb">${ICO.cam} Mania view</button>`+trPlanHTML(ids)),
    roster:full('trSecPlayers','mtbl','Players and report cards','grades, form, trend',trTblHTML())+full('trRosterBox','roster','Your roster','add, remove, rename',out,1),
@@ -8112,6 +8149,7 @@ function trBind(root){const rm=(arr,id)=>{let i=arr.indexOf(id);if(i>=0)arr.spli
  root.querySelectorAll('.trpS').forEach(b=>b.onclick=()=>{TRP[b.dataset.k]=b.dataset.v;let box=document.getElementById('trPlanBox');if(box){box.innerHTML=trOut(()=>trPlanBody(TR.my));trBind(box)}});
  root.querySelectorAll('.tmT').forEach(b=>b.onclick=()=>{TRMT=b.dataset.k;trRenderAll();let bar=document.querySelector('.tmTabs');if(bar){let y=bar.getBoundingClientRect().top+window.scrollY-52;if(window.scrollY>y)window.scrollTo(0,Math.max(0,y))}});
  root.querySelectorAll('.poSubT').forEach(b=>b.onclick=()=>{TRPO=b.dataset.k;trRenderAll();let bar=document.querySelector('.poTabs');if(bar){let y=bar.getBoundingClientRect().top+window.scrollY-52;if(window.scrollY>y)window.scrollTo(0,Math.max(0,y))}});
+ root.querySelectorAll('.poRow').forEach(b=>b.onclick=()=>poTeamModal(+b.dataset.i));
  root.querySelectorAll('.trShotB').forEach(b=>b.onclick=()=>trOut(trShotOpen));root.querySelectorAll('.trEditB').forEach(b=>b.onclick=trEditRoster);
  root.querySelectorAll('.trVw').forEach(b=>b.onclick=()=>{TRS.view=b.dataset.v;tb()});
  root.querySelectorAll('.trImpT').forEach(b=>b.onclick=()=>{TRI.tab=b.dataset.k;TRI.n=4;ti()});
