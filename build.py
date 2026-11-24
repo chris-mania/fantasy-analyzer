@@ -7596,7 +7596,12 @@ function lgIdeasAll(ids,fp,only){let D3=LGDEEP==='all',D=LGDEEP===true||LGDEEP==
   loc=loc.filter(d=>{if(d.A.some(x=>x.pl.R>0)||d.B.some(x=>x.pl.R>0)||d.A.length!==1||d.B.length!==1)return true;return d.A[0].p.pos!==d.B[0].p.pos});
   loc.forEach(d=>{d.ty=lgType(d.A,d.B,their)});
   loc.sort((x,y)=>x.tier-y.tier||y.score-x.score);
-  if(D){loc.slice(0,60).forEach(d=>res.push(d));return}
+  /* D (the deep, Load-button-triggered search) only ever runs as D3 in practice -- real evaluated
+     trades, already fully computed above, were getting cut to the first 60 here regardless of how
+     many actually passed. On a normal roster that is routinely over 100 real matches against a single
+     team, so more than half of them never even reached the picker below. The search already did the
+     work; nothing is saved by throwing the rest away, so keep every one it found. */
+  if(D){loc.forEach(d=>res.push(d));return}
   loc.filter(d=>d.tier!==3&&d.tier!==5&&d.tier!==8).slice(0,14).concat(loc.filter(d=>d.tier===3).slice(0,6),loc.filter(d=>d.tier===5).slice(0,10),loc.filter(d=>d.tier===6).slice(0,10),loc.filter(d=>d.tier===7).slice(0,8),loc.filter(d=>d.tier===8).slice(0,6)).forEach(d=>res.push(d))});
  LGSTRICT=false;if(!D)LGI={key,res};return res}
 function lgStarThr(){let V=trCtx().V,a=TR.my.map(i=>V[i]).filter(v=>v&&!v.pl.gone).map(v=>v.raw).sort((x,y)=>y-x);return (a[2]||a[a.length-1]||0)*.9}
