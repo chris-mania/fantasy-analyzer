@@ -7282,16 +7282,24 @@ function poByePct(r){return r.byeProven==='clinched'?'100%':r.byeProven==='elimi
 function poPanelHTML(PO){
  if(!PO||!PO.me)return '';
  let me=PO.me,N=PO.standings.length;
- const sosLbl=v=>v<.94?'an easier than average':v>1.06?'a harder than average':'an about average';
- let meSos=(PO.sos.find(s=>s.me)||{}).sos||1,meSeed=PO.standings.findIndex(r=>r.me)+1;
- let hero=`<div class="lgPwH"><b>Your playoff odds: ${poPct(me)}</b><small>Currently seed <b>#${meSeed}</b> of ${N} at <b>${me.w}-${me.l}${me.t?'-'+me.t:''}</b>, projected finish seed <b>#${Math.round(me.seed)}</b>. ${trEsc(me.scen)}. The rest of the way has ${sosLbl(meSos)} schedule.</small></div>`,
+ /* Matches the rank-based coloring in the Strength tab below: easiest third, middle third, hardest
+    third of the league's remaining schedules, not a fixed SOS number. */
+ let meSosRank=PO.sos.findIndex(s=>s.me),sosN=PO.sos.length,sosGrn=Math.round(sosN/3),sosRed=sosN-Math.round(sosN/3),
+  sosLbl2=meSosRank<0?'an about average':meSosRank<sosGrn?'an easier than average':meSosRank>=sosRed?'a harder than average':'an about average',
+  meSeed=PO.standings.findIndex(r=>r.me)+1;
+ let hero=`<div class="lgPwH"><b>Your playoff odds: ${poPct(me)}</b><small>Currently seed <b>#${meSeed}</b> of ${N} at <b>${me.w}-${me.l}${me.t?'-'+me.t:''}</b>, projected finish seed <b>#${Math.round(me.seed)}</b>. ${trEsc(me.scen)}. The rest of the way has ${sosLbl2} schedule.</small></div>`,
   tabs=[['standings','Standings'],['odds','Odds'],['sos','Strength']],
   bar=`<div class="poTabs">${tabs.map(([k,t])=>`<button type="button" class="tmT poSubT${TRPO===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div>`,
   body='';
  if(TRPO==='odds'){
   body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>Odds</span><span>Seed</span></div>${PO.odds.map((r,k)=>`<div class="lgSr poRow${r.me?' me':''}" data-i="${r.i}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}<small style="display:block;color:#8a97ad;font-weight:700">${trEsc(r.scen)} &rsaquo;</small></span><span>${poPct(r)}</span><span>${Math.round(r.seed)}</span></div>`).join('')}<p class="lgNote">Odds and projected seed come from simulating the rest of the season thousands of times with each team's optimal projected lineup each week plus real variance, then applying your league's own tiebreaker (wins, then total points for). A team only shows 100%/0% once it is mathematically proven, not just heavily favored. Tap a team for the full breakdown.</p>`;
  }else if(TRPO==='sos'){
-  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>SOS</span></div>${PO.sos.map((r,k)=>{let c=r.sos<.94?'#0B8A47':r.sos>1.06?'#D12B3A':'#5b6b85';return `<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}</span><span style="color:${c};font-weight:800">${r.sos.toFixed(2)}</span></div>`}).join('')}<p class="lgNote">Strength of schedule averages each remaining opponent's projected weekly output against the league average that week. <b style="color:#0B8A47">Green</b> (below 1.00) is an easier remaining schedule, <b style="color:#D12B3A">red</b> (above 1.00) is harder.</p>`;
+  /* Color by rank within the league, not a fixed number -- in a small league "1.06" might be the
+     hardest schedule there is, and in a big one it might be solidly in the middle. PO.sos is already
+     sorted easiest-first, so the top third of the league (by index) is green, the bottom third is red,
+     and whatever is left in between is yellow. */
+  let NS=PO.sos.length,grn=Math.round(NS/3),red=NS-Math.round(NS/3);
+  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>SOS</span></div>${PO.sos.map((r,k)=>{let c=k<grn?'#0B8A47':k>=red?'#D12B3A':'#C98A0E';return `<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}</span><span style="color:${c};font-weight:800">${r.sos.toFixed(2)}</span></div>`}).join('')}<p class="lgNote">Strength of schedule averages each remaining opponent's projected weekly output against the league average that week. Lower is easier. <b style="color:#0B8A47">Green</b> is the easiest third of the league's remaining schedules, <b style="color:#D12B3A">red</b> the hardest third, and <b style="color:#C98A0E">yellow</b> is in between.</p>`;
  }else{
   body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>Rec</span><span>PF</span></div>${PO.standings.map((r,k)=>`<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}</span><span>${r.w}-${r.l}${r.t?'-'+r.t:''}</span><span>${Math.round(r.pf)}</span></div>`).join('')}<p class="lgNote">Standings use your league's real records from your last import and your own tiebreaker: most total points for (PF).</p>`;
  }
