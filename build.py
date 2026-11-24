@@ -4803,6 +4803,7 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 .tmTabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#e4eaf3;border-radius:14px;padding:4px;margin:12px 0 14px;position:sticky;top:50px;z-index:20}
 .tmT{border:0;background:transparent;border-radius:11px;padding:10px 0;font-size:12.5px;font-weight:800;color:#51607a;cursor:pointer;min-width:0}
 .tmT.on{background:#0b1220;color:#fff;box-shadow:0 4px 10px -4px rgba(10,20,40,.4)}
+.poTabs{grid-template-columns:repeat(3,1fr)!important}
 .tmFull{display:block!important;grid-column:1/-1;padding:0!important;background:transparent!important;box-shadow:none!important;border:0!important;min-height:0!important}
 .tmFull .pfull{display:block!important;padding:0!important}.tmFull .trD>summary{display:none}.tmFull .trDB{padding:0!important}
 .tmFull .ptx,.tmFull .pprev{display:none!important}
@@ -7129,10 +7130,10 @@ function trEspnParse(txt,players){txt=trEspnFlat(txt);let idx={},L=txt.split(/\r
 function lgOn(){return !TR.lgOff&&!!(TR.lg&&TR.lg.length)}
 var LGIMP={add:true};
 (function(){if((!TR.leagues||!TR.leagues.length)&&TR.lgAll&&TR.lgAll.length>1){TR.leagues=[{id:1,name:'My league',lgAll:JSON.parse(JSON.stringify(TR.lgAll)),lgMe:TR.lgMe,lgTs:TR.lgTs,st:JSON.parse(JSON.stringify(TR.st)),sf:TR.sf,n:TR.n}];TR.lgCur=0}})();
-function lgSaveCur(){let l=TR.leagues&&TR.leagues[TR.lgCur];if(!l)return;l.lgAll=JSON.parse(JSON.stringify(TR.lgAll));l.lgMe=TR.lgMe;l.lgTs=TR.lgTs;l.st=JSON.parse(JSON.stringify(TR.st));l.sf=TR.sf;l.n=TR.n;l.espnPj=TR.espnPj||{};trSave()}
-function lgStore(name){let rec={id:Date.now(),name:(name||'').trim().slice(0,28)||'My league',lgAll:JSON.parse(JSON.stringify(TR.lgAll)),lgMe:TR.lgMe,lgTs:TR.lgTs,st:JSON.parse(JSON.stringify(TR.st)),sf:TR.sf,n:TR.n,espnPj:TR.espnPj||{}};TR.leagues=TR.leagues||[];if(!LGIMP.add&&TR.lgCur>=0&&TR.leagues[TR.lgCur]){rec.id=TR.leagues[TR.lgCur].id;if(!(name||'').trim())rec.name=TR.leagues[TR.lgCur].name;TR.leagues[TR.lgCur]=rec}else{TR.leagues.push(rec);TR.lgCur=TR.leagues.length-1}TR.lgOff=false;trSave()}
+function lgSaveCur(){let l=TR.leagues&&TR.leagues[TR.lgCur];if(!l)return;l.lgAll=JSON.parse(JSON.stringify(TR.lgAll));l.lgMe=TR.lgMe;l.lgTs=TR.lgTs;l.st=JSON.parse(JSON.stringify(TR.st));l.sf=TR.sf;l.n=TR.n;l.espnPj=TR.espnPj||{};l.espnAdv=TR.espnAdv||null;trSave()}
+function lgStore(name){let rec={id:Date.now(),name:(name||'').trim().slice(0,28)||'My league',lgAll:JSON.parse(JSON.stringify(TR.lgAll)),lgMe:TR.lgMe,lgTs:TR.lgTs,st:JSON.parse(JSON.stringify(TR.st)),sf:TR.sf,n:TR.n,espnPj:TR.espnPj||{},espnAdv:TR.espnAdv||null};TR.leagues=TR.leagues||[];if(!LGIMP.add&&TR.lgCur>=0&&TR.leagues[TR.lgCur]){rec.id=TR.leagues[TR.lgCur].id;if(!(name||'').trim())rec.name=TR.leagues[TR.lgCur].name;TR.leagues[TR.lgCur]=rec}else{TR.leagues.push(rec);TR.lgCur=TR.leagues.length-1}TR.lgOff=false;trSave()}
 function lgRefresh(){trSave();trRenderAll();try{tAutoMine();renderTeams()}catch(e){}}
-function lgUseLeague(i){let l=TR.leagues[i];if(!l)return;TR.espnPj=l.espnPj||{};TR.lgCur=i;TR.lgOff=false;TR.st=JSON.parse(JSON.stringify(l.st||TR.st));TR.sf=!!l.sf;TR.n=l.n||TR.n;TRC=null;lgApply(JSON.parse(JSON.stringify(l.lgAll)),l.lgMe,false);TR.lgTs=l.lgTs||0;trSave();trRenderAll()}
+function lgUseLeague(i){let l=TR.leagues[i];if(!l)return;TR.espnPj=l.espnPj||{};TR.espnAdv=l.espnAdv||null;TR.lgCur=i;TR.lgOff=false;TR.st=JSON.parse(JSON.stringify(l.st||TR.st));TR.sf=!!l.sf;TR.n=l.n||TR.n;TRC=null;lgApply(JSON.parse(JSON.stringify(l.lgAll)),l.lgMe,false);TR.lgTs=l.lgTs||0;trSave();trRenderAll()}
 function lgNameModal(title,val,ok,delMsg){let m=document.createElement('div');m.className='trModal';m.innerHTML=delMsg?`<div class="trModalB"><b>${title}</b><p>${delMsg}</p><div class="lgTb"><button type="button" class="trAsk lgOk">Delete</button><button type="button" class="trAsk lgX">Cancel</button></div></div>`:`<div class="trModalB"><b>${title}</b><input class="lgNmI" maxlength="28" value="${trEsc(val||'')}"><div class="lgTb"><button type="button" class="trAsk lgOk">Save</button><button type="button" class="trAsk lgX">Cancel</button></div></div>`;m.onclick=e=>{if(e.target===m||e.target.classList.contains('lgX'))m.remove();else if(e.target.classList.contains('lgOk')){let v=m.querySelector('.lgNmI');ok(v?v.value:'');m.remove()}};document.body.appendChild(m);let i=m.querySelector('.lgNmI');if(i){i.focus();i.select()}}
 document.addEventListener('change',e=>{let t=e.target;if(!t.classList||!t.classList.contains('lgLs'))return;if(t.value==='off'){TR.lgOff=true;trLgOffClear();lgRefresh()}else lgUseLeague(+t.value)});
 document.addEventListener('click',e=>{let t=e.target.closest&&e.target.closest('.lgRn,.lgDel');if(!t)return;let l=TR.leagues&&TR.leagues[TR.lgCur];if(!l)return;if(t.classList.contains('lgRn'))lgNameModal('Rename league',l.name,v=>{l.name=(v||'').trim().slice(0,28)||l.name;lgRefresh()});else lgNameModal('Delete league','',()=>{TR.leagues.splice(TR.lgCur,1);if(TR.leagues.length)lgUseLeague(0);else{TR.lgCur=-1;TR.lg=[];TR.lgAll=[];TR.lgMe=-1;TR.lgi=-1;TR.lgOff=false;lgRefresh()}},'This removes "'+trEsc(l.name)+'" from this device. You can import it again any time.')});
@@ -7176,6 +7177,71 @@ function lgRankChipHTML(name){if(!lgOn()||!name||!TR.my.length)return '';let R=l
 function lgStandHTML(){if(!lgOn()||!TR.my.length)return '';let R=lgRankRows().slice(),s=LGR.sort,wk=META.next_week,me=R.find(r=>r.me),N=R.length,f={s:r=>r.st,g:r=>-r.tot,m:r=>-(r.mania||0),w:r=>-r.wkp,p:r=>-r.ppg}[s];R.sort((a,b)=>f(a)-f(b));
  const so=(k,t)=>`<span class="lgSo${s===k?' on':''}" data-k="${k}">${t}</span>`;
  return `<div class="lgPw lgSt"><div class="lgPwH"><b>Team rankings</b><small>You are <b>#${me.st}</b> of ${N}${me.w!=null?' at '+me.w+'-'+me.l+(me.tt?'-'+me.tt:''):''}, grade <b>${me.g}</b>. Tap a heading to sort.</small></div><div class="lgSr lgSh">${so('s','#')}<span>Team</span>${so('g','Grade')}${so('m','Mania')}${so('w','Wk '+wk)}${so('p','Pts/G')}</div>${R.map((r,k)=>`<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}${r.w!=null?' <small style="color:#8a97ad;font-weight:700">'+r.w+'-'+r.l+(r.tt?'-'+r.tt:'')+'</small>':''}</span><span><i class="lgGr g${r.g.charAt(0)}">${r.g}</i></span><span>${r.mania==null?'&mdash;':Math.round(r.mania)}</span><span>${r.wkp.toFixed(0)}</span><span>${r.ppg.toFixed(0)}</span></div>`).join('')}<p class="lgNote"><b>#</b> is your current league standing and the record is the real one, both from your last import. <b>Grade</b> ranks each team's best lineup against your league. <b>Mania</b> is the average Mania Rating of that lineup. <b>Wk ${wk}</b> is this week's projected points for it, and <b>Pts/G</b> is what it averages a game so far${kdAdd()?' (both include kicker and defense)':''}. These update on their own. For the newest rosters, import again${lgDate()?' (last imported '+lgDate()+')':''}.</p></div>`}
+function trGauss(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+var POR=null;
+function poBuild(){
+ if(!lgOn()||!TR.my.length)return null;
+ let A=TR.espnAdv;if(!A||!A.sched||!A.sched.length||!A.regWeeks||!A.playoffTeamCount)return null;
+ let all=TR.lgAll||[],N=all.length,me=TR.lgMe;if(me<0||!all[me])return null;
+ let wk=META.next_week,regEnd=A.regWeeks,playoffTeamCount=A.playoffTeamCount;
+ if(wk>regEnd)return null;
+ let ck=wk+'|'+regEnd+'|'+N+'|'+me+'|'+(TR.lgTs||0);
+ if(POR&&POR.ck===ck)return POR.v;
+ let sched=A.sched.filter(g=>g.w>=wk&&g.w<=regEnd&&g.h<N&&g.a<N&&g.h>=0&&g.a>=0);
+ function wTot(ti,w){let ids=(all[ti]&&all[ti].ids)||[];if(!ids.length)return 0;let r=trLineupW(ids,w);return (r&&r.tot)||0}
+ let avgByWeek={};
+ for(let w=wk;w<=regEnd;w++){let s=0;for(let i=0;i<N;i++)s+=wTot(i,w);avgByWeek[w]=N?s/N:0}
+ function oppOf(ti,w){let g=sched.find(x=>x.w===w&&(x.h===ti||x.a===ti));return g?(g.h===ti?g.a:g.h):null}
+ let TRIALS=600,sg=.22,made=new Array(N).fill(0),seedSum=new Array(N).fill(0),
+  addWins=Array.from({length:N},()=>new Array(TRIALS)),madeArr=Array.from({length:N},()=>new Array(TRIALS));
+ for(let tr=0;tr<TRIALS;tr++){
+  let rec=all.map(t=>({w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0}));
+  for(let w=wk;w<=regEnd;w++)sched.filter(g=>g.w===w).forEach(g=>{
+   let mh=wTot(g.h,w),ma=wTot(g.a,w),sh=mh*(1+sg*trGauss()),sa=ma*(1+sg*trGauss());
+   rec[g.h].pf+=sh;rec[g.a].pf+=sa;
+   if(sh>sa)rec[g.h].w++;else if(sa>sh)rec[g.a].w++;else{rec[g.h].t++;rec[g.a].t++}
+  });
+  let order=rec.map((r,i)=>({i,r})).sort((a,b)=>{let wa=a.r.w+.5*a.r.t,wb=b.r.w+.5*b.r.t;return (wb-wa)||(b.r.pf-a.r.pf)});
+  order.forEach((o,k)=>{let mk=k<playoffTeamCount;made[o.i]+=mk?1:0;seedSum[o.i]+=k+1;addWins[o.i][tr]=rec[o.i].w-(+all[o.i].w||0);madeArr[o.i][tr]=mk});
+ }
+ let odds=made.map(x=>x/TRIALS),avgSeed=seedSum.map(x=>x/TRIALS);
+ function remGamesFor(i){return sched.filter(g=>g.h===i||g.a===i).length}
+ function clinchFor(i){let rg=remGamesFor(i);for(let k=0;k<=rg;k++){let tot=0,mdd=0;for(let tr=0;tr<TRIALS;tr++)if(addWins[i][tr]>=k){tot++;if(madeArr[i][tr])mdd++}if(tot>0&&mdd/tot>=.97)return k}return null}
+ let rows=all.map((t,i)=>{
+  let rg=remGamesFor(i),o=odds[i],k=clinchFor(i),
+   scen=o>=.999?'Clinched a playoff spot':o<=.003?'Eliminated from playoff contention':k==null?'Needs help even winning out':k===0?'Controls its own destiny':('Win '+k+' of its last '+rg+' to clinch');
+  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen};
+ });
+ let sos=all.map((t,i)=>{
+  let ws=[];for(let w=wk;w<=regEnd;w++){let o=oppOf(i,w);if(o==null)continue;ws.push(wTot(o,w)/(avgByWeek[w]||1))}
+  return {i,n:t.n||'',me:i===me,sos:ws.length?ws.reduce((s,x)=>s+x,0)/ws.length:1,rg:ws.length};
+ });
+ let v={wk,regEnd,playoffTeamCount,
+  odds:rows.slice().sort((a,b)=>b.odds-a.odds||a.seed-b.seed),
+  standings:rows.slice().sort((a,b)=>(b.w+.5*b.t)-(a.w+.5*a.t)||b.pf-a.pf),
+  sos:sos.slice().sort((a,b)=>a.sos-b.sos),
+  me:rows.find(r=>r.me)};
+ POR={ck,v};return v;
+}
+function poPanelHTML(PO){
+ if(!PO||!PO.me)return '';
+ let me=PO.me,N=PO.standings.length;
+ const pct=o=>o>=.995?'100%':o<=.004?'0%':Math.round(o*100)+'%';
+ const sosLbl=v=>v<.94?'an easier than average':v>1.06?'a harder than average':'an about average';
+ let meSos=(PO.sos.find(s=>s.me)||{}).sos||1,meSeed=PO.standings.findIndex(r=>r.me)+1;
+ let hero=`<div class="lgPwH"><b>Your playoff odds: ${pct(me.odds)}</b><small>Currently seed <b>#${meSeed}</b> of ${N} at <b>${me.w}-${me.l}${me.t?'-'+me.t:''}</b>, projected finish seed <b>#${Math.round(me.seed)}</b>. ${trEsc(me.scen)}. The rest of the way has ${sosLbl(meSos)} schedule.</small></div>`,
+  tabs=[['standings','Standings'],['odds','Playoff picture'],['sos','Schedule strength']],
+  bar=`<div class="tmTabs poTabs">${tabs.map(([k,t])=>`<button type="button" class="tmT poSubT${TRPO===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div>`,
+  body='';
+ if(TRPO==='odds'){
+  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>Odds</span><span>Seed</span></div>${PO.odds.map((r,k)=>`<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}<small style="display:block;color:#8a97ad;font-weight:700">${trEsc(r.scen)}</small></span><span>${pct(r.odds)}</span><span>${Math.round(r.seed)}</span></div>`).join('')}<p class="lgNote">Odds and projected seed come from simulating the rest of the season thousands of times with each team's optimal projected lineup each week plus real variance, then applying your league's own tiebreaker (wins, then total points for). <b>Scenario</b> is how close each team is to clinching or being eliminated.</p>`;
+ }else if(TRPO==='sos'){
+  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>SOS</span></div>${PO.sos.map((r,k)=>`<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}</span><span>${r.sos.toFixed(2)}</span></div>`).join('')}<p class="lgNote">Strength of schedule averages each remaining opponent's projected weekly output against the league average that week. Below <b>1.00</b> is an easier remaining schedule, above is harder.</p>`;
+ }else{
+  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>Rec</span><span>PF</span></div>${PO.standings.map((r,k)=>`<div class="lgSr${r.me?' me':''}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}</span><span>${r.w}-${r.l}${r.t?'-'+r.t:''}</span><span>${Math.round(r.pf)}</span></div>`).join('')}<p class="lgNote">Standings use your league's real records from your last import and your own tiebreaker: most total points for (PF).</p>`;
+ }
+ return `<div class="lgPw poPanel"><p class="lgNote" style="margin:0 0 10px;color:#8a97ad;font-weight:800;text-transform:uppercase;font-size:10.5px;letter-spacing:.06em">Advanced import only</p>${hero}${bar}${body}</div>`;
+}
 document.addEventListener('click',e=>{let t=e.target.closest&&e.target.closest('.lgSo');if(!t)return;LGR.sort=t.dataset.k;let b=t.closest('.lgSt');if(b)b.outerHTML=lgStandHTML()});
 function lgBox(cx){let LS=TR.leagues||[],TD=!cx||cx==='trade';
  if(!lgOn()&&!LS.length)return `<div class="lgBox"><div><b>Import your ESPN or Sleeper league</b><span>Bring in every team in your league. Then you can compare against anyone, trade with real rosters, and see who is on waivers.</span></div><button type="button" class="lgImp">Import league</button></div>`;
@@ -7464,6 +7530,7 @@ function trEspnModalPaste(){let m=document.createElement('div');m.className='trM
  m.onclick=e=>{if(e.target===m)m.remove()};
  m.querySelector('.trAsk').onclick=()=>{let r=trEspnParse(m.querySelector('textarea').value,Object.values(trCtx().V).map(v=>v.p));
   let txt=m.querySelector('textarea').value,E=m.querySelector('.trImpE'),why=trEspnWhy(txt,r);if(why){E.textContent=why;return}
+  TR.espnPj={};TR.espnAdv=null;
   lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')};
  document.body.appendChild(m);m.querySelector('textarea').focus()}
 /* ===== ESPN import through ESPN's own league feed: public league ID, run on your own computer, or private login ===== */
@@ -7485,11 +7552,19 @@ function trEspnFromApi(d,players,swid){var b=(d&&d.base)||d||{},idx={},miss=[],t
  var c=((b.settings||{}).rosterSettings||{}).lineupSlotCounts||{},g=function(k){return +c[k]||0},set=null;
  if(g(0)+g(2)+g(4)>=3)set={n:teams.length,QB:Math.max(1,g(0)),RB:g(2),WR:g(4),TE:g(6),FLEX:g(23)+g(3)+g(5)+g(7),sf:g(7)>0,K:g(17)>0,DST:g(16)>0,bench:g(20),ir:g(21)};
  var me=-1;if(swid){var sw=String(swid).toLowerCase().replace(/[{}]/g,'');teams.forEach(function(T,k){if(String(T.own).toLowerCase().replace(/[{}]/g,'')===sw)me=k})}
- return {teams:teams,miss:miss,me:me,set:set,name:((b.settings||{}).name||'').trim(),pj:pj}}
+ /* Advanced-only extras: the league's real regular-season schedule and playoff/seeding rules, used by
+    the Playoffs tab (odds, strength of schedule, standings tiebreaker). Only the full JSON league feed
+    (private PDF/paste, or a public league via our proxy) carries these -- the Easy/Rosters-page scrape
+    has no schedule or settings object at all, so this naturally stays empty for that path. */
+ var schS=(b.settings||{}).scheduleSettings||{},regWeeks=+schS.matchupPeriodCount||0,playoffTeamCount=+schS.playoffTeamCount||0,seedRule=schS.playoffSeedingRule||'';
+ var eidIdx={};teams.forEach(function(T,i){eidIdx[T.eid]=i});
+ var sched=[];(b.schedule||[]).forEach(function(gm){var wk2=gm.matchupPeriodId;if(!wk2||!regWeeks||wk2>regWeeks)return;var h=gm.home,a=gm.away;if(!h||!a)return;var hi=eidIdx[h.teamId],ai=eidIdx[a.teamId];if(hi==null||ai==null)return;
+  sched.push({w:wk2,h:hi,a:ai,hp:+h.totalPoints||0,ap:+a.totalPoints||0})});
+ return {teams:teams,miss:miss,me:me,set:set,name:((b.settings||{}).name||'').trim(),pj:pj,sched:sched,regWeeks:regWeeks,playoffTeamCount:playoffTeamCount,seedRule:seedRule}}
 function trEspnApply(m,d,swid,E){var r;E=E||m.querySelector('.espnErr');
  try{r=trEspnFromApi(d,Object.values(trCtx().V).map(function(v){return v.p}),swid)}catch(e){if(E)E.textContent='We could not read that league data. Try again, or use another way in.';return}
  if(!r.teams.length||r.teams.reduce(function(s,x){return s+x.ids.length},0)<r.teams.length*3){if(E)E.textContent='ESPN answered, but we found no rosters in it. If the league is private, use the private league or run-it-on-your-computer way.';return}
- TR.espnPj=r.pj;trSave();
+ TR.espnPj=r.pj;TR.espnAdv=(r.sched&&r.sched.length)?{sched:r.sched,regWeeks:r.regWeeks,playoffTeamCount:r.playoffTeamCount,seedRule:r.seedRule}:null;trSave();
  lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')}
 function trEspnCall(m,body,btn){var E=m.querySelector('.espnErr');E.textContent='';btn.disabled=true;var t0=btn.textContent;btn.textContent='Reading your league…';
  var done=function(){btn.disabled=false;btn.textContent=t0};
@@ -7583,7 +7658,7 @@ function trEspnModal(){
  var phFile=m.querySelector('.espnPhFile');if(phFile)phFile.onchange=function(){var f=phFile.files&&phFile.files[0];if(!f)return;trEspnPhoneFileGo(f,m.querySelector('.espnErrPriv'))};
  m.querySelector('.espnPasteGo').onclick=function(){var E=m.querySelector('.espnErrPriv'),pf=phFile&&phFile.files&&phFile.files[0];if(pf)return trEspnPhoneFileGo(pf,E);
   var ta=m.querySelector('.espnPasteRoster');if(/^\s*\{/.test(ta.value))return trEspnPhonePaste(m,ta.value,E);var r=trEspnParse(ta.value,Object.values(trCtx().V).map(function(v){return v.p}));
-  var txt=ta.value,E=m.querySelector('.espnErrPriv'),why=trEspnWhy(txt,r);if(why){E.textContent=why;return}TR.espnPj={};
+  var txt=ta.value,E=m.querySelector('.espnErrPriv'),why=trEspnWhy(txt,r);if(why){E.textContent=why;return}TR.espnPj={};TR.espnAdv=null;
   lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')};
  m.querySelectorAll('.espnGo').forEach(function(btn){btn.onclick=function(){var k=btn.dataset.k,P=m.querySelector('.espnP[data-k="'+k+'"]'),E=P.querySelector('.espnErr');E.textContent='';
   var id=P.querySelector('.espnId').value.replace(/\D/g,''),y=parseInt(P.querySelector('.espnY').value,10)||yr;if(!id){E.textContent='Enter your league ID.';return}
@@ -7971,7 +8046,7 @@ function trShotOpen(){document.querySelectorAll('.trShot').forEach(x=>x.remove()
   box.querySelectorAll('.shO').forEach(b=>b.onclick=()=>{TRSH.sw[+b.dataset.i]=b.dataset.id;TRSH.edit=null;draw()})};
  el.onclick=e=>{if(TRSH.hide&&(e.target===el||e.target===box||e.target.closest('.shCard'))){TRSH.hide=false;draw()}else if(e.target===el)cl()};draw()}
 function trNameBox(){return `<div class="kdBox trTop${window.TRNB?' open':''}"><button type="button" class="trSetT"><span>Team settings</span><i>${trEsc(TR.tname||'Name your team')}${KD.on?' \u2022 K + DEF counted':''}</i><em>\u25BE</em></button><label class="trNameL"><span>Team name</span><input type="text" class="trName" maxlength="22" placeholder="Name your team" value="${trEsc(TR.tname)}"></label>${kdInner()}</div>`}
-var TRTO={},TRMT='ov';
+var TRTO={},TRMT='ov',TRPO='standings';
 function trPv(k,ids,nd,Ll){let c=trCtx(),kd=kdAdd(),w=META.next_week,f1=x=>x==null?'—':(+x).toFixed(1);
  if(k==='plan'){let wk=trWeeks('ros').slice(0,10),A=trAvgTeam(),tot=wk.map(x=>({w:x,t:trLineupWD(ids,x).tot+kdAdd(ids,x),a:(x===w?A.proj:A.later)+kd})),mx=Math.max(1,...tot.map(d=>Math.max(d.t,d.a)))*1.05,L0=trLineupWD(ids,w),V=ids.map(i=>c.V[i]).filter(v=>v&&!v.pl.gone),inS=new Set(L0.st.filter(x=>x.v).map(x=>x.v.p.id)),
    bnA=V.filter(v=>!inS.has(v.p.id)&&v.pl.R===0).map(v=>({v,pp:trWeekPpgD(v,w)})),bn=bnA.filter(e=>e.pp!=null).sort((a,b)=>b.pp-a.pp).slice(0,4),lastE=bnA.find(e=>e.v.p.id===TR.last),ir0=V.filter(v=>v.pl.R>0),ir=ir0.slice(0,2),d0=L0.tot+kdAdd(ids,w)-((w===w?A.proj:A.later)+kd);
@@ -7991,13 +8066,15 @@ function trMineRaw(){let ids=TR.my,out=trRoster('my','Your roster',false);TRCVma
   nav='',
   sec=(id,k,t,s,b,o)=>`<div class="trSec" id="${id}">${trD(k,t,s,b,o!==false)}</div>`,
   TT=TRMT||'ov',full=(id,k,t,sb,body,nop)=>`<div class="ptile trT${nop?'':' open'} tmFull" data-k="${k}" id="${id}"><div class="pfull trSec"><details class="trD" data-k="${k}" open><summary><span>${t}</span><i>${sb||''}</i></summary><div class="trDB">${body}</div></details></div></div>`,
-  tabs=[['ov','Overview'],['lineup','Lineup'],['roster','Roster'],['trades','Trades'],['league','League']],
+  PO=poBuild(),
+  tabs=[['ov','Overview'],['lineup','Lineup'],['roster','Roster'],['trades','Trades'],['league','League']].concat(PO?[['playoffs','Playoffs']]:[]),
   bar=`<div class="tmTabs">${tabs.map(([k,t])=>`<button type="button" class="tmT${TT===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div>`,
   P={ov:`<div class="trAct"><button type="button" class="trShotB">${ICO.cam} Mania view</button></div>`+report+full('trSecPos','mpos','Position breakdown','vs league average',trPosBars(ids,nd,Ll)),
    lineup:full('trSecLineup','plan','Lineup planner','week by week, byes and injuries',`<button type="button" class="trShotB trMVb">${ICO.cam} Mania view</button>`+trPlanHTML(ids)),
    roster:full('trSecPlayers','mtbl','Players and report cards','grades, form, trend',trTblHTML())+full('trRosterBox','roster','Your roster','add, remove, rename',out,1),
    trades:full('trSecImprove','mimp','Trade ideas and waivers','trades and waiver pickups',trImpHTML(ids,nd)),
-   league:(lgOn()?lgStandHTML():'<p class="tnote">Import your ESPN or Sleeper league to see where you stand against every team.</p>')+trNameBox()};
+   league:(lgOn()?lgStandHTML():'<p class="tnote">Import your ESPN or Sleeper league to see where you stand against every team.</p>')+trNameBox(),
+   playoffs:PO?poPanelHTML(PO):''};
  return `${lgBox('team')}${bar}<div class="tmPanel">${P[TT]||P.ov}</div>`}
 /* ---------- render ---------- */
 function trBind(root){const rm=(arr,id)=>{let i=arr.indexOf(id);if(i>=0)arr.splice(i,1)};
@@ -8034,6 +8111,7 @@ function trBind(root){const rm=(arr,id)=>{let i=arr.indexOf(id);if(i>=0)arr.spli
  root.querySelectorAll('.trName').forEach(i=>i.onchange=()=>trRenderAll());
  root.querySelectorAll('.trpS').forEach(b=>b.onclick=()=>{TRP[b.dataset.k]=b.dataset.v;let box=document.getElementById('trPlanBox');if(box){box.innerHTML=trOut(()=>trPlanBody(TR.my));trBind(box)}});
  root.querySelectorAll('.tmT').forEach(b=>b.onclick=()=>{TRMT=b.dataset.k;trRenderAll();let bar=document.querySelector('.tmTabs');if(bar){let y=bar.getBoundingClientRect().top+window.scrollY-52;if(window.scrollY>y)window.scrollTo(0,Math.max(0,y))}});
+ root.querySelectorAll('.poSubT').forEach(b=>b.onclick=()=>{TRPO=b.dataset.k;trRenderAll();let bar=document.querySelector('.poTabs');if(bar){let y=bar.getBoundingClientRect().top+window.scrollY-52;if(window.scrollY>y)window.scrollTo(0,Math.max(0,y))}});
  root.querySelectorAll('.trShotB').forEach(b=>b.onclick=()=>trOut(trShotOpen));root.querySelectorAll('.trEditB').forEach(b=>b.onclick=trEditRoster);
  root.querySelectorAll('.trVw').forEach(b=>b.onclick=()=>{TRS.view=b.dataset.v;tb()});
  root.querySelectorAll('.trImpT').forEach(b=>b.onclick=()=>{TRI.tab=b.dataset.k;TRI.n=4;ti()});
