@@ -4762,7 +4762,7 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 .lgHow b,.lgUl b{font-size:15px!important}.newPill{align-self:flex-start}
 .lgSr{display:grid;grid-template-columns:22px minmax(0,1fr) 54px 48px 44px;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #eef2f8;font-size:13.5px;text-align:right}.lgSr>span:nth-child(2){text-align:left}.lgSr>span:first-child{text-align:left}
 .lgSr.lgSh{border-top:0;font-size:11px;font-weight:800;color:#8a97ad;letter-spacing:.06em;text-transform:uppercase;padding-bottom:2px}.lgSr.me{background:#f1f8f4;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px}
-.poBdRow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid #eef2f8;font-size:13.5px}.poBdRow>span:first-child{text-align:left;min-width:0}.poBdRow>span:last-child{text-align:right;font-weight:800;flex:none}.poBdRow.hd{border-top:0;font-size:11px;font-weight:800;color:#8a97ad;letter-spacing:.06em;text-transform:uppercase;padding-bottom:2px}.poBdRow.me{background:#f1f8f4;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px}
+.poBdRow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid #eef2f8;font-size:13.5px}.poBdRow>span:first-child{text-align:left;min-width:0}.poBdRow>span:last-child{text-align:right;font-weight:800;flex:none}.poBdRow.hd{border-top:0;font-size:11px;font-weight:800;color:#8a97ad;letter-spacing:.06em;text-transform:uppercase;padding-bottom:2px}.poBdRow.me{background:#f1f8f4;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px}.poBdRow.loseOut{background:#fdecea;border-top:0;border-radius:10px;margin:0 -6px 2px;padding:9px 6px;font-weight:800}.poBdRow.loseOut>span:first-child{color:#b42318}.poBdRow.loseOut>span:last-child{color:#b42318;font-size:15px}
 .lgNote{font-size:12px;color:#6b7a94;margin:10px 0 6px;line-height:1.5}.lgRc{font-size:11px;color:#8a97ad;font-weight:700;margin-left:4px}
 .lgIT{font-weight:800;font-size:14px;color:#16213a;margin:14px 0 4px}.lgIT em{font-style:normal;font-weight:700;font-size:12px;color:#b45309;background:#fff3e0;border-radius:999px;padding:2px 8px;margin-left:4px}.lgIT em.rx{color:#5b6b85;background:#eef2f8}
 .trfReal{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#16213a;margin:4px 0 10px}.trfTeam{font:inherit;font-size:14px;padding:8px 12px;border-radius:12px;border:1px solid #c7d5ee;background:#fff;max-width:100%}
@@ -7254,6 +7254,11 @@ function poBuild(){
     single threshold sentence. */
  function breakdownFor(i){let rg=remGamesFor(i),out=[];for(let k=0;k<=rg;k++){let tot=0,mdd=0;for(let tr=0;tr<TRIALS;tr++)if(addWins[i][tr]>=k){tot++;if(madeArr[i][tr])mdd++}out.push({k,p:tot>0?mdd/tot:(out.length?out[out.length-1].p:odds[i])})}return out}
  function byeBreakdownFor(i){if(byeCount<=0)return [];let rg=remGamesFor(i),out=[];for(let k=0;k<=rg;k++){let tot=0,mdd=0;for(let tr=0;tr<TRIALS;tr++)if(addWins[i][tr]>=k){tot++;if(byeArr[i][tr])mdd++}out.push({k,p:tot>0?mdd/tot:(out.length?out[out.length-1].p:byeOdds[i])})}return out}
+ /* The k=0 row of breakdownFor above reads "wins AT LEAST 0 more", which every simulation trivially
+    satisfies -- so it is just the team's overall odds again, not what losing every remaining game would
+    actually do to them. That is a genuinely different, usually much lower, number: the EXACT condition
+    addWins[i][tr]===0 (not >=0) restricted to the trials where this team truly lost out. */
+ function loseOutFor(i,arr){let tot=0,mdd=0;for(let tr=0;tr<TRIALS;tr++)if(addWins[i][tr]===0){tot++;if(arr[i][tr])mdd++}return tot>0?mdd/tot:0}
  let rows=all.map((t,i)=>{
   let rg=remGamesFor(i),o=odds[i],bd=breakdownFor(i),clinched=provenClinched(i),eliminated=!clinched&&provenEliminated(i),
    k=clinched?0:eliminated?null:(bd.find(x=>x.p>=.97)||{}).k,
@@ -7262,9 +7267,14 @@ function poBuild(){
    byeBd=byeBreakdownFor(i),byeClinched=byeCount>0&&provenByeClinched(i),byeEliminated=byeCount>0&&!byeClinched&&provenByeEliminated(i),
    byeK=byeClinched?0:byeEliminated?null:(byeBd.find(x=>x.p>=.97)||{}).k,
    byeProven=byeCount<=0?null:byeClinched?'clinched':byeEliminated?'eliminated':null,
-   byeScen=byeCount<=0?'':byeClinched?'Clinched the first-round bye':byeEliminated?'Eliminated from bye contention':byeK==null?'Needs help even winning out':byeK===0?'Controls its own destiny for the bye':('Win '+byeK+' of its last '+rg+' to clinch the bye');
-  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen,proven,breakdown:bd,
-   byeOdds:byeOdds[i],byeProven,byeScen,byeBreakdown:byeBd};
+   byeScen=byeCount<=0?'':byeClinched?'Clinched the first-round bye':byeEliminated?'Eliminated from bye contention':byeK==null?'Needs help even winning out':byeK===0?'Controls its own destiny for the bye':('Win '+byeK+' of its last '+rg+' to clinch the bye'),
+   /* True "what if it loses every remaining game" odds -- distinct from bd[0]/byeBd[0], which are really
+      the unconditional overall odds (see loseOutFor above). Clamp the proven cases instead of trusting a
+      thin simulation slice: a clinched team is in even at 0-for-the-rest, an eliminated one is out either way. */
+   loseOut=clinched?1:eliminated?0:loseOutFor(i,madeArr),
+   byeLoseOut=byeCount<=0?null:byeClinched?1:byeEliminated?0:loseOutFor(i,byeArr);
+  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen,proven,breakdown:bd,loseOut,
+   byeOdds:byeOdds[i],byeProven,byeScen,byeBreakdown:byeBd,byeLoseOut};
  });
  let sos=all.map((t,i)=>{
   let ws=[];for(let w=wk;w<=regEnd;w++){let o=oppOf(i,w);if(o==null)continue;ws.push(wTot(o,w)/(avgByWeek[w]||1))}
@@ -7313,15 +7323,19 @@ function poTeamModalSched(i,PO){
 function poTeamModalBody(PO,r){
  if(TRPOT==='bye'&&PO.byeCount>0){
   let firstK=r.byeProven==='clinched'?0:r.byeProven==='eliminated'?null:(r.byeBreakdown.find(x=>x.p>=.97)||{}).k,
-   rows=r.byeBreakdown.map(x=>{let hi=firstK!=null&&x.k===firstK,pc=r.byeProven==='clinched'?100:r.byeProven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Win 0 more (as-is)':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
+   loPc=Math.min(100,Math.max(0,Math.round((r.byeLoseOut||0)*100))),
+   loseRow=`<div class="poBdRow loseOut"><span>Loses out the rest of the way (0-${r.rg})</span><span>${loPc}%</span></div>`,
+   rows=r.byeBreakdown.map(x=>{let hi=firstK!=null&&x.k===firstK,pc=r.byeProven==='clinched'?100:r.byeProven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Win at least 0 (overall odds)':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
   return `<p class="lgNote" style="margin:0 0 8px">${poByePct(r)} chance of a top-${PO.byeCount} seed and a first-round bye. ${trEsc(r.byeScen)}.</p>
-   <div class="poBdRow hd"><span>If it wins&hellip;</span><span>Bye odds</span></div>${rows}
-   <p class="lgNote">Same read as the playoff table, but for finishing in the top ${PO.byeCount} seed${PO.byeCount===1?'':'s'} and skipping the first round of the playoffs.</p>`;
+   <div class="poBdRow hd"><span>Scenario</span><span>Bye odds</span></div>${loseRow}${rows}
+   <p class="lgNote">The top row is the real "what if it loses every game left" number. The rows below ask "what if it wins AT LEAST this many" -- the first one (win at least 0) is just the overall odds again, since every outcome wins at least 0 games, so it is not the same as losing out.</p>`;
  }
  let firstClinchK=r.proven==='clinched'?0:r.proven==='eliminated'?null:(r.breakdown.find(x=>x.p>=.97)||{}).k;
- let bdRows=r.breakdown.map(x=>{let hi=firstClinchK!=null&&x.k===firstClinchK,pc=r.proven==='clinched'?100:r.proven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Win 0 more (as-is)':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
- return `<div class="poBdRow hd"><span>If it wins&hellip;</span><span>Odds in</span></div>${bdRows}
-  <p class="lgNote">Reading this: each row asks "what if it wins at least this many of its remaining games" -- winning one fewer than the highlighted row does not guarantee a spot, it just lowers the odds to whatever that row shows.</p>`;
+ let loPc2=Math.min(100,Math.max(0,Math.round((r.loseOut||0)*100))),
+  loseRow2=`<div class="poBdRow loseOut"><span>Loses out the rest of the way (0-${r.rg})</span><span>${loPc2}%</span></div>`,
+  bdRows=r.breakdown.map(x=>{let hi=firstClinchK!=null&&x.k===firstClinchK,pc=r.proven==='clinched'?100:r.proven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Win at least 0 (overall odds)':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
+ return `<div class="poBdRow hd"><span>Scenario</span><span>Odds in</span></div>${loseRow2}${bdRows}
+  <p class="lgNote">The top row is the real "what if it loses every game left" number. The rows below ask "what if it wins AT LEAST this many of its remaining games" -- the first one (win at least 0) is just the overall odds again, since every outcome wins at least 0 games, so it is not the same as losing out.</p>`;
 }
 function poTeamModalInner(PO,r){
  let tabBar=PO.byeCount>0?`<div class="poTabs"><button type="button" class="tmT poSubT poModT${TRPOT==='make'?' on':''}" data-k="make">Make Playoffs</button><button type="button" class="tmT poSubT poModT${TRPOT==='bye'?' on':''}" data-k="bye">Get the Bye</button></div>`:'';
