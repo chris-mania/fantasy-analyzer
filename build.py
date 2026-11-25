@@ -4763,6 +4763,8 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 .lgSr{display:grid;grid-template-columns:22px minmax(0,1fr) 54px 48px 44px;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #eef2f8;font-size:13.5px;text-align:right}.lgSr>span:nth-child(2){text-align:left}.lgSr>span:first-child{text-align:left}
 .lgSr.lgSh{border-top:0;font-size:11px;font-weight:800;color:#8a97ad;letter-spacing:.06em;text-transform:uppercase;padding-bottom:2px}.lgSr.me{background:#f1f8f4;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px}
 .poBdRow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid #eef2f8;font-size:13.5px}.poBdRow>span:first-child{text-align:left;min-width:0}.poBdRow>span:last-child{text-align:right;font-weight:800;flex:none}.poBdRow.hd{border-top:0;font-size:11px;font-weight:800;color:#8a97ad;letter-spacing:.06em;text-transform:uppercase;padding-bottom:2px}.poBdRow.me{background:#f1f8f4;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px}.poBdRow.loseOut{background:#fdecea;border-top:0;border-radius:10px;margin:0 -6px 2px;padding:9px 6px;font-weight:800}.poBdRow.loseOut>span:first-child{color:#b42318}.poBdRow.loseOut>span:last-child{color:#b42318;font-size:15px}
+.poClinch{border-radius:12px;padding:10px 12px;margin:2px 0 10px;font-size:14.5px;font-weight:800;line-height:1.3}
+.poClinch.gd{background:#eaf7f0;color:#0B8A47}.poClinch.am{background:#fdf3e2;color:#8a5c09}.poClinch.bd{background:#fdecea;color:#b42318}
 .lgNote{font-size:12px;color:#6b7a94;margin:10px 0 6px;line-height:1.5}.lgRc{font-size:11px;color:#8a97ad;font-weight:700;margin-left:4px}
 .lgIT{font-weight:800;font-size:14px;color:#16213a;margin:14px 0 4px}.lgIT em{font-style:normal;font-weight:700;font-size:12px;color:#b45309;background:#fff3e0;border-radius:999px;padding:2px 8px;margin-left:4px}.lgIT em.rx{color:#5b6b85;background:#eef2f8}
 .trfReal{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#16213a;margin:4px 0 10px}.trfTeam{font:inherit;font-size:14px;padding:8px 12px;border-radius:12px;border:1px solid #c7d5ee;background:#fff;max-width:100%}
@@ -7273,8 +7275,8 @@ function poBuild(){
       thin simulation slice: a clinched team is in even at 0-for-the-rest, an eliminated one is out either way. */
    loseOut=clinched?1:eliminated?0:loseOutFor(i,madeArr),
    byeLoseOut=byeCount<=0?null:byeClinched?1:byeEliminated?0:loseOutFor(i,byeArr);
-  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen,proven,breakdown:bd,loseOut,
-   byeOdds:byeOdds[i],byeProven,byeScen,byeBreakdown:byeBd,byeLoseOut};
+  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen,proven,k,breakdown:bd,loseOut,
+   byeOdds:byeOdds[i],byeProven,byeK,byeScen,byeBreakdown:byeBd,byeLoseOut};
  });
  let sos=all.map((t,i)=>{
   let ws=[];for(let w=wk;w<=regEnd;w++){let o=oppOf(i,w);if(o==null)continue;ws.push(wTot(o,w)/(avgByWeek[w]||1))}
@@ -7289,6 +7291,18 @@ function poBuild(){
 }
 function poPct(r){return r.proven==='clinched'?'100%':r.proven==='eliminated'?'0%':Math.min(99,Math.max(1,Math.round(r.odds*100)))+'%'}
 function poByePct(r){return r.byeProven==='clinched'?'100%':r.byeProven==='eliminated'?'0%':Math.min(99,Math.max(1,Math.round((r.byeOdds||0)*100)))+'%'}
+/* Same 3-bucket read everywhere a team's scenario shows up: green = in good shape on its own (clinched,
+   or controls its own destiny), amber = still has to go win specific games, red = needs help from other
+   results, or it's already over. Mirrors the green/yellow/red the Strength tab already uses. */
+function poScenCat(proven,k){return (proven==='clinched'||k===0)?'gd':(proven==='eliminated'||k==null)?'bd':'am'}
+function poScenColor(cat){return cat==='gd'?'#0B8A47':cat==='bd'?'#D12B3A':'#C98A0E'}
+/* The small gray tagline text ("Win 1 of its last 3 to clinch") stays accurate everywhere else; this is
+   only the bigger, punchier headline for the top of a team's modal, where a clean "win K to clinch" is
+   worth calling out plainly -- and "win 1" especially reads better as "one more win" than as a fraction. */
+function poHeadline(scen,proven,k,bye){
+ if(k===1)return bye?'One more win clinches the bye':'One more win clinches a playoff spot';
+ return scen;
+}
 function poPanelHTML(PO){
  if(!PO||!PO.me)return '';
  let me=PO.me,N=PO.standings.length;
@@ -7302,7 +7316,7 @@ function poPanelHTML(PO){
   bar=`<div class="poTabs">${tabs.map(([k,t])=>`<button type="button" class="tmT poSubT${TRPO===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div>`,
   body='';
  if(TRPO==='odds'){
-  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>Odds</span><span>Seed</span></div>${PO.odds.map((r,k)=>`<div class="lgSr poRow${r.me?' me':''}" data-i="${r.i}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}<small style="display:block;color:#8a97ad;font-weight:700">${trEsc(r.scen)} &rsaquo;</small></span><span>${poPct(r)}</span><span>${Math.round(r.seed)}</span></div>`).join('')}<p class="lgNote">Odds and projected seed come from simulating the rest of the season thousands of times with each team's optimal projected lineup each week plus real variance, then applying your league's own tiebreaker (wins, then total points for). A team only shows 100%/0% once it is mathematically proven, not just heavily favored. Tap a team for the full breakdown.</p>`;
+  body=`<div class="lgSr lgSh"><span>#</span><span>Team</span><span>Odds</span><span>Seed</span></div>${PO.odds.map((r,k)=>{let cat=poScenCat(r.proven,r.k),c=poScenColor(cat);return `<div class="lgSr poRow${r.me?' me':''}" data-i="${r.i}"><span class="lgRk">${k+1}</span><span class="lgNm">${trEsc(r.n)}<small style="display:block;color:${c};font-weight:700">${trEsc(r.scen)} &rsaquo;</small></span><span style="color:${c};font-weight:800">${poPct(r)}</span><span>${Math.round(r.seed)}</span></div>`}).join('')}<p class="lgNote">Odds and projected seed come from simulating the rest of the season thousands of times with each team's optimal projected lineup each week plus real variance, then applying your league's own tiebreaker (wins, then total points for). A team only shows 100%/0% once it is mathematically proven, not just heavily favored. <b style="color:#0B8A47">Green</b> means clinched or in full control, <b style="color:#C98A0E">yellow</b> means it needs to win specific games of its own, and <b style="color:#D12B3A">red</b> means it needs help from other results (or it's already over). Tap a team for the full breakdown.</p>`;
  }else if(TRPO==='sos'){
   /* Color by rank within the league, not a fixed number -- in a small league "1.06" might be the
      hardest schedule there is, and in a big one it might be solidly in the middle. PO.sos is already
@@ -7326,7 +7340,7 @@ function poTeamModalBody(PO,r){
    loPc=Math.min(100,Math.max(0,Math.round((r.byeLoseOut||0)*100))),
    loseRow=`<div class="poBdRow loseOut"><span>Loses out the rest of the way (0-${r.rg})</span><span>${loPc}%</span></div>`,
    rows=r.byeBreakdown.map(x=>{let hi=firstK!=null&&x.k===firstK,pc=r.byeProven==='clinched'?100:r.byeProven==='eliminated'?0:Math.min(99,Math.max(1,Math.round(x.p*100)));return `<div class="poBdRow${hi?' me':''}"><span>${x.k===0?'Overall odds right now':'Win '+x.k+' of its last '+r.rg}</span><span>${pc}%</span></div>`}).join('');
-  return `<p class="lgNote" style="margin:0 0 8px">${poByePct(r)} chance of a top-${PO.byeCount} seed and a first-round bye. ${trEsc(r.byeScen)}.</p>
+  return `<p class="lgNote" style="margin:0 0 8px">${poByePct(r)} chance of a top-${PO.byeCount} seed and a first-round bye.</p>
    <div class="poBdRow hd"><span>Scenario</span><span>Bye odds</span></div>${loseRow}${rows}
    <p class="lgNote">"Overall odds right now" is this team's real, full odds today -- the same simulation as everywhere else in this app, using its actual remaining opponents, their lineups, and real variance. The top row asks the opposite question: what if it loses every game left.</p>`;
  }
@@ -7339,7 +7353,12 @@ function poTeamModalBody(PO,r){
 }
 function poTeamModalInner(PO,r){
  let tabBar=PO.byeCount>0?`<div class="poTabs"><button type="button" class="tmT poSubT poModT${TRPOT==='make'?' on':''}" data-k="make">Make Playoffs</button><button type="button" class="tmT poSubT poModT${TRPOT==='bye'?' on':''}" data-k="bye">Get the Bye</button></div>`:'';
- return `<div class="lgPw" style="margin:0"><div class="lgPwH"><b>${trEsc(r.n)}</b><small>${r.w}-${r.l}${r.t?'-'+r.t:''} &middot; ${Math.round(r.pf)} PF &middot; ${poPct(r)} to make the playoffs. ${trEsc(r.scen)}.</small></div>
+ let bye=TRPOT==='bye'&&PO.byeCount>0,
+  cat=bye?poScenCat(r.byeProven,r.byeK):poScenCat(r.proven,r.k),
+  headline=bye?poHeadline(r.byeScen,r.byeProven,r.byeK,true):poHeadline(r.scen,r.proven,r.k,false),
+  clinch=`<div class="poClinch ${cat}">${trEsc(headline)}</div>`;
+ return `<div class="lgPw" style="margin:0"><div class="lgPwH"><b>${trEsc(r.n)}</b><small>${r.w}-${r.l}${r.t?'-'+r.t:''} &middot; ${Math.round(r.pf)} PF &middot; ${poPct(r)} to make the playoffs.</small></div>
+  ${clinch}
   ${tabBar}
   <div class="poModBody">${poTeamModalBody(PO,r)}</div>
   <div class="poBdRow hd"><span>Remaining schedule</span><span></span></div>${poTeamModalSched(r.i,PO)}
