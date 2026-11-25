@@ -2429,6 +2429,32 @@ try:
 except Exception as _e:
     print("   QB advanced stats unavailable:", _e)
 
+# ---- Team-level receiver YAC creation (NFL Next Gen Stats: YAC over expected) ----
+# A raw "YAC per completion" number (qa.yacc above) is mostly the QB's own ball-placement and release
+# quickness, not his receivers'. NGS's "YAC over expected" instead models, from tracking data, how much
+# after-catch yardage an average receiver would get on that exact catch (location, coverage, etc.), so
+# the gap above/below that expectation isolates genuine receiver/scheme ability. We weight it to the team
+# (not one QB) by each game's receptions, so it reflects the current pass-catching corps a QB throws to.
+TEAM_RECYAC = {}
+try:
+    _ngs = pd.read_csv(f"{BASE}/nextgen_stats/ngs_receiving.csv.gz", low_memory=False)
+    _ngs = _ngs[(_ngs["season"] == SEASON) & (safe_num(_ngs["week"]) > 0)].copy()
+    if AS_OF_WEEK:
+        _ngs = _ngs[safe_num(_ngs["week"]) <= AS_OF_WEEK]
+    _ngs["team_abbr"] = _ngs["team_abbr"].replace({"LAR": "LA", "WSH": "WAS", "JAC": "JAX"})
+    _ngs["avg_yac_above_expectation"] = safe_num(_ngs["avg_yac_above_expectation"])
+    _ngs["receptions"] = safe_num(_ngs["receptions"])
+    _ngs = _ngs.dropna(subset=["avg_yac_above_expectation", "receptions"])
+    _ngs = _ngs[_ngs["receptions"] > 0]
+    _ngs["wv"] = _ngs["avg_yac_above_expectation"] * _ngs["receptions"]
+    _ngg = _ngs.groupby("team_abbr").agg(wv=("wv", "sum"), rec=("receptions", "sum"))
+    for _t, _row in _ngg.iterrows():
+        if _row["rec"] > 0:
+            TEAM_RECYAC[str(_t)] = {"v": round(float(_row["wv"] / _row["rec"]), 3), "n": int(_row["rec"])}
+    print(f"   Receiver YAC-over-expected attached for {len(TEAM_RECYAC)} teams.")
+except Exception as _e:
+    print("   Receiver YAC-over-expected unavailable:", _e)
+
 players = []
 TEAMCAR = merged.groupby(["team", "week"])["carries"].sum().to_dict()
 for _, r in g.sort_values("mania", ascending=False).iterrows():
@@ -2655,7 +2681,7 @@ def _fmpk_payload(pl):
             + json.dumps(_packed, separators=(",", ":")) + "," + json.dumps(_rooms, separators=(",", ":")) + ")")
 payload = _fmpk_payload(players)
 depth_json = "null"
-extra_json = json.dumps({"board": ADV_BOARD, "ftn": FTN_TEAMS, "logos": TEAM_LOGOS, "trades": TRADES, "lg": ADV_LG, "min": [round(float(globals().get("_minT", 0))), round(float(globals().get("_minC", 0)))]}, separators=(",", ":"))
+extra_json = json.dumps({"board": ADV_BOARD, "ftn": FTN_TEAMS, "logos": TEAM_LOGOS, "trades": TRADES, "lg": ADV_LG, "recyac": TEAM_RECYAC, "min": [round(float(globals().get("_minT", 0))), round(float(globals().get("_minC", 0)))]}, separators=(",", ":"))
 try:
     if DEPTH_RAW is not None and len(DEPTH_RAW):
         _dr = DEPTH_RAW.copy()
@@ -8617,7 +8643,7 @@ function teamWeap(t){if(!_TW){_TW={};var by={};allPlayers().forEach(function(p){
   _TW[tm]={v:sv/sw,names:names,wr:W.slice(0,3),te:T[0],rb:R[0]}})}
  return _TW[t]||null}
 var QCAST={cast_wpn:{k:'cast_wpn',l:'Weapons around him',g:function(q){var w=teamWeap(q.team);return w?w.v:NaN},d:1,hi:1},cast_line:{k:'cast_line',l:'Pressure rate',g:function(q){return q.qa&&q.qa.pres},d:1,hi:0,sf:'%'},
- cast_yac:{k:'cast_yac',l:'Yards after catch',g:function(q){return q.qa&&q.qa.yacc},d:1,hi:1},
+ cast_yac:{k:'cast_yac',l:'YAC vs. expected',g:function(q){var r=(XTRA.recyac||{})[q.team];return r?r.v:NaN},d:2,hi:1,sg:1},
  cast_drp:{k:'cast_drp',l:'Drop rate',g:function(q){return q.qa&&q.qa.drp!=null?100*q.qa.drp/Math.max(1,q.qa.db-q.qa.sk):NaN},d:1,hi:0,sf:'%'},
  cast_rec:{k:'cast_rec',l:'Receivers help',pct:1,hi:1,d:0,g:function(q){var a=[qbStat(q,QCAST.cast_yac),qbStat(q,QCAST.cast_drp)].filter(Boolean);return a.length?a.reduce(function(x,y){return x+y.pc},0)/a.length:NaN}},
  cast_all:{k:'cast_all',l:'Help from teammates',pct:1,hi:1,d:0,g:function(q){var v=qbSup(q);return v==null?NaN:v}}};
@@ -8649,7 +8675,7 @@ function qbAdvHTML(p){var qa=p.qa;if(!qa)return '';var ranked=p.qual!==false&&p.
  if(qa.drp!=null)rows+='<div class="qaR"><div class="qaT"><b>Dropped passes</b><span class="advChip n">Context</span></div><div class="qaV"><b>'+qa.drp+'</b> passes his receivers dropped</div><div class="qaH" style="display:block">Not his fault, but every drop costs him fantasy points.</div></div>';
  if(!rows)return '';
  return '<div class="ph">Advanced passing</div><p class="advSub">'+(ranked?'The same stats the pros use, in plain words. Green means better than most of the '+qbQ().length+' QBs. The small mark on each bar is the QB average.':'Not ranked yet. He needs more games.')+'</p>'+rows}
-function qbSup(p){var a=[{g:function(q){return q.qa&&q.qa.pres},hi:0},{g:function(q){return QCAST.cast_wpn.g(q)},hi:1},{g:function(q){var y=q.qa&&q.qa.yacc,d=q.qa&&q.qa.drp!=null?100*q.qa.drp/Math.max(1,q.qa.db-q.qa.sk):NaN;return Number.isFinite(y)&&Number.isFinite(d)?y-d*0.5:NaN},hi:1}].map(function(M){var s=qbStat(p,M);return s?s.pc:null}).filter(function(x){return x!=null});return a.length?Math.round(a.reduce(function(x,y){return x+y},0)/a.length):null}
+function qbSup(p){var a=[qbStat(p,QCAST.cast_line),qbStat(p,QCAST.cast_wpn),qbStat(p,QCAST.cast_rec)].filter(Boolean).map(function(s){return s.pc});return a.length?Math.round(a.reduce(function(x,y){return x+y},0)/a.length):null}
 function qbLuck(p){var Q=qbQ(),sp=0,sy=0,sr=0,sy2=0;Q.forEach(function(x){var g=x.games||1;sp+=x.m.ptd*g;sy+=x.m.pyd*g;sr+=x.m.rtd*g;sy2+=x.m.ruy*g});if(!sy||!sy2)return 0;return 4*(p.m.ptd-p.m.pyd*sp/sy)+6*(p.m.rtd-p.m.ruy*sr/sy2)}
 function qbStory(p){if(p.mania==null||p.qual===false||!p.buckets||!p.m)return null;if(p._st)return p._st;var b=p.buckets,prod=Math.round(b.Production),real=Math.round(b.Efficiency),help=qbSup(p),luck=0,lk=Math.abs(luck).toFixed(1),t,c,sh,s;
  if(prod>=60&&real>=60&&help!=null&&help<=40){t='Carrying his offense';sh='Carrying his team';c='g';s='He scores a lot and plays well, even though he gets less help than most QBs (more pressure, fewer yards from his receivers). This one is real.'}
@@ -8670,11 +8696,11 @@ function qbCastHTML(p){var pr=qbStat(p,QCAST.cast_line),wp=qbStat(p,QCAST.cast_w
  var starter=qbIsStarter(p),out='<div class="ph">The team around him</div><p class="qcS">How much help he gets. Tap any circle to see all quarterbacks ranked.</p><div class="qcSc">'+(QBSC==='all'?'Compared with all quarterbacks, backups included.':starter?'Compared with starting quarterbacks.':'He is a backup, so he is compared with the starters.')+' <button type="button" data-qsc="'+(QBSC==='all'?'starters':'all')+'">'+(QBSC==='all'?'Starters only':'Include backups')+'</button></div><div class="qcG">';
  if(pr)out+=cell('cast_line','Offensive line',pr.pc,lab(pr.pc)+' • pressured '+pr.v.toFixed(0)+'% (avg '+pr.avg.toFixed(0)+'%)');
  if(wp&&tw)out+=cell('cast_wpn','Weapons',wp.pc,lab(wp.pc)+' • '+tw.names.map(function(n){return n.replace(/ \(\d+\)/,'')}).join(', '));
- if(yc){var rp=dr?Math.round((yc.pc+dr.pc)/2):yc.pc;out+=cell('cast_rec','After the catch',rp,lab(rp)+' • '+yc.v.toFixed(1)+' yds per catch'+(qa.drp!=null?', '+qa.drp+' drops':''))}
+ if(yc){var rp=dr?Math.round((yc.pc+dr.pc)/2):yc.pc;out+=cell('cast_rec','After the catch',rp,lab(rp)+' • '+(yc.v>=0?'+':'')+yc.v.toFixed(2)+' YAC/catch vs. expected'+(qa.drp!=null?', '+qa.drp+' drops':''))}
  if(all!=null)out+=cell('cast_all','Overall help',all,all>=60?'A lot of help':all<=40?'Less than most':'About average');
  out+='</div>';
  if(all!=null)out+='<div class="qcT '+(all>=60?'g':all<=40?'u':'m')+'">'+(all>=60?'He gets a lot of help. Some of his numbers belong to his teammates.':all<=40?'He gets less help than most. His numbers are harder to come by.':'His teammates help about as much as an average team.')+'</div>';
- return out+'<div class="qcN">Starters are quarterbacks who are first on their team’s depth chart or have taken at least half of their team’s dropbacks. Weapons use the current Mania Rating of his best three receivers, tight end and back. Anyone who is out this week does not count. Pressure rate depends a little on how long he holds the ball, and yards after the catch depend a little on the scheme, so treat this as a good guide, not a final grade.</div>'}
+ return out+'<div class="qcN">Starters are quarterbacks who are first on their team’s depth chart or have taken at least half of their team’s dropbacks. Weapons use the current Mania Rating of his best three receivers, tight end and back. Anyone who is out this week does not count. Yards after the catch is measured against the NFL’s own tracking-data expectation for where and how each pass was caught, so it credits the receivers for creating extra yardage instead of crediting the QB’s checkdowns. Pressure rate depends a little on how long he holds the ball, so treat this as a good guide, not a final grade.</div>'}
 function qbStoryHTML(p){var v=qbStory(p);if(!v)return '';var row=function(l,sub,pc,key,col){return '<div class="barrow qsr"><span><b class="qsl">'+l+'</b><em class="qss">'+sub+'</em></span><div class="track"><div class="fill" style="width:'+Math.max(3,pc)+'%;background:'+(col||barColor(pc))+'"></div></div>'+(key?'<b class="pctNum lnk '+barGrade(pc)+'" data-board="qb" data-key="'+key+'" data-title="'+l+'" data-pos="QB" style="--s:'+pc+'">'+pc+'</b>':'<b class="pctNum '+barGrade(pc)+'" style="--s:'+pc+'">'+pc+'</b>')+'</div>'};
  return '<div class="ph">The real story</div><div class="qvd '+v.c+'"><b>'+v.t+'</b><span>'+v.s+'</span></div>'
  +row('Points scored','Fantasy points per game',v.prod,'bk0')
