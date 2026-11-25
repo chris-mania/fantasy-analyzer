@@ -904,3 +904,41 @@ body,button,input,select,textarea,.pill,.rcard,.hc,.hs{font-family:'Barlow','Hel
 #home .lkExploreHd,#home #lkTagline{
   font-synthesis:none!important;
 }
+/* ===== pass 16: single-row desktop hero (Nov 2026 approved mock) =====
+   Replaces the old floating dkOv / first dkKp tile (absolute-positioned, which
+   left a large empty gap under the identity block on wide viewports) with one
+   in-flow column: Mania Rating + Week N Rating + Week N Projection as three
+   equal tiles in a row, with a "Games counted N of M · Edit" chip centered
+   underneath -- all contained inside the team-color band, nothing overlapping
+   its edge. The position-specific extra stats (touch/snap share, ppg, etc.)
+   stay in their own row below the band, unchanged. */
+@media(min-width:1000px){
+ #profile .dkTop{
+  display:grid!important;grid-template-columns:180px minmax(0,1fr) auto!important;
+  grid-template-rows:auto auto auto auto!important;column-gap:28px!important;row-gap:0!important;
+  padding:30px 0 24px!important;margin:0 0 20px!important;min-height:0!important
+ }
+ #profile .dkTop::before{height:336px!important}
+ #profile .lkWm{height:336px!important}
+ #profile .dkRing{grid-column:1!important;grid-row:1/3!important;position:static!important;align-self:center!important;justify-self:start!important}
+ #profile .dkLab{display:none!important}
+ #profile .dkNm{grid-column:2!important;grid-row:1!important;align-self:end!important;margin:0!important}
+ #profile .dkBd{grid-column:2!important;grid-row:2!important;align-self:start!important;margin-top:12px!important}
+ #profile .dkKp{grid-column:1/4!important;grid-row:3!important;margin:104px 0 14px!important;position:static!important}
+ #profile .dkKp>.dkT:first-child{position:static!important}
+ #profile .dkOv{position:static!important;top:auto!important;right:auto!important;left:auto!important;bottom:auto!important;width:auto!important;height:auto!important}
+ #profile .dkTiles{grid-column:3!important;grid-row:1/3!important;align-self:center!important;justify-self:end!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:10px!important}
+ #profile .dkTRow{display:flex!important;gap:14px!important}
+ #profile .dkTiles .dkT{background:#fff!important;border:0!important;border-radius:14px!important;box-shadow:0 10px 22px -10px rgba(10,20,50,.5)!important;padding:14px 20px!important;min-width:108px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important;gap:0!important}
+ #profile .dkTiles .dkT.dkClk{cursor:pointer!important}
+ #profile .dkTiles .dkT b{font-family:'Barlow Condensed','Arial Narrow',sans-serif!important;font-size:30px!important;line-height:1!important;margin:0!important;font-weight:800!important;color:#101A3D}
+ #profile .dkTiles .dkT b.g90{color:#22a45d!important}
+ #profile .dkTiles .dkT b.g70{color:#e3a21a!important}
+ #profile .dkTiles .dkT b.g0{color:#e2505b!important}
+ #profile .dkTiles .dkT span{margin-top:4px!important;font-size:9.5px!important;letter-spacing:.06em!important;text-transform:uppercase!important;color:#5B6472!important;font-weight:800!important;font-family:'Barlow Condensed','Arial Narrow',sans-serif!important}
+ #profile .dkTiles .dkT em{display:none!important}
+ #profile .dkGm{display:flex!important;align-items:center!important;gap:6px!important;background:rgba(255,255,255,.14)!important;border:1px solid rgba(255,255,255,.35)!important;border-radius:999px!important;padding:5px 12px 5px 10px!important;color:#fff!important;font-size:10.5px!important;font-weight:700!important;white-space:nowrap!important;cursor:pointer!important;font-family:'Barlow','Helvetica Neue',Arial,sans-serif!important}
+ #profile .dkGm b{font-weight:800!important;margin:0 3px!important}
+ #profile .dkGm i{font-style:normal!important;text-decoration:underline!important;text-decoration-color:rgba(255,255,255,.5)!important;margin-left:2px!important}
+ #profile .dkTb{grid-column:1/4!important;grid-row:4!important}
+}
