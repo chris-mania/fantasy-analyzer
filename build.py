@@ -4765,6 +4765,13 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 .poBdRow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid #eef2f8;font-size:13.5px}.poBdRow>span:first-child{text-align:left;min-width:0}.poBdRow>span:last-child{text-align:right;font-weight:800;flex:none}.poBdRow.hd{border-top:0;font-size:11px;font-weight:800;color:#8a97ad;letter-spacing:.06em;text-transform:uppercase;padding-bottom:2px}.poBdRow.me{background:#f1f8f4;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px}.poBdRow.loseOut{background:#fdecea;border-top:0;border-radius:10px;margin:0 -6px 2px;padding:9px 6px;font-weight:800}.poBdRow.loseOut>span:first-child{color:#b42318}.poBdRow.loseOut>span:last-child{color:#b42318;font-size:15px}
 .poClinch{border-radius:12px;padding:10px 12px;margin:2px 0 10px;font-size:14.5px;font-weight:800;line-height:1.3}
 .poClinch.gd{background:#eaf7f0;color:#0B8A47}.poClinch.am{background:#fdf3e2;color:#8a5c09}.poClinch.bd{background:#fdecea;color:#b42318}
+.poMxRow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #eef2f8}
+.poMxRow.gd{background:#f1f8f4;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px;border-top-color:transparent}
+.poMxRow.bd{background:#fdf6f5;border-radius:10px;margin:0 -6px;padding-left:6px;padding-right:6px;border-top-color:transparent}
+.poMxGames{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
+.poMxG{font-size:11.5px;font-weight:800;padding:3px 7px;border-radius:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.poMxG.w{background:#eaf7f0;color:#0B8A47}.poMxG.l{background:#fdecea;color:#b42318}
+.poMxPc{font-weight:800;flex:none;font-size:14px}
 .lgNote{font-size:12px;color:#6b7a94;margin:10px 0 6px;line-height:1.5}.lgRc{font-size:11px;color:#8a97ad;font-weight:700;margin-left:4px}
 .lgIT{font-weight:800;font-size:14px;color:#16213a;margin:14px 0 4px}.lgIT em{font-style:normal;font-weight:700;font-size:12px;color:#b45309;background:#fff3e0;border-radius:999px;padding:2px 8px;margin-left:4px}.lgIT em.rx{color:#5b6b85;background:#eef2f8}
 .trfReal{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#16213a;margin:4px 0 10px}.trfTeam{font:inherit;font-size:14px;padding:8px 12px;border-radius:12px;border:1px solid #c7d5ee;background:#fff;max-width:100%}
@@ -7240,17 +7247,46 @@ function poBuild(){
  function provenByeEliminated(i){if(byeCount<=0)return true;let c=ceilW(i),ahead=0;for(let j=0;j<N;j++){if(j===i)continue;if(floorW(j)>c)ahead++}return ahead>=byeCount}
  let TRIALS=2500,sg=.22,made=new Array(N).fill(0),seedSum=new Array(N).fill(0),byeMade=new Array(N).fill(0),
   addWins=Array.from({length:N},()=>new Array(TRIALS)),madeArr=Array.from({length:N},()=>new Array(TRIALS)),byeArr=Array.from({length:N},()=>new Array(TRIALS));
+ /* Full matchup-by-matchup matrix (every win/loss combo for a team's own remaining games, not just a
+    win-count total) -- only makes sense, and only stays readable, once a team is down to <=3 games left
+    (2^3=8 rows at most). For each such team, track which SPECIFIC remaining games it wins each trial
+    (a bitmask, bit j = its j-th remaining game by week order), alongside the usual per-trial outcome. */
+ let qualI=[];for(let i=0;i<N;i++){let rg0=remGamesFor(i);if(rg0>=1&&rg0<=3)qualI.push(i)}
+ let myGames={};qualI.forEach(i=>{myGames[i]=sched.filter(g=>g.h===i||g.a===i).sort((a,b)=>a.w-b.w)});
+ let comboWin={};qualI.forEach(i=>{comboWin[i]=new Array(TRIALS).fill(0)});
+ let gameBitMap={};qualI.forEach(i=>{myGames[i].forEach((g,bit)=>{let key=g.w+'|'+g.h+'|'+g.a;(gameBitMap[key]=gameBitMap[key]||[]).push({i,bit})})});
  for(let tr=0;tr<TRIALS;tr++){
   let rec=all.map(t=>({w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0}));
   for(let w=wk;w<=regEnd;w++)sched.filter(g=>g.w===w).forEach(g=>{
    let mh=wTot(g.h,w),ma=wTot(g.a,w),sh=mh*(1+sg*trGauss()),sa=ma*(1+sg*trGauss());
    rec[g.h].pf+=sh;rec[g.a].pf+=sa;
-   if(sh>sa)rec[g.h].w++;else if(sa>sh)rec[g.a].w++;else{rec[g.h].t++;rec[g.a].t++}
+   let hWon;
+   if(sh>sa){rec[g.h].w++;hWon=true}else if(sa>sh){rec[g.a].w++;hWon=false}else{rec[g.h].t++;rec[g.a].t++;hWon=null}
+   let hits=gameBitMap[g.w+'|'+g.h+'|'+g.a];
+   if(hits)hits.forEach(({i,bit})=>{let iWon=hWon===null?false:(g.h===i?hWon:!hWon);if(iWon)comboWin[i][tr]|=(1<<bit)});
   });
   let order=rec.map((r,i)=>({i,r})).sort((a,b)=>{let wa=a.r.w+.5*a.r.t,wb=b.r.w+.5*b.r.t;return (wb-wa)||(b.r.pf-a.r.pf)});
   order.forEach((o,k)=>{let mk=k<playoffTeamCount,bk=k<byeCount;made[o.i]+=mk?1:0;byeMade[o.i]+=bk?1:0;seedSum[o.i]+=k+1;addWins[o.i][tr]=rec[o.i].w-(+all[o.i].w||0);madeArr[o.i][tr]=mk;byeArr[o.i][tr]=bk});
  }
  let odds=made.map(x=>x/TRIALS),avgSeed=seedSum.map(x=>x/TRIALS),byeOdds=byeMade.map(x=>x/TRIALS);
+ /* matrixFor: every possible combination of win/loss across a qualifying team's own remaining games
+    (<=3, so <=8 rows), each with its own conditional playoff (or bye) odds -- not pooled by win count,
+    the exact path. Sorted so the next game up is the primary sort key (win before loss), matching how
+    someone actually thinks it through week by week. */
+ function matrixFor(i,arr){
+  let rg=myGames[i].length;if(!rg)return null;
+  let rows=[];
+  for(let c=0;c<(1<<rg);c++){
+   let tot=0,mdd=0;
+   for(let tr=0;tr<TRIALS;tr++)if(comboWin[i][tr]===c){tot++;if(arr[i][tr])mdd++}
+   let bits=[];for(let j=0;j<rg;j++)bits.push(!!(c&(1<<j)));
+   let weight=0;for(let j=0;j<rg;j++)weight+=(bits[j]?1:0)*Math.pow(2,rg-1-j);
+   rows.push({bits,p:tot>0?mdd/tot:null,n:tot,weight});
+  }
+  rows.sort((a,b)=>b.weight-a.weight);
+  return rows;
+ }
+ function matrixGamesFor(i){return (myGames[i]||[]).map(g=>({w:g.w,opp:g.h===i?g.a:g.h,home:g.h===i}))}
  /* breakdownFor: for k=0..remaining games, what fraction of simulations where this team won AT LEAST k
     more games still made the playoffs -- the detailed "what if he only wins 2, not 3" table, not just a
     single threshold sentence. */
@@ -7274,9 +7310,10 @@ function poBuild(){
       the unconditional overall odds (see loseOutFor above). Clamp the proven cases instead of trusting a
       thin simulation slice: a clinched team is in even at 0-for-the-rest, an eliminated one is out either way. */
    loseOut=clinched?1:eliminated?0:loseOutFor(i,madeArr),
-   byeLoseOut=byeCount<=0?null:byeClinched?1:byeEliminated?0:loseOutFor(i,byeArr);
-  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen,proven,k,breakdown:bd,loseOut,
-   byeOdds:byeOdds[i],byeProven,byeK,byeScen,byeBreakdown:byeBd,byeLoseOut};
+   byeLoseOut=byeCount<=0?null:byeClinched?1:byeEliminated?0:loseOutFor(i,byeArr),
+   matrix=matrixFor(i,madeArr),byeMatrix=byeCount>0?matrixFor(i,byeArr):null,matrixGames=matrixGamesFor(i);
+  return {i,n:t.n||'',me:i===me,w:+t.w||0,l:+t.l||0,t:+t.t||0,pf:+t.pf||0,odds:o,seed:avgSeed[i],rg,scen,proven,k,breakdown:bd,loseOut,matrix,matrixGames,
+   byeOdds:byeOdds[i],byeProven,byeK,byeScen,byeBreakdown:byeBd,byeLoseOut,byeMatrix};
  });
  let sos=all.map((t,i)=>{
   let ws=[];for(let w=wk;w<=regEnd;w++){let o=oppOf(i,w);if(o==null)continue;ws.push(wTot(o,w)/(avgByWeek[w]||1))}
@@ -7334,8 +7371,23 @@ function poTeamModalSched(i,PO){
   all=TR.lgAll||[],nameOf=j=>trEsc((all[j]&&all[j].n)||'?');
  return sched.map(g=>{let home=g.h===i,opp=home?g.a:g.h;return `<div class="poBdRow"><span>Week ${g.w}</span><span>${home?'vs':'at'} ${nameOf(opp)}</span></div>`}).join('')||'<p class="lgNote">No games left on the board.</p>';
 }
+/* Full matchup-by-matchup matrix: every specific win/loss combo across a team's remaining games (only
+   shown once it's down to <=3 of them, per matrixFor), each row naming the actual opponent instead of
+   just a win count -- "if you beat X but lose to Y..." laid out all at once rather than a tap-through. */
+function poMatrixHTML(r,matrix,label){
+ let all=TR.lgAll||[],nameOf=j=>trEsc((all[j]&&all[j].n)||'?'),games=r.matrixGames;
+ let rowsHtml=matrix.map(row=>{
+  let pills=row.bits.map((won,j)=>`<span class="poMxG ${won?'w':'l'}">${won?'W':'L'} ${games[j].home?'vs':'at'} ${nameOf(games[j].opp)}</span>`).join('');
+  let pc=row.p==null?'&mdash;':Math.min(99,Math.max(1,Math.round(row.p*100)))+'%';
+  let allWon=row.bits.every(Boolean),allLost=row.bits.every(b=>!b);
+  return `<div class="poMxRow${allWon?' gd':''}${allLost?' bd':''}"><span class="poMxGames">${pills}</span><span class="poMxPc">${pc}</span></div>`;
+ }).join('');
+ return `<div class="poBdRow hd"><span>Every combination (Week ${games[0].w}${games.length>1?'-'+games[games.length-1].w:''})</span><span>${label}</span></div>${rowsHtml}
+  <p class="lgNote">All ${matrix.length} possible outcomes of its remaining games, and what each one does to its odds -- not a pooled average, the actual path.</p>`;
+}
 function poTeamModalBody(PO,r){
  if(TRPOT==='bye'&&PO.byeCount>0){
+  if(r.byeMatrix&&r.byeMatrix.length)return `<p class="lgNote" style="margin:0 0 8px">${poByePct(r)} chance of a top-${PO.byeCount} seed and a first-round bye.</p>${poMatrixHTML(r,r.byeMatrix,'Bye odds')}`;
   let firstK=r.byeProven==='clinched'?0:r.byeProven==='eliminated'?null:(r.byeBreakdown.find(x=>x.p>=.97)||{}).k,
    loPc=Math.min(100,Math.max(0,Math.round((r.byeLoseOut||0)*100))),
    loseRow=`<div class="poBdRow loseOut"><span>Loses out the rest of the way (0-${r.rg})</span><span>${loPc}%</span></div>`,
@@ -7344,6 +7396,7 @@ function poTeamModalBody(PO,r){
    <div class="poBdRow hd"><span>Scenario</span><span>Bye odds</span></div>${loseRow}${rows}
    <p class="lgNote">"Overall odds right now" is this team's real, full odds today -- the same simulation as everywhere else in this app, using its actual remaining opponents, their lineups, and real variance. The top row asks the opposite question: what if it loses every game left.</p>`;
  }
+ if(r.matrix&&r.matrix.length)return poMatrixHTML(r,r.matrix,'Playoff odds');
  let firstClinchK=r.proven==='clinched'?0:r.proven==='eliminated'?null:(r.breakdown.find(x=>x.p>=.97)||{}).k;
  let loPc2=Math.min(100,Math.max(0,Math.round((r.loseOut||0)*100))),
   loseRow2=`<div class="poBdRow loseOut"><span>Loses out the rest of the way (0-${r.rg})</span><span>${loPc2}%</span></div>`,
