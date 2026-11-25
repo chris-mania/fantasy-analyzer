@@ -85,7 +85,11 @@ def main():
     # painted with a fallback font and look.css's colors, so the body text visibly swapped fonts a
     # moment later. Loading it as a normal <link> in <head> lets the browser fetch it in parallel
     # with everything else, right alongside the stylesheet that names it.
-    font_tag = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&display=swap">'
+    # Only the plain "Barlow" family goes here -- "Barlow Condensed" is already requested (at a
+    # wider weight range) by build.py's own <link> near the top of the page, and asking Google
+    # Fonts for it a second time here just adds a redundant request competing for the same
+    # bandwidth while every headline is waiting on it to avoid the fallback-font flash.
+    font_tag = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=optional">'
     head_tag = font_tag + '<link rel="stylesheet" href="/look/look.css?v=' + v + '">'
     body_tag = '<script src="/look/look.js?v=' + v + '"></script>'
     apply_to(os.path.join(PUB, "index.html"), head_tag, body_tag)
