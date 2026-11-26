@@ -4871,6 +4871,7 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 @keyframes tsB{from{transform:translate(var(--dx),0)}50%{transform:translate(calc(var(--dx)/2),-30px)}to{transform:translate(0,0)}}
 @keyframes tsA{from{transform:translate(calc(var(--dx)*-1),0)}50%{transform:translate(calc(var(--dx)/-2),30px)}to{transform:translate(0,0)}}
 .glX{margin:2px 0 14px}.glX svg{width:100%;height:auto;display:block;overflow:visible}.glX .ln{stroke-dasharray:100;stroke-dashoffset:100}
+.glXSc{position:relative}.glXScW{overflow-x:auto;-webkit-overflow-scrolling:touch}.glXScW svg{width:auto}.glXSc:after{content:'';position:absolute;top:0;right:0;bottom:38px;width:18px;background:linear-gradient(to right,rgba(255,255,255,0),#fff);pointer-events:none}
 .glX.go .ln{animation:glLine 1.4s cubic-bezier(.4,0,.2,1) forwards}
 .glX .dt{opacity:0;transform-box:fill-box;transform-origin:center}.glX.go .dt{animation:glDot .35s ease-out forwards;animation-delay:var(--d)}
 @keyframes glLine{to{stroke-dashoffset:0}}@keyframes glDot{0%{opacity:0;transform:scale(0)}70%{transform:scale(1.5)}100%{opacity:1;transform:scale(1)}}
@@ -9949,12 +9950,13 @@ function cxVsList(p){var T=(META.vs&&META.vs.t)||{},PN={QB:'quarterbacks',RB:'ru
   +'<table><tbody>'+rows.map(function(r){return '<tr><td>W'+r[3]+'</td><td>'+tlogo(r[4],'sm')+trEsc(r[1])+'</td><td class="grade '+grade(Math.min(99,r[6]*4))+'">'+r[6]+'</td></tr>'}).join('')+'</tbody></table></div>'}
 function cxChart(p,q){var A=[],B=[];try{A=glLg(p).filter(function(l){return l.ppr!=null});B=glLg(q).filter(function(l){return l.ppr!=null})}catch(e){return ''}
  var wk={};A.concat(B).forEach(function(l){wk[+l.w]=1});var Ws=Object.keys(wk).map(Number).sort(function(x,y){return x-y});if(Ws.length<2||!A.length||!B.length)return '';
- var W=320,H=150,pl=20,pr=20,pt=24,pb=38,n=Ws.length,mx=10;A.concat(B).forEach(function(l){mx=Math.max(mx,l.ppr)});
- var X=function(w){return pl+(W-pl-pr)*(Ws.indexOf(+w)/(n-1))},Y=function(v){return pt+(H-pt-pb)*(1-Math.max(v,-2)/mx)},sh=n<=10,AM={},BM={};A.forEach(function(l){AM[+l.w]=l});B.forEach(function(l){BM[+l.w]=l});
+ var pl=20,pr=20,pt=24,pb=38,n=Ws.length,mx=10;A.concat(B).forEach(function(l){mx=Math.max(mx,l.ppr)});
+ var sc=n>10,W=sc?Math.max(320,34*(n-1)+pl+pr):320,H=150;
+ var X=function(w){return pl+(W-pl-pr)*(Ws.indexOf(+w)/(n-1))},Y=function(v){return pt+(H-pt-pb)*(1-Math.max(v,-2)/mx)},sh=true,AM={},BM={};A.forEach(function(l){AM[+l.w]=l});B.forEach(function(l){BM[+l.w]=l});
  var av=function(L){return L.reduce(function(s,l){return s+l.ppr},0)/L.length},aa=av(A),ba=av(B);
  var nm=function(x){if(x.pos==='DST')return x.team;var w=String(x.name||'').split(' ').filter(function(t){return !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(t)});return w[w.length-1]||x.name};
  var path=function(L,c){return '<path d="'+L.map(function(l,i){return (i?'L':'M')+X(l.w).toFixed(1)+' '+Y(l.ppr).toFixed(1)}).join(' ')+'" fill="none" stroke="'+c+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'};
- var o='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Fantasy points by week for both players">'
+ var o='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'"'+(sc?' style="width:'+W+'px;max-width:none"':'')+' role="img" aria-label="Fantasy points by week for both players">'
   +'<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(aa).toFixed(1)+'" y2="'+Y(aa).toFixed(1)+'" stroke="#9db4e3" stroke-dasharray="3 4"/>'
   +'<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(ba).toFixed(1)+'" y2="'+Y(ba).toFixed(1)+'" stroke="#eba3a3" stroke-dasharray="3 4"/>'+path(A,'#2457b8')+path(B,'#d93a3a');
  Ws.forEach(function(w){var x=X(w).toFixed(1),a=AM[w],b=BM[w];
@@ -9963,7 +9965,7 @@ function cxChart(p,q){var A=[],B=[];try{A=glLg(p).filter(function(l){return l.pp
   if(sh){var au=!b||a&&a.ppr>=b.ppr;if(a)o+='<text x="'+x+'" y="'+(au?Y(a.ppr)-9:Y(a.ppr)+17).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="800" fill="#12151a">'+a.ppr+'</text>';
    if(b)o+='<text x="'+x+'" y="'+(!a||!au?Y(b.ppr)-9:Y(b.ppr)+17).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="800" fill="#d93a3a">'+b.ppr+'</text>'}
   o+='<text x="'+x+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#8794ad" font-weight="700">W'+w+'</text>'});
- return '<div class="glX go glQ">'+o+'</svg><div class="glLg"><span><i class="a"></i>'+nm(p)+' avg <b>'+aa.toFixed(1)+'</b></span><span><i class="r"></i>'+nm(q)+' avg <b>'+ba.toFixed(1)+'</b></span></div></div>'}
+ return '<div class="glX go glQ'+(sc?' glXSc':'')+'">'+(sc?'<div class="glXScW">':'')+o+'</svg>'+(sc?'</div>':'')+'<div class="glLg"><span><i class="a"></i>'+nm(p)+' avg <b>'+aa.toFixed(1)+'</b></span><span><i class="r"></i>'+nm(q)+' avg <b>'+ba.toFixed(1)+'</b></span></div></div>'}
 function cxPane(t){var a=A,b=B,k=!!(a.kd||b.kd),qb=a.pos==='QB'&&b.pos==='QB',wk=META.next_week,na=trEsc(a.name),nb=trEsc(b.name);
  if(t==='gl'){var pa=cxShim(a),pb=cxShim(b),h=cxChart(pa,pb);if(!h)h=glHTML(pa);return '<div class="panel cxGl"><div class="ph">Game log</div>'+(h||'<p class="sub">Not enough games yet to draw a line.</p>')+'<p class="cxN">'+na+' is blue, '+nb+' is red. Every week either one played is shown.</p>'+cxLogTbls(a,b)+'</div>'}
  if(t==='bb'){var sa=cxBBst(a),sb=cxBBst(b),pa2=cxProj(a),pb2=cxProj(b);if(!sa&&!sb)return '<div class="panel"><p class="sub">No games yet.</p></div>';
