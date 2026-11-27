@@ -7474,12 +7474,26 @@ function poTeamModal(i){
 function gmOn(){return lgOn()&&TR.my.length>0&&!!(TR.espnGm&&TR.espnGm.picks&&TR.espnGm.picks.length)}
 function gmGames(p){return (p.logs||[]).filter(l=>l.ppr!=null&&!l.auto)}
 function gmPts(p){return gmGames(p).reduce((s,l)=>s+l.ppr,0)}
+/* Per-game rate, not a season total -- a stud who tore an ACL in Week 8 should still finish near the
+   top, not get buried under every healthy player's extra games of counting stats. Missed time is real
+   bad luck, not a bad pick. Small samples still need a guard rail, though (one monster game is not
+   "the best player in the league"), so a short sample is pulled toward the position's average rate --
+   the more games played, the less it gets pulled, and an 8-game stud barely moves at all. */
+var GMPOSAVG=null;
+/* Games-weighted, not a plain average of each player's own rate -- a plain average would let a
+   one-game-sample backup (the very noise this shrinkage exists to tame) outvote a 12-game starter,
+   since each player's rate counted equally regardless of how many games it was built on. Summing all
+   points and all games across the position first means a 1-game outlier barely moves the baseline. */
+function gmPosAvgRate(pos){GMPOSAVG=GMPOSAVG||{};if(GMPOSAVG[pos]!=null)return GMPOSAVG[pos];
+ let totPts=0,totG=0;allPlayers().forEach(p=>{if(p.pos!==pos)return;let gs=gmGames(p).length;if(!gs)return;totPts+=gmPts(p);totG+=gs});
+ let avg=totG?totPts/totG:0;GMPOSAVG[pos]=avg;return avg}
+function gmAdjRate(p){let gs=gmGames(p).length;if(!gs)return null;let rate=gmPts(p)/gs,k=4,posAvg=gmPosAvgRate(p.pos);return (rate*gs+posAvg*k)/(gs+k)}
 /* Overall (not positional) realized finish, among every skill player who has actually played a game
    this season -- matches how the pick-value formula below is meant to read: pick 1 on a player who
    finishes #1 overall nets 0 ("that takes no skill"); pick 100 on a player who finishes top-5 at his
    position (roughly rank 15 overall in a typical PPR league) nets +85. Kickers/defenses are already
    left out of TR.espnGm.picks (see trEspnFromApi), so they never enter this pool either. */
-function gmFinishPool(){let arr=allPlayers().filter(p=>gmGames(p).length>0).map(p=>({id:p.id,pts:gmPts(p)}));arr.sort((a,b)=>b.pts-a.pts);let rank={};arr.forEach((x,i)=>rank[x.id]=i+1);return {rank,total:arr.length}}
+function gmFinishPool(){GMPOSAVG=null;let arr=allPlayers().filter(p=>gmGames(p).length>0).map(p=>({id:p.id,rate:gmAdjRate(p)}));arr.sort((a,b)=>b.rate-a.rate);let rank={};arr.forEach((x,i)=>rank[x.id]=i+1);return {rank,total:arr.length}}
 /* Replacement level for GRADING trades against past weeks: the Nth-best player at the position this
    SEASON by real results (N = teams x starters needed there) -- not the live trade analyzer's
    forward-looking blend, which assumes today's roster shape and today's outlook and does not make
@@ -7562,7 +7576,7 @@ function gmPanelHTML(GM){if(!GM)return '';
     :(pk&&pk.value<0?`Reached on ${trEsc(pk.p.name)} at pick ${pk.pick}, who finished only #${pk.finish} overall.`:'No real reach &mdash; every pick finished about where he was taken.');
    return `<div class="gmPickCard"><div class="gmPickH"><b>${trEsc((GM.board[d.ti]||{}).name||'')}</b><span>${d.sum>=0?'+':''}${Math.round(d.sum)} pts above slot</span></div><p>${line}</p></div>`},
   drafting=GM.drafters.length?`<div class="tsec">Best drafter</div>${draftCard(bestD,'best')}${GM.drafters.length>1?`<div class="tsec" style="margin-top:14px">Worst drafter</div>${draftCard(worstD,'worst')}`:''}`:'';
- return `${hero}${board}${trades}${drafting}<p class="tnote" style="margin-top:14px">Best Drafter credits/blames whoever drafted a player, even if he was later traded away or dropped. Best Trader compares what each side's players actually did after the trade (points above a replacement player at their position, per game, capped if they got hurt) so one huge or one terrible game right after a trade can't swing it, and neither can bad injury luck. A new trade needs a few games on the books before it's graded. ${N>(GM.ranked.length||0)?'Teams with no graded picks or trades yet are left off the board above.':''}</p>`}
+ return `${hero}${board}${trades}${drafting}<p class="tnote" style="margin-top:14px">Best Drafter credits/blames whoever drafted a player, even if he was later traded away or dropped, and grades him on points per game (not his season total), so a stud who got hurt partway through the year still shows as a great pick instead of getting buried under everyone else's extra healthy games. Best Trader compares what each side's players actually did after the trade (points above a replacement player at their position, per game, capped if they got hurt) so one huge or one terrible game right after a trade can't swing it, and neither can bad injury luck. A new trade needs a few games on the books before it's graded. ${N>(GM.ranked.length||0)?'Teams with no graded picks or trades yet are left off the board above.':''}</p>`}
 document.addEventListener('click',e=>{let t=e.target.closest&&e.target.closest('.lgSo');if(!t)return;LGR.sort=t.dataset.k;let b=t.closest('.lgSt');if(b)b.outerHTML=lgStandHTML()});
 function lgBox(cx){let LS=TR.leagues||[],TD=!cx||cx==='trade';
  if(!lgOn()&&!LS.length)return `<div class="lgBox"><div><b>Import your ESPN or Sleeper league</b><span>Bring in every team in your league. Then you can compare against anyone, trade with real rosters, and see who is on waivers.</span></div><button type="button" class="lgImp">Import league</button></div>`;
