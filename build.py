@@ -4806,6 +4806,16 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 .lgSr{grid-template-columns:22px minmax(0,1fr) 40px 42px 44px 44px!important;gap:6px!important}.lgSr>span{min-width:0}.lgSr>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lgSo{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}.lgSo.on{color:#2457b8}
 .lgGr{font-style:normal;font-weight:800;font-size:12.5px;padding:2px 7px;border-radius:8px;background:#eef2f8;color:#16213a}.lgGr.gA{background:#dff5e6;color:#14663a}.lgGr.gB{background:#e3f0ff;color:#1f4fa8}.lgGr.gC{background:#fff3d6;color:#8a5a00}.lgGr.gD,.lgGr.gF{background:#fde4e4;color:#a4282a}
+.gmHero{background:#fff;border-radius:20px;box-shadow:var(--shadow);padding:18px 18px 14px;margin:0 0 14px;border-top:4px solid #3a7bd5}.gmHero.good{border-top-color:#22a45d}.gmHero.bad{border-top-color:#e2505b}
+.gmHeroH{display:flex;gap:16px;align-items:center;margin-bottom:14px}.gmHeroG{flex:none;width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;letter-spacing:-.03em;color:#fff;background:#3a7bd5}.gmHero.good .gmHeroG{background:#22a45d}.gmHero.bad .gmHeroG{background:#e2505b}
+.gmHeroH strong{display:block;font-size:18px;letter-spacing:-.02em;margin:0 0 4px}.gmHeroH p{margin:0;font-size:13px;color:#3d4f6d;line-height:1.5}.gmHeroH p b.up{color:#16803f}.gmHeroH p b.dn{color:#c0303c}
+.gmHeroT{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.gmHeroT>div{background:#f6f8fb;border-radius:12px;padding:10px 6px;text-align:center}.gmHeroT small{display:block;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.3px;text-transform:uppercase}.gmHeroT b{display:block;font-size:16px;font-weight:800;letter-spacing:-.02em;margin:2px 0}.gmHeroT span{display:block;font-size:11px;color:var(--muted)}
+@media(max-width:800px){.gmHeroT{grid-template-columns:1fr 1fr 1fr}.gmHeroG{width:52px;height:52px;font-size:21px}}
+.gmBoard{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}.gmRow{display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}.gmRow.me{box-shadow:0 0 0 2px #3a7bd5,var(--shadow)}
+.gmRowN{flex:1;min-width:0}.gmRowN b{display:block;font-size:14px}.gmRowN small{display:block;font-size:11.5px;color:var(--muted)}.gmRowG{font-size:16px;font-weight:800}
+.gmDeal{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow)}.gmDealT{display:flex;flex-direction:column;gap:6px;font-size:13px}.gmDealT div{display:flex;flex-direction:column}.gmDealT b{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}.gmDealT i{font-style:normal;color:var(--muted);font-size:11.5px}
+.gmDealM{font-size:11.5px;color:var(--muted);margin-top:8px}.gmDealV{margin-top:6px}
+.gmPickCard{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);margin-bottom:10px}.gmPickH{display:flex;justify-content:space-between;align-items:baseline}.gmPickH b{font-size:14.5px}.gmPickH span{font-size:12px;color:var(--muted)}.gmPickCard p{margin:6px 0 0;font-size:13px;color:#3d4f6d;line-height:1.5}
 .lgWvL{border-bottom:1px solid #eef2f8;padding-bottom:6px}.lgWvL .trVal{display:none!important}.lgWvV{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:0 4px 4px 56px;font-size:12.5px;color:#4a5a73}.lgWvV small{flex-basis:100%;color:#6b7a94;font-size:12px}.lgYour b{color:#16213a}
 .lgVd{font-weight:800;font-size:11.5px;padding:2px 9px;border-radius:999px;background:#eef2f8;color:#4a5a73}.lgVd.up{background:#dff5e6;color:#14663a}.lgVd.ok{background:#e3f0ff;color:#1f4fa8}.lgVd.dn{background:#f1f3f7;color:#7a879c}
 .lgIT em.ok{color:#14663a;background:#dff5e6}
@@ -6897,8 +6907,9 @@ try{let s=JSON.parse(localStorage.getItem(TRK)||'null');if(s&&s.st&&s.send){TR=O
     the Advanced way, until something (like opening League -> picking your team) called lgUseLeague()
     and repopulated it for that session only. Fall back to the active league's saved copy so a fresh
     page load has it immediately, for anyone whose data predates this fix too. */
- if(!TR.espnAdv&&TR.leagues&&TR.leagues[TR.lgCur])TR.espnAdv=TR.leagues[TR.lgCur].espnAdv||null}}catch(e){}
-function trSave(){if(TR.shared)return;if(TR.lg[TR.lgi])TR.lg[TR.lgi].ids=TR.their.slice();try{localStorage.setItem(TRK,JSON.stringify({v:3,tname:TR.tname||'',solo:!!TR.solo,inc:TR.inc||[],n:TR.n,sf:TR.sf,hz:TR.hz,st:TR.st,give:TR.give,get:TR.get,my:TR.my,their:TR.their,send:TR.send,rec:TR.rec,lock:TR.lock||[],stand:TR.stand||{},lg:TR.lg,lgi:TR.lgi,lgAll:TR.lgAll,lgMe:TR.lgMe,lgTs:TR.lgTs,leagues:TR.leagues,lgCur:TR.lgCur,lgOff:TR.lgOff,espnPj:TR.espnPj||{},espnAdv:TR.espnAdv||null}))}catch(e){}}
+ if(!TR.espnAdv&&TR.leagues&&TR.leagues[TR.lgCur])TR.espnAdv=TR.leagues[TR.lgCur].espnAdv||null;
+ if(!TR.espnGm&&TR.leagues&&TR.leagues[TR.lgCur])TR.espnGm=TR.leagues[TR.lgCur].espnGm||null}}catch(e){}
+function trSave(){if(TR.shared)return;if(TR.lg[TR.lgi])TR.lg[TR.lgi].ids=TR.their.slice();try{localStorage.setItem(TRK,JSON.stringify({v:3,tname:TR.tname||'',solo:!!TR.solo,inc:TR.inc||[],n:TR.n,sf:TR.sf,hz:TR.hz,st:TR.st,give:TR.give,get:TR.get,my:TR.my,their:TR.their,send:TR.send,rec:TR.rec,lock:TR.lock||[],stand:TR.stand||{},lg:TR.lg,lgi:TR.lgi,lgAll:TR.lgAll,lgMe:TR.lgMe,lgTs:TR.lgTs,leagues:TR.leagues,lgCur:TR.lgCur,lgOff:TR.lgOff,espnPj:TR.espnPj||{},espnAdv:TR.espnAdv||null,espnGm:TR.espnGm||null}))}catch(e){}}
 const trSoft=x=>1.4*Math.log(1+Math.exp(x/1.4)),trN=v=>v==null||isNaN(v)?'—':Math.abs(v)>=10?String(Math.round(v)):(Math.round(v*10)/10).toFixed(1).replace(/\.0$/,'');
 function trGameWeeks(team){let o=(META.opps||{})[team]||{},a=[];for(let w=META.next_week;w<=TRLAST;w++)if(o[w])a.push(w);return a}
 function trBye(team){let o=(META.opps||{})[team]||{};for(let w=1;w<=18;w++)if(!o[w])return w;return 0}
@@ -7188,16 +7199,16 @@ function trEspnParse(txt,players){txt=trEspnFlat(txt);let idx={},L=txt.split(/\r
 function lgOn(){return !TR.lgOff&&!!(TR.lg&&TR.lg.length)}
 var LGIMP={add:true};
 (function(){if((!TR.leagues||!TR.leagues.length)&&TR.lgAll&&TR.lgAll.length>1){TR.leagues=[{id:1,name:'My league',lgAll:JSON.parse(JSON.stringify(TR.lgAll)),lgMe:TR.lgMe,lgTs:TR.lgTs,st:JSON.parse(JSON.stringify(TR.st)),sf:TR.sf,n:TR.n}];TR.lgCur=0}})();
-function lgSaveCur(){let l=TR.leagues&&TR.leagues[TR.lgCur];if(!l)return;l.lgAll=JSON.parse(JSON.stringify(TR.lgAll));l.lgMe=TR.lgMe;l.lgTs=TR.lgTs;l.st=JSON.parse(JSON.stringify(TR.st));l.sf=TR.sf;l.n=TR.n;l.espnPj=TR.espnPj||{};l.espnAdv=TR.espnAdv||null;trSave()}
-function lgStore(name){let rec={id:Date.now(),name:(name||'').trim().slice(0,28)||'My league',lgAll:JSON.parse(JSON.stringify(TR.lgAll)),lgMe:TR.lgMe,lgTs:TR.lgTs,st:JSON.parse(JSON.stringify(TR.st)),sf:TR.sf,n:TR.n,espnPj:TR.espnPj||{},espnAdv:TR.espnAdv||null};TR.leagues=TR.leagues||[];if(!LGIMP.add&&TR.lgCur>=0&&TR.leagues[TR.lgCur]){rec.id=TR.leagues[TR.lgCur].id;if(!(name||'').trim())rec.name=TR.leagues[TR.lgCur].name;TR.leagues[TR.lgCur]=rec}else{TR.leagues.push(rec);TR.lgCur=TR.leagues.length-1}TR.lgOff=false;trSave()}
+function lgSaveCur(){let l=TR.leagues&&TR.leagues[TR.lgCur];if(!l)return;l.lgAll=JSON.parse(JSON.stringify(TR.lgAll));l.lgMe=TR.lgMe;l.lgTs=TR.lgTs;l.st=JSON.parse(JSON.stringify(TR.st));l.sf=TR.sf;l.n=TR.n;l.espnPj=TR.espnPj||{};l.espnAdv=TR.espnAdv||null;l.espnGm=TR.espnGm||null;trSave()}
+function lgStore(name){let rec={id:Date.now(),name:(name||'').trim().slice(0,28)||'My league',lgAll:JSON.parse(JSON.stringify(TR.lgAll)),lgMe:TR.lgMe,lgTs:TR.lgTs,st:JSON.parse(JSON.stringify(TR.st)),sf:TR.sf,n:TR.n,espnPj:TR.espnPj||{},espnAdv:TR.espnAdv||null,espnGm:TR.espnGm||null};TR.leagues=TR.leagues||[];if(!LGIMP.add&&TR.lgCur>=0&&TR.leagues[TR.lgCur]){rec.id=TR.leagues[TR.lgCur].id;if(!(name||'').trim())rec.name=TR.leagues[TR.lgCur].name;TR.leagues[TR.lgCur]=rec}else{TR.leagues.push(rec);TR.lgCur=TR.leagues.length-1}TR.lgOff=false;trSave()}
 function lgRefresh(){trSave();trRenderAll();try{tAutoMine();renderTeams()}catch(e){}}
-function lgUseLeague(i){let l=TR.leagues[i];if(!l)return;TR.espnPj=l.espnPj||{};TR.espnAdv=l.espnAdv||null;TR.lgCur=i;TR.lgOff=false;TR.st=JSON.parse(JSON.stringify(l.st||TR.st));TR.sf=!!l.sf;TR.n=l.n||TR.n;TRC=null;lgApply(JSON.parse(JSON.stringify(l.lgAll)),l.lgMe,false);TR.lgTs=l.lgTs||0;trSave();trRenderAll()}
+function lgUseLeague(i){let l=TR.leagues[i];if(!l)return;TR.espnPj=l.espnPj||{};TR.espnAdv=l.espnAdv||null;TR.espnGm=l.espnGm||null;TR.lgCur=i;TR.lgOff=false;TR.st=JSON.parse(JSON.stringify(l.st||TR.st));TR.sf=!!l.sf;TR.n=l.n||TR.n;TRC=null;lgApply(JSON.parse(JSON.stringify(l.lgAll)),l.lgMe,false);TR.lgTs=l.lgTs||0;trSave();trRenderAll()}
 function lgNameModal(title,val,ok,delMsg){let m=document.createElement('div');m.className='trModal';m.innerHTML=delMsg?`<div class="trModalB"><b>${title}</b><p>${delMsg}</p><div class="lgTb"><button type="button" class="trAsk lgOk">Delete</button><button type="button" class="trAsk lgX">Cancel</button></div></div>`:`<div class="trModalB"><b>${title}</b><input class="lgNmI" maxlength="28" value="${trEsc(val||'')}"><div class="lgTb"><button type="button" class="trAsk lgOk">Save</button><button type="button" class="trAsk lgX">Cancel</button></div></div>`;m.onclick=e=>{if(e.target===m||e.target.classList.contains('lgX'))m.remove();else if(e.target.classList.contains('lgOk')){let v=m.querySelector('.lgNmI');ok(v?v.value:'');m.remove()}};document.body.appendChild(m);let i=m.querySelector('.lgNmI');if(i){i.focus();i.select()}}
 document.addEventListener('change',e=>{let t=e.target;if(!t.classList||!t.classList.contains('lgLs'))return;if(t.value==='off'){TR.lgOff=true;trLgOffClear();lgRefresh()}else lgUseLeague(+t.value)});
 document.addEventListener('click',e=>{let t=e.target.closest&&e.target.closest('.lgRn,.lgDel');if(!t)return;let l=TR.leagues&&TR.leagues[TR.lgCur];if(!l)return;if(t.classList.contains('lgRn'))lgNameModal('Rename league',l.name,v=>{l.name=(v||'').trim().slice(0,28)||l.name;lgRefresh()});else lgNameModal('Delete league','',()=>{TR.leagues.splice(TR.lgCur,1);if(TR.leagues.length)lgUseLeague(0);else{TR.lgCur=-1;TR.lg=[];TR.lgAll=[];TR.lgMe=-1;TR.lgi=-1;TR.lgOff=false;lgRefresh()}},'This removes "'+trEsc(l.name)+'" from this device. You can import it again any time.')});
 function lgOwned(){let m={};(TR.lg||[]).forEach(t=>t.ids.forEach(i=>m[i]=t.n));return m}
 function lgAllIds(){let st=new Set(TR.my);(TR.lg||[]).forEach(t=>t.ids.forEach(i=>st.add(i)));if(TR.lgi<0)TR.their.forEach(i=>st.add(i));return st}
-function lgApply(all,me,fresh){TR.lgAll=all.map(t=>({n:t.n,ids:t.ids.slice(),rec:t.rec||'',w:t.w,l:t.l,t:t.t,seed:t.seed||0,pf:t.pf||0,pa:t.pa||0}));TR.lgMe=me;if(fresh)TR.lgTs=Date.now();let m=all[me],oth=all.filter((t,i)=>i!==me).map(t=>({n:t.n,ids:t.ids.slice()}));
+function lgApply(all,me,fresh){TR.lgAll=all.map(t=>({n:t.n,ids:t.ids.slice(),rec:t.rec||'',w:t.w,l:t.l,t:t.t,seed:t.seed||0,pf:t.pf||0,pa:t.pa||0,eid:t.eid}));TR.lgMe=me;if(fresh)TR.lgTs=Date.now();let m=all[me],oth=all.filter((t,i)=>i!==me).map(t=>({n:t.n,ids:t.ids.slice()}));
  TR.my=m.ids.slice();TR.tname=m.n.slice(0,22);TR.lg=oth;TR.lgi=oth.length?0:-1;TR.their=oth.length?oth[0].ids.slice():[];TR.send={my:[],their:[]};TR.give=[];TR.get=[];TR.inc=[];TR.n=Math.max(6,Math.min(20,all.length));TRIC=null;
  trSave();trRenderAll();try{tAutoMine();renderTeams()}catch(e){}}
 function trEspnWhy(txt,r){let t=(txt||'').trim();if(!t)return 'The box is empty. Paste the Rosters page you copied from ESPN.';
@@ -7456,6 +7467,102 @@ function poTeamModal(i){
  };
  document.body.appendChild(m);
 }
+/* ===== GM tab: Best Drafter, Best Trader, league GM leaderboard =====
+   Entirely derived from TR.espnGm (draft picks + trade history, already resolved to our own player
+   ids at import time -- see trEspnFromApi) plus each player's own real game log for the season. No
+   extra server data needed. Gated like Playoffs: only shows up once an Advanced-way import has it. */
+function gmOn(){return lgOn()&&TR.my.length>0&&!!(TR.espnGm&&TR.espnGm.picks&&TR.espnGm.picks.length)}
+function gmGames(p){return (p.logs||[]).filter(l=>l.ppr!=null&&!l.auto)}
+function gmPts(p){return gmGames(p).reduce((s,l)=>s+l.ppr,0)}
+/* Overall (not positional) realized finish, among every skill player who has actually played a game
+   this season -- matches how the pick-value formula below is meant to read: pick 1 on a player who
+   finishes #1 overall nets 0 ("that takes no skill"); pick 100 on a player who finishes top-5 at his
+   position (roughly rank 15 overall in a typical PPR league) nets +85. Kickers/defenses are already
+   left out of TR.espnGm.picks (see trEspnFromApi), so they never enter this pool either. */
+function gmFinishPool(){let arr=allPlayers().filter(p=>gmGames(p).length>0).map(p=>({id:p.id,pts:gmPts(p)}));arr.sort((a,b)=>b.pts-a.pts);let rank={};arr.forEach((x,i)=>rank[x.id]=i+1);return {rank,total:arr.length}}
+/* Replacement level for GRADING trades against past weeks: the Nth-best player at the position this
+   SEASON by real results (N = teams x starters needed there) -- not the live trade analyzer's
+   forward-looking blend, which assumes today's roster shape and today's outlook and does not make
+   sense applied retroactively to a trade from six weeks ago. */
+var GMREPL=null;
+function gmRepl(){if(GMREPL)return GMREPL;let out={};TRPOS.forEach(pos=>{let arr=allPlayers().filter(p=>p.pos===pos&&gmGames(p).length>0).map(p=>gmPts(p)/gmGames(p).length);arr.sort((a,b)=>b-a);let n=Math.max(1,Math.round((TR.n||10)*(TR.st[pos]||1)));out[pos]=arr.length?arr[Math.min(n,arr.length)-1]:0});GMREPL=out;return out}
+function gmTeamIdx(eid){let all=TR.lgAll||[];for(let i=0;i<all.length;i++)if(all[i].eid===eid)return i;return -1}
+/* ---------- Best Drafter: value = where he was picked minus where he actually finished ---------- */
+function gmDraftTeam(ti,pool){let eid=(TR.lgAll[ti]||{}).eid;if(eid==null)return null;
+ let picks=(TR.espnGm.picks||[]).filter(pk=>pk.teamEid===eid).map(pk=>{let p=byId(pk.id);if(!p)return null;let finish=pool.rank[pk.id]!=null?pool.rank[pk.id]:pool.total+1;return {p,pick:pk.pick,round:pk.round,finish,value:pk.pick-finish}}).filter(Boolean);
+ if(!picks.length)return null;
+ let sum=picks.reduce((s,v)=>s+v.value,0),avg=sum/picks.length,best=picks.slice().sort((a,b)=>b.value-a.value)[0],worst=picks.slice().sort((a,b)=>a.value-b.value)[0];
+ return {ti,picks,sum,avg,best,worst}}
+/* ---------- Best Trader ---------- */
+/* One trade = everything that moved between the same two teams, grouped by ESPN's own
+   relatedTransactionId (a real 2-sided trade is usually two linked transaction records, one per team),
+   so a single trade is one entry here, never two. */
+function gmTrades(){let groups={};(TR.espnGm.tx||[]).forEach(t=>{let k=t.rel;groups[k]=groups[k]||{wk:t.wk,items:[]};groups[k].items=groups[k].items.concat(t.items||[]);if(t.wk&&(!groups[k].wk||t.wk<groups[k].wk))groups[k].wk=t.wk});
+ let out=[];Object.keys(groups).forEach(k=>{let g=groups[k],sides={};g.items.forEach(it=>{if(it.id==null||it.to==null)return;(sides[it.to]=sides[it.to]||[]).push(it.id)});let eids=Object.keys(sides).map(Number);
+  if(eids.length!==2)return;let eA=eids[0],eB=eids[1],tiA=gmTeamIdx(eA),tiB=gmTeamIdx(eB);if(tiA<0||tiB<0)return;
+  out.push({wk:g.wk||1,tiA,tiB,gotA:sides[eA],gotB:sides[eB]})});
+ return out}
+/* Rate-based (points above replacement PER GAME actually played, not a season total) so an injury
+   right after the trade -- bad luck, not a bad decision -- cannot sink a grade just because fewer
+   weeks got played, and a couple of random big or bad games cannot swing it either: at least 3 total
+   games across both hauls are required before a trade is graded at all. Before that, "too early to
+   tell yet" is the honest answer, so it is simply left out of the leaderboards. */
+function gmSideRate(ids,fromWk,repl){let games=0,rate=0,total=0;(ids||[]).forEach(id=>{let p=byId(id);if(!p)return;let logs=(p.logs||[]).filter(l=>l.w>fromWk&&l.ppr!=null&&!l.auto);if(!logs.length)return;let sum=0;logs.forEach(l=>sum+=Math.max(0,l.ppr-(repl[p.pos]||0)));games+=logs.length;rate+=sum/logs.length;total+=logs.reduce((s,l)=>s+l.ppr,0)});return {games,rate,total}}
+function gmGradeTrade(t,repl){let a=gmSideRate(t.gotA,t.wk,repl),b=gmSideRate(t.gotB,t.wk,repl);if(a.games+b.games<3)return null;
+ return {wk:t.wk,tiA:t.tiA,tiB:t.tiB,gotA:t.gotA,gotB:t.gotB,margin:a.rate-b.rate,ptsA:a.total,ptsB:b.total,gamesA:a.games,gamesB:b.games}}
+function gmTradeTeam(ti,graded){let mine=graded.filter(g=>g.tiA===ti||g.tiB===ti);if(!mine.length)return null;
+ let vals=mine.map(g=>g.tiA===ti?g.margin:-g.margin),sumPts=mine.reduce((s,g)=>s+(g.tiA===ti?g.ptsA-g.ptsB:g.ptsB-g.ptsA),0),avg=vals.reduce((s,v)=>s+v,0)/vals.length;
+ return {ti,n:mine.length,avg,sumPts}}
+/* ---------- build + combine ---------- */
+var GMR=null;
+function gmBuild(){if(!gmOn())return null;let key=TR.lgTs+'|'+(TR.espnGm.picks||[]).length+'|'+(TR.espnGm.tx||[]).length+'|'+TR.lgMe;if(GMR&&GMR.key===key)return GMR.v;
+ GMREPL=null;let pool=gmFinishPool(),repl=gmRepl(),all=TR.lgAll||[],N=all.length,me=TR.lgMe;
+ let drafters=[];for(let i=0;i<N;i++){let d=gmDraftTeam(i,pool);if(d)drafters.push(d)}
+ drafters.sort((a,b)=>b.avg-a.avg);drafters.forEach((d,i)=>d.rank=i+1);
+ let gradedAll=gmTrades().map(t=>gmGradeTrade(t,repl)).filter(Boolean);
+ let traders=[];for(let i=0;i<N;i++){let t=gmTradeTeam(i,gradedAll);if(t)traders.push(t)}
+ traders.sort((a,b)=>b.avg-a.avg);traders.forEach((t,i)=>t.rank=i+1);
+ function pct(arr,val){return arr.length>1?arr.filter(x=>x.avg<val).length/(arr.length-1):.5}
+ let board=all.map((team,i)=>{let d=drafters.find(x=>x.ti===i),t=traders.find(x=>x.ti===i),
+   dPc=d?pct(drafters,d.avg):null,tPc=t?pct(traders,t.avg):null,
+   parts=[dPc,tPc].filter(x=>x!=null),overall=parts.length?parts.reduce((s,x)=>s+x,0)/parts.length:null;
+  return {ti:i,name:team.n||('Team '+(i+1)),d,t,dPc,tPc,overall,nDraft:drafters.length,nTrade:traders.length}});
+ let ranked=board.filter(b=>b.overall!=null).sort((a,b)=>b.overall-a.overall);
+ ranked.forEach((b,k)=>b.rank=k+1);
+ let tradesSorted=gradedAll.slice().sort((a,b)=>b.margin-a.margin),
+  bestTrades=tradesSorted.slice(0,3),worstTrades=tradesSorted.slice(-3).reverse().filter(t=>bestTrades.indexOf(t)<0);
+ let v={board,ranked,me:ranked.find(b=>b.ti===me)||board.find(b=>b.ti===me)||null,bestTrades,worstTrades,drafters,traders,poolTotal:pool.total};
+ GMR={key,v};return v}
+function gmTradeHeadline(g,GM){let names=ids=>ids.map(id=>{let p=byId(id);return p?trEsc(p.name):'a pick'}).join(', '),nA=trEsc(GM.board[g.tiA].name),nB=trEsc(GM.board[g.tiB].name),
+ winnerIsA=g.margin>=0,winN=winnerIsA?nA:nB,gap=Math.abs(g.margin);
+ return {nA,nB,gotA:names(g.gotA),gotB:names(g.gotB),verdict:gap<.5?`Close, but ${winN} edges it`:gap<2.5?`${winN} won it`:`Lopsided &mdash; ${winN} won big`}}
+function gmPanelHTML(GM){if(!GM)return '';
+ function pct(arr,val){return arr.length>1?arr.filter(x=>x.avg<val).length/(arr.length-1):.5}
+ let me=GM.me,N=(TR.lgAll||[]).length,lgLet=pc=>pc==null?null:lgLetter(pc),
+  hero=(()=>{if(!me)return '<p class="tnote">Not enough of your own picks or trades could be graded yet to rank you &mdash; the league board below still works.</p>';
+   let d=me.d,t=me.t,graded=me.overall!=null,g=lgLet(me.overall),
+    draftTxt=d?`#${d.rank} of ${GM.drafters.length}`:'No picks to grade yet',
+    tradeTxt=t?`#${t.rank} of ${GM.traders.length}`:'No graded trades yet',
+    rankTxt=graded?`#${me.rank} of ${GM.ranked.length}`:'Not ranked yet',
+    headline=graded?(me.rank===1?'You\'re the #1 GM in your league':`You're #${me.rank} GM in your league`):'Not enough graded yet to rank you as a GM',
+    sub=d&&t?`Drafting grade <b class="${d.sum>=0?'up':'dn'}">${lgLet(pct(GM.drafters,d.avg))}</b>, trading grade <b class="${t.sumPts>=0?'up':'dn'}">${lgLet(pct(GM.traders,t.avg))}</b>.`
+     :d?`Graded on drafting only so far (${lgLet(pct(GM.drafters,d.avg))}) &mdash; none of your trades have enough games played yet to grade.`
+     :t?`Graded on trading only so far (${lgLet(pct(GM.traders,t.avg))}) &mdash; none of your draft picks could be matched up yet.`
+     :'Import again once you have a few picks or trades to show.';
+   return `<div class="gmHero${graded?(me.overall>=.6?' good':me.overall<.35?' bad':''):''}"><div class="gmHeroH"><div class="gmHeroG">${g||'&mdash;'}</div><div><strong>${headline}</strong><p>${sub}</p></div></div><div class="gmHeroT"><div><small>Best Drafter</small><b>${draftTxt}</b><span>${d?(d.sum>=0?'+':'')+Math.round(d.sum)+' pts above slot':'&mdash;'}</span></div><div><small>Best Trader</small><b>${tradeTxt}</b><span>${t?t.n+' graded trade'+(t.n===1?'':'s'):'&mdash;'}</span></div><div><small>Overall GM</small><b>${rankTxt}</b><span>${graded?Math.round(me.overall*100)+'th percentile':'&mdash;'}</span></div></div></div>`})();
+ let board=`<div class="tsec">League GM leaderboard</div><div class="gmBoard">${GM.ranked.map(b=>`<div class="gmRow${b.ti===TR.lgMe?' me':''}"><i class="trRole ${b.rank===1?'st':b.rank===GM.ranked.length?'ir':'fx'}">${b.rank}</i><div class="gmRowN"><b>${trEsc(b.name)}</b><small>${b.d?lgLet(pct(GM.drafters,b.d.avg))+' drafter':'no picks graded'}${b.t?', '+lgLet(pct(GM.traders,b.t.avg))+' trader':', no trades graded'}</small></div><b class="gmRowG">${lgLet(b.overall)}</b></div>`).join('')||'<p class="tnote">Nobody has enough graded picks or trades yet.</p>'}</div>`,
+  tradeCard=g=>{let h=gmTradeHeadline(g,GM);return `<div class="gmDeal"><div class="gmDealT"><div><b>${h.nA} got</b>${h.gotA}<i> from ${h.nB}</i></div><div><b>${h.nB} got</b>${h.gotB}<i> from ${h.nA}</i></div></div><div class="gmDealM">Week ${g.wk} trade</div><div class="gmDealV"><span class="trChip ${Math.abs(g.margin)<.5?'ok':'up'}">${h.verdict}</span></div></div>`},
+  trades=(GM.bestTrades.length||GM.worstTrades.length)?`<div class="tsec">Best trades</div>${GM.bestTrades.length?GM.bestTrades.map(tradeCard).join(''):'<p class="tnote">No trades have enough games played yet to grade.</p>'}<div class="tsec">Worst trades</div>${GM.worstTrades.length?GM.worstTrades.map(tradeCard).join(''):'<p class="tnote">No lopsided trades yet.</p>'}`:`<div class="tsec">Trades</div><p class="tnote">No trades have enough games played since they happened to grade yet. Check back as the season goes &mdash; or import again if you only have the current week's trade history (see the Advanced way link vs. the bookmark for a full season's worth).</p>`,
+  bestD=GM.drafters[0],worstD=GM.drafters[GM.drafters.length-1],
+  /* Best drafter's card leads with their best single steal; worst drafter's card leads with their
+     worst single reach -- a team's single best pick says nothing about its weakest if we are
+     explaining why that specific team ranked where it did, so the two cards never share one fallback. */
+  draftCard=(d,label)=>{if(!d)return '';let pk=label==='best'?d.best:d.worst,line=label==='best'
+    ?(pk&&pk.value>0?`${trEsc(pk.p.name)} in round ${pk.round} (pick ${pk.pick}), finished the real #${pk.finish} overall. Biggest steal of the draft.`:'No pick that beat where he was taken.')
+    :(pk&&pk.value<0?`Reached on ${trEsc(pk.p.name)} at pick ${pk.pick}, who finished only #${pk.finish} overall.`:'No real reach &mdash; every pick finished about where he was taken.');
+   return `<div class="gmPickCard"><div class="gmPickH"><b>${trEsc((GM.board[d.ti]||{}).name||'')}</b><span>${d.sum>=0?'+':''}${Math.round(d.sum)} pts above slot</span></div><p>${line}</p></div>`},
+  drafting=GM.drafters.length?`<div class="tsec">Best drafter</div>${draftCard(bestD,'best')}${GM.drafters.length>1?`<div class="tsec" style="margin-top:14px">Worst drafter</div>${draftCard(worstD,'worst')}`:''}`:'';
+ return `${hero}${board}${trades}${drafting}<p class="tnote" style="margin-top:14px">Best Drafter credits/blames whoever drafted a player, even if he was later traded away or dropped. Best Trader compares what each side's players actually did after the trade (points above a replacement player at their position, per game, capped if they got hurt) so one huge or one terrible game right after a trade can't swing it, and neither can bad injury luck. A new trade needs a few games on the books before it's graded. ${N>(GM.ranked.length||0)?'Teams with no graded picks or trades yet are left off the board above.':''}</p>`}
 document.addEventListener('click',e=>{let t=e.target.closest&&e.target.closest('.lgSo');if(!t)return;LGR.sort=t.dataset.k;let b=t.closest('.lgSt');if(b)b.outerHTML=lgStandHTML()});
 function lgBox(cx){let LS=TR.leagues||[],TD=!cx||cx==='trade';
  if(!lgOn()&&!LS.length)return `<div class="lgBox"><div><b>Import your ESPN or Sleeper league</b><span>Bring in every team in your league. Then you can compare against anyone, trade with real rosters, and see who is on waivers.</span></div><button type="button" class="lgImp">Import league</button></div>`;
@@ -7749,7 +7856,7 @@ function trEspnModalPaste(){let m=document.createElement('div');m.className='trM
  m.onclick=e=>{if(e.target===m)m.remove()};
  m.querySelector('.trAsk').onclick=()=>{let r=trEspnParse(m.querySelector('textarea').value,Object.values(trCtx().V).map(v=>v.p));
   let txt=m.querySelector('textarea').value,E=m.querySelector('.trImpE'),why=trEspnWhy(txt,r);if(why){E.textContent=why;return}
-  TR.espnPj={};TR.espnAdv=null;
+  TR.espnPj={};TR.espnAdv=null;TR.espnGm=null;
   lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')};
  document.body.appendChild(m);m.querySelector('textarea').focus()}
 /* ===== ESPN import through ESPN's own league feed: public league ID, run on your own computer, or private login ===== */
@@ -7779,11 +7886,23 @@ function trEspnFromApi(d,players,swid){var b=(d&&d.base)||d||{},idx={},miss=[],t
  var eidIdx={};teams.forEach(function(T,i){eidIdx[T.eid]=i});
  var sched=[];(b.schedule||[]).forEach(function(gm){var wk2=gm.matchupPeriodId;if(!wk2||!regWeeks||wk2>regWeeks)return;var h=gm.home,a=gm.away;if(!h||!a)return;var hi=eidIdx[h.teamId],ai=eidIdx[a.teamId];if(hi==null||ai==null)return;
   sched.push({w:wk2,h:hi,a:ai,hp:+h.totalPoints||0,ap:+a.totalPoints||0})});
- return {teams:teams,miss:miss,me:me,set:set,name:((b.settings||{}).name||'').trim(),pj:pj,sched:sched,regWeeks:regWeeks,playoffTeamCount:playoffTeamCount,seedRule:seedRule}}
+ /* GM tab extras: draft recap and trade history, resolved to our own player ids right here while eidMap
+    is still in scope (so the GM scoring code never has to know ESPN's own ids). mDraftDetail always
+    returns the whole season in one shot. mTransactions2 does not -- it is scoped to one week per
+    request, so d.tx (set only by the looping bookmarklet above) carries the full season's transactions;
+    a plain single-link import only ever has b.transactions, the current week alone. Kickers/defenses and
+    any pick nobody has rostered all season (so we have no name to match it to) are left out of the
+    draft recap -- low skill signal either way, and we would just be guessing at a name. */
+ var gmPicks=[];((b.draftDetail&&b.draftDetail.picks)||[]).forEach(function(pk){var our=eidMap[pk.playerId];if(our==null)return;if(!players.some(function(p){return p.id===our}))return;
+  gmPicks.push({id:our,pick:pk.overallPickNumber,round:pk.roundId,teamEid:pk.teamId})});
+ var gmTx=[];(((d&&d.tx)||b.transactions)||[]).forEach(function(t){if(t.status!=='EXECUTED')return;if(!(t.items||[]).some(function(it){return it.type==='TRADE'}))return;
+  gmTx.push({id:t.id,rel:t.relatedTransactionId||t.id,wk:t.scoringPeriodId||0,items:(t.items||[]).filter(function(it){return it.type==='TRADE'}).map(function(it){var our2=eidMap[it.playerId];return {from:it.fromTeamId,to:it.toTeamId,id:(our2!=null&&players.some(function(p){return p.id===our2}))?our2:null}})})});
+ return {teams:teams,miss:miss,me:me,set:set,name:((b.settings||{}).name||'').trim(),pj:pj,sched:sched,regWeeks:regWeeks,playoffTeamCount:playoffTeamCount,seedRule:seedRule,gmPicks:gmPicks,gmTx:gmTx}}
 function trEspnApply(m,d,swid,E){var r;E=E||m.querySelector('.espnErr');
  try{r=trEspnFromApi(d,Object.values(trCtx().V).map(function(v){return v.p}),swid)}catch(e){if(E)E.textContent='We could not read that league data. Try again, or use another way in.';return}
  if(!r.teams.length||r.teams.reduce(function(s,x){return s+x.ids.length},0)<r.teams.length*3){if(E)E.textContent='ESPN answered, but we found no rosters in it. If the league is private, use the private league or run-it-on-your-computer way.';return}
- TR.espnPj=r.pj;TR.espnAdv=(r.sched&&r.sched.length)?{sched:r.sched,regWeeks:r.regWeeks,playoffTeamCount:r.playoffTeamCount,seedRule:r.seedRule}:null;trSave();
+ TR.espnPj=r.pj;TR.espnAdv=(r.sched&&r.sched.length)?{sched:r.sched,regWeeks:r.regWeeks,playoffTeamCount:r.playoffTeamCount,seedRule:r.seedRule}:null;
+ TR.espnGm=(r.gmPicks&&r.gmPicks.length)?{picks:r.gmPicks,tx:r.gmTx||[]}:null;trSave();
  lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')}
 function trEspnCall(m,body,btn){var E=m.querySelector('.espnErr');E.textContent='';btn.disabled=true;var t0=btn.textContent;btn.textContent='Reading your league…';
  var done=function(){btn.disabled=false;btn.textContent=t0};
@@ -7797,8 +7916,14 @@ function trEspnBookmarklet(){var base=location.origin+location.pathname.replace(
  +"window.addEventListener('message',function(e){if(e.origin===O&&e.data&&e.data.fmEspnReady){ready=true;send()}});"
  +"var B='https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/'+yr+'/segments/0/leagues/'+id;"
  +"function g(q){return fetch(B+q,{credentials:'include'}).then(function(r){return r.json()})}"
- +"g('?view=mSettings&view=mTeam&view=mRoster&view=mStandings').then(function(base){var cur=Math.max(1,base.scoringPeriodId||1),ws=[];for(var k=cur;k<=17;k++)ws.push(k);"
- +"return Promise.all(ws.map(function(k){return g('?view=mRoster&scoringPeriodId='+k).then(function(j){var o={};(j.teams||[]).forEach(function(t){((t.roster&&t.roster.entries)||[]).forEach(function(e){var p=e.playerPoolEntry&&e.playerPoolEntry.player;if(!p)return;var s=(p.stats||[]).filter(function(x){return x.statSourceId===1&&x.scoringPeriodId===k})[0];if(s&&s.appliedTotal!=null)o[e.playerId]=Math.round(s.appliedTotal*10)/10})});return [k,o]}).catch(function(){return [k,{}]})})).then(function(a){var pr={};a.forEach(function(x){pr[x[0]]=x[1]});return {base:base,proj:pr}})})"
+ +"g('?view=mSettings&view=mTeam&view=mRoster&view=mStandings&view=mDraftDetail').then(function(base){var cur=Math.max(1,base.scoringPeriodId||1),ws=[];for(var k=cur;k<=17;k++)ws.push(k);var txw=[];for(var k2=1;k2<=cur;k2++)txw.push(k2);"
+ /* Transactions (trades, waivers, drops) only ever come back scoped to ONE week per request --
+    ESPN has no "whole season" param for mTransactions2 -- so a full trade history needs one request
+    per week already played. The bookmarklet can afford that loop since it is still a single click for
+    the person; the phone/paste "Advanced way" link below cannot loop at all, so it only ever sees the
+    current week's transactions. Draft picks need no loop: mDraftDetail always returns the complete
+    season's draft in one shot, folded into the same base/mSettings request above. */
+ +"return Promise.all([Promise.all(ws.map(function(k){return g('?view=mRoster&scoringPeriodId='+k).then(function(j){var o={};(j.teams||[]).forEach(function(t){((t.roster&&t.roster.entries)||[]).forEach(function(e){var p=e.playerPoolEntry&&e.playerPoolEntry.player;if(!p)return;var s=(p.stats||[]).filter(function(x){return x.statSourceId===1&&x.scoringPeriodId===k})[0];if(s&&s.appliedTotal!=null)o[e.playerId]=Math.round(s.appliedTotal*10)/10})});return [k,o]}).catch(function(){return [k,{}]})})),Promise.all(txw.map(function(k){return g('?view=mTransactions2&scoringPeriodId='+k).then(function(j){return j.transactions||[]}).catch(function(){return []})}))]).then(function(res){var pr={};res[0].forEach(function(x){pr[x[0]]=x[1]});var tx=[];res[1].forEach(function(arr){tx=tx.concat(arr)});return {base:base,proj:pr,tx:tx}})})"
  +".then(function(d){data=JSON.stringify(d);send();setTimeout(function(){if(ready)return;var t=document.createElement('textarea');t.value=data;t.style.cssText='position:fixed;z-index:2147483647;left:5%;top:10%;width:90%;height:50%;font:12px monospace';document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(e){}alert('Fantasy Mania did not open. The league data is selected in the box: copy it (Ctrl+C), then paste it into the Import screen on Fantasy Mania.')},6000)})"
  +".catch(function(){alert('ESPN would not give the league data. Make sure you are logged in to ESPN and on your league page.')})})();";
  return 'javascript:'+encodeURIComponent(code)}
@@ -7808,7 +7933,11 @@ function trEspnBookmarklet(){var base=location.origin+location.pathname.replace(
    roster on this week's matchup instead of on the team, so trEspnPhoneFix moves them to where trEspnFromApi
    looks. A team with no game this week has no roster there; then we hand out the big mRoster link instead. */
 function trEspnPhoneUrl(v,full){v=String(v||'');var id=(v.match(/leagueId=(\d{4,12})/)||v.match(/^\s*(\d{4,12})\s*$/)||[])[1],y=(v.match(/seasonId=(\d{4})/)||[])[1]||trEspnSeason();
- return id?'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/'+y+'/segments/0/leagues/'+id+'?view=mSettings&view=mTeam&view='+(full?'mRoster':'mBoxscore'):''}
+ /* mDraftDetail always returns the whole season's draft in one shot, so a single link gets the full
+    GM-tab draft recap either way. mTransactions2 only ever covers the single current week here (see the
+    bookmarklet above for why) -- so a league imported this way sees Best Drafter but a thinner, current
+    week only Best Trader until they use the bookmarklet or re-import later in the season. */
+ return id?'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/'+y+'/segments/0/leagues/'+id+'?view=mSettings&view=mTeam&view=mDraftDetail&view=mTransactions2&view='+(full?'mRoster':'mBoxscore'):''}
 function trEspnPhoneFix(d){var by={};(d.schedule||[]).forEach(function(g){['home','away'].forEach(function(s){var x=g[s],r=x&&x.rosterForCurrentScoringPeriod;if(r&&r.entries)by[x.teamId]=r})});
  (d.teams||[]).forEach(function(t){if(!t.roster&&by[t.id])t.roster=by[t.id]});return d}
 function trEspnPdfClean(raw){var i=raw.indexOf('{');if(i>0)raw=raw.slice(i);raw=raw.split('Pretty-print').join('');
@@ -7877,7 +8006,7 @@ function trEspnModal(){
  var phFile=m.querySelector('.espnPhFile');if(phFile)phFile.onchange=function(){var f=phFile.files&&phFile.files[0];if(!f)return;trEspnPhoneFileGo(f,m.querySelector('.espnErrPriv'))};
  m.querySelector('.espnPasteGo').onclick=function(){var E=m.querySelector('.espnErrPriv'),pf=phFile&&phFile.files&&phFile.files[0];if(pf)return trEspnPhoneFileGo(pf,E);
   var ta=m.querySelector('.espnPasteRoster');if(/^\s*\{/.test(ta.value))return trEspnPhonePaste(m,ta.value,E);var r=trEspnParse(ta.value,Object.values(trCtx().V).map(function(v){return v.p}));
-  var txt=ta.value,E=m.querySelector('.espnErrPriv'),why=trEspnWhy(txt,r);if(why){E.textContent=why;return}TR.espnPj={};TR.espnAdv=null;
+  var txt=ta.value,E=m.querySelector('.espnErrPriv'),why=trEspnWhy(txt,r);if(why){E.textContent=why;return}TR.espnPj={};TR.espnAdv=null;TR.espnGm=null;
   lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')};
  m.querySelectorAll('.espnGo').forEach(function(btn){btn.onclick=function(){var k=btn.dataset.k,P=m.querySelector('.espnP[data-k="'+k+'"]'),E=P.querySelector('.espnErr');E.textContent='';
   var id=P.querySelector('.espnId').value.replace(/\D/g,''),y=parseInt(P.querySelector('.espnY').value,10)||yr;if(!id){E.textContent='Enter your league ID.';return}
@@ -8285,15 +8414,19 @@ function trMineRaw(){let ids=TR.my,out=trRoster('my','Your roster',false);TRCVma
   nav='',
   sec=(id,k,t,s,b,o)=>`<div class="trSec" id="${id}">${trD(k,t,s,b,o!==false)}</div>`,
   TT=TRMT||'ov',full=(id,k,t,sb,body,nop)=>`<div class="ptile trT${nop?'':' open'} tmFull" data-k="${k}" id="${id}"><div class="pfull trSec"><details class="trD" data-k="${k}" open><summary><span>${t}</span><i>${sb||''}</i></summary><div class="trDB">${body}</div></details></div></div>`,
-  PO=poBuild(),
-  tabs=[['ov','Overview'],['lineup','Lineup'],['roster','Roster'],['trades','Trades'],['league','League']].concat(PO?[['playoffs','Playoffs']]:[]),
+  PO=poBuild(),GM=gmOn()?gmBuild():null,
+  tabs=[['ov','Overview'],['lineup','Lineup'],['trades','Trades'],['league','League']].concat(PO?[['playoffs','Playoffs']]:[]).concat(GM?[['gm','GM']]:[]),
   bar=`<div class="tmTabs${tabs.length>5?' tmTabsN':''}" style="grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k,t])=>`<button type="button" class="tmT${TT===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div>`,
+  /* Lineup and Roster used to be two separate tabs with almost nothing to tell them apart at a glance --
+     merged into one scroll (planner first, then the player report-card table and roster box underneath)
+     to free up a tab slot for GM below. */
   P={ov:`<div class="trAct"><button type="button" class="trShotB">${ICO.cam} Mania view</button></div>`+report+full('trSecPos','mpos','Position breakdown','vs league average',trPosBars(ids,nd,Ll)),
-   lineup:full('trSecLineup','plan','Lineup planner','week by week, byes and injuries',`<button type="button" class="trShotB trMVb">${ICO.cam} Mania view</button>`+trPlanHTML(ids)),
-   roster:full('trSecPlayers','mtbl','Players and report cards','grades, form, trend',trTblHTML())+full('trRosterBox','roster','Your roster','add, remove, rename',out,1),
+   lineup:full('trSecLineup','plan','Lineup planner','week by week, byes and injuries',`<button type="button" class="trShotB trMVb">${ICO.cam} Mania view</button>`+trPlanHTML(ids))
+    +full('trSecPlayers','mtbl','Players and report cards','grades, form, trend',trTblHTML())+full('trRosterBox','roster','Your roster','add, remove, rename',out,1),
    trades:full('trSecImprove','mimp','Trade ideas and waivers','trades and waiver pickups',trImpHTML(ids,nd)),
    league:(lgOn()?lgStandHTML():'<p class="tnote">Import your ESPN or Sleeper league to see where you stand against every team.</p>')+trNameBox(),
-   playoffs:PO?poPanelHTML(PO):''};
+   playoffs:PO?poPanelHTML(PO):'',
+   gm:GM?gmPanelHTML(GM):''};
  return `${lgBox('team')}${bar}<div class="tmPanel">${P[TT]||P.ov}</div>`}
 /* ---------- render ---------- */
 function trBind(root){const rm=(arr,id)=>{let i=arr.indexOf(id);if(i>=0)arr.splice(i,1)};
@@ -8356,7 +8489,7 @@ root.querySelectorAll('.trJump button[data-j]').forEach(b=>b.onclick=()=>{let t=
  e=root.querySelector('#trLgSel');if(e)e.onchange=ev=>{TR.lgi=+ev.target.value;TR.their=TR.lgi<0?[]:TR.lg[TR.lgi].ids.slice();TR.send.their=[];TR.rec.their=[0,0];TRSUG=false;trSave();trRenderAll()};
  e=root.querySelector('#trLgSave');if(e)e.onclick=()=>{let n=(prompt('Team name')||'').trim();if(!n)return;TR.lg.push({n,ids:TR.their.slice()});TR.lgi=TR.lg.length-1;trSave();trRenderAll()};
  e=root.querySelector('#trLgDel');if(e)e.onclick=()=>{if(!confirm(`Remove ${TR.lg[TR.lgi].n} from your league? Its roster stays loaded.`))return;TR.lg.splice(TR.lgi,1);TR.lgi=-1;trSave();trRenderAll()}}
-function trEditRoster(){if(TRMT!=='roster'){TRMT='roster';trRenderAll()}let t=document.getElementById('trRosterBox');if(!t)return;t.classList.add('open');TRTO.roster=1;if(window.innerWidth>800)t.scrollIntoView({behavior:'smooth',block:'start'});else t.scrollTop=0}
+function trEditRoster(){if(TRMT!=='lineup'){TRMT='lineup';trRenderAll()}let t=document.getElementById('trRosterBox');if(!t)return;t.classList.add('open');TRTO.roster=1;if(window.innerWidth>800)t.scrollIntoView({behavior:'smooth',block:'start'});else t.scrollTop=0}
 function trRenderAll(){TRC=null;TRTV={};TRCVmap=null;let set=$('trSet'),body=$('trBody');
  if(set&&body){set.innerHTML=trSettings();body.innerHTML=((lgOn()||(TR.leagues&&TR.leagues.length))?lgBox():'')+(TR.mode==='full'?trFull():trQuick());document.querySelectorAll('#trModes .tsb').forEach(b=>b.classList.toggle('on',b.dataset.v===TR.mode));trBind(set);trBind(body)}
  let ms=$('plMineSet'),mb=$('plMineBody');if(ms&&mb&&$('team').classList.contains('on')){let sh=document.getElementById('trRosterBox'),st=sh?sh.scrollTop:0,wy=window.scrollY,ae=document.activeElement,hadF=!!(ae&&ae.closest&&ae.closest('#trRmy'));ms.innerHTML=trSettings();mb.innerHTML=trMine();trBind(ms);trBind(mb);let n=document.getElementById('trRosterBox');if(n&&n.classList.contains('open')){n.scrollTop=st;if(hadF){let ii=n.querySelector('#trRmy input');if(ii)ii.focus({preventScroll:true})}}window.scrollTo(0,wy)}}
