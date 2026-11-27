@@ -4806,14 +4806,6 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 .lgSr{grid-template-columns:22px minmax(0,1fr) 40px 42px 44px 44px!important;gap:6px!important}.lgSr>span{min-width:0}.lgSr>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lgSo{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}.lgSo.on{color:#2457b8}
 .lgGr{font-style:normal;font-weight:800;font-size:12.5px;padding:2px 7px;border-radius:8px;background:#eef2f8;color:#16213a}.lgGr.gA{background:#dff5e6;color:#14663a}.lgGr.gB{background:#e3f0ff;color:#1f4fa8}.lgGr.gC{background:#fff3d6;color:#8a5a00}.lgGr.gD,.lgGr.gF{background:#fde4e4;color:#a4282a}
-.gmHero{background:#fff;border-radius:20px;box-shadow:var(--shadow);padding:18px 18px 14px;margin:0 0 14px;border-top:4px solid #3a7bd5}.gmHero.good{border-top-color:#22a45d}.gmHero.bad{border-top-color:#e2505b}
-.gmHeroH{display:flex;gap:16px;align-items:center;margin-bottom:14px}.gmHeroG{flex:none;width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;letter-spacing:-.03em;color:#fff;background:#3a7bd5}.gmHero.good .gmHeroG{background:#22a45d}.gmHero.bad .gmHeroG{background:#e2505b}
-.gmHeroH strong{display:block;font-size:18px;letter-spacing:-.02em;margin:0 0 4px}.gmHeroH p{margin:0;font-size:13px;color:#3d4f6d;line-height:1.5}.gmHeroH p b.up{color:#16803f}.gmHeroH p b.dn{color:#c0303c}
-.gmHeroT{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.gmHeroT>div{background:#f6f8fb;border-radius:12px;padding:10px 6px;text-align:center}.gmHeroT small{display:block;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.3px;text-transform:uppercase}.gmHeroT b{display:block;font-size:16px;font-weight:800;letter-spacing:-.02em;margin:2px 0}.gmHeroT span{display:block;font-size:11px;color:var(--muted)}
-@media(max-width:800px){.gmHeroT{grid-template-columns:1fr 1fr 1fr}.gmHeroG{width:52px;height:52px;font-size:21px}}
-.gmBoard{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}.gmRow{display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}.gmRow.me{box-shadow:0 0 0 2px #3a7bd5,var(--shadow)}
-.gmRowN{flex:1;min-width:0}.gmRowN b{display:block;font-size:14px}.gmRowN small{display:block;font-size:11.5px;color:var(--muted)}.gmRowG{font-size:16px;font-weight:800}
-.gmPickCard{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);margin-bottom:10px}.gmPickH{display:flex;justify-content:space-between;align-items:baseline}.gmPickH b{font-size:14.5px}.gmPickH span{font-size:12px;color:var(--muted)}.gmPickCard p{margin:6px 0 0;font-size:13px;color:#3d4f6d;line-height:1.5}
 .lgWvL{border-bottom:1px solid #eef2f8;padding-bottom:6px}.lgWvL .trVal{display:none!important}.lgWvV{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:0 4px 4px 56px;font-size:12.5px;color:#4a5a73}.lgWvV small{flex-basis:100%;color:#6b7a94;font-size:12px}.lgYour b{color:#16213a}
 .lgVd{font-weight:800;font-size:11.5px;padding:2px 9px;border-radius:999px;background:#eef2f8;color:#4a5a73}.lgVd.up{background:#dff5e6;color:#14663a}.lgVd.ok{background:#e3f0ff;color:#1f4fa8}.lgVd.dn{background:#f1f3f7;color:#7a879c}
 .lgIT em.ok{color:#14663a;background:#dff5e6}
@@ -6905,9 +6897,8 @@ try{let s=JSON.parse(localStorage.getItem(TRK)||'null');if(s&&s.st&&s.send){TR=O
     the Advanced way, until something (like opening League -> picking your team) called lgUseLeague()
     and repopulated it for that session only. Fall back to the active league's saved copy so a fresh
     page load has it immediately, for anyone whose data predates this fix too. */
- if(!TR.espnAdv&&TR.leagues&&TR.leagues[TR.lgCur])TR.espnAdv=TR.leagues[TR.lgCur].espnAdv||null;
- if(!TR.espnGm&&TR.leagues&&TR.leagues[TR.lgCur])TR.espnGm=TR.leagues[TR.lgCur].espnGm||null}}catch(e){}
-function trSave(){if(TR.shared)return;if(TR.lg[TR.lgi])TR.lg[TR.lgi].ids=TR.their.slice();try{localStorage.setItem(TRK,JSON.stringify({v:3,tname:TR.tname||'',solo:!!TR.solo,inc:TR.inc||[],n:TR.n,sf:TR.sf,hz:TR.hz,st:TR.st,give:TR.give,get:TR.get,my:TR.my,their:TR.their,send:TR.send,rec:TR.rec,lock:TR.lock||[],stand:TR.stand||{},lg:TR.lg,lgi:TR.lgi,lgAll:TR.lgAll,lgMe:TR.lgMe,lgTs:TR.lgTs,leagues:TR.leagues,lgCur:TR.lgCur,lgOff:TR.lgOff,espnPj:TR.espnPj||{},espnAdv:TR.espnAdv||null,espnGm:TR.espnGm||null}))}catch(e){}}
+ if(!TR.espnAdv&&TR.leagues&&TR.leagues[TR.lgCur])TR.espnAdv=TR.leagues[TR.lgCur].espnAdv||null}}catch(e){}
+function trSave(){if(TR.shared)return;if(TR.lg[TR.lgi])TR.lg[TR.lgi].ids=TR.their.slice();try{localStorage.setItem(TRK,JSON.stringify({v:3,tname:TR.tname||'',solo:!!TR.solo,inc:TR.inc||[],n:TR.n,sf:TR.sf,hz:TR.hz,st:TR.st,give:TR.give,get:TR.get,my:TR.my,their:TR.their,send:TR.send,rec:TR.rec,lock:TR.lock||[],stand:TR.stand||{},lg:TR.lg,lgi:TR.lgi,lgAll:TR.lgAll,lgMe:TR.lgMe,lgTs:TR.lgTs,leagues:TR.leagues,lgCur:TR.lgCur,lgOff:TR.lgOff,espnPj:TR.espnPj||{},espnAdv:TR.espnAdv||null}))}catch(e){}}
 const trSoft=x=>1.4*Math.log(1+Math.exp(x/1.4)),trN=v=>v==null||isNaN(v)?'—':Math.abs(v)>=10?String(Math.round(v)):(Math.round(v*10)/10).toFixed(1).replace(/\.0$/,'');
 function trGameWeeks(team){let o=(META.opps||{})[team]||{},a=[];for(let w=META.next_week;w<=TRLAST;w++)if(o[w])a.push(w);return a}
 function trBye(team){let o=(META.opps||{})[team]||{};for(let w=1;w<=18;w++)if(!o[w])return w;return 0}
@@ -7197,16 +7188,16 @@ function trEspnParse(txt,players){txt=trEspnFlat(txt);let idx={},L=txt.split(/\r
 function lgOn(){return !TR.lgOff&&!!(TR.lg&&TR.lg.length)}
 var LGIMP={add:true};
 (function(){if((!TR.leagues||!TR.leagues.length)&&TR.lgAll&&TR.lgAll.length>1){TR.leagues=[{id:1,name:'My league',lgAll:JSON.parse(JSON.stringify(TR.lgAll)),lgMe:TR.lgMe,lgTs:TR.lgTs,st:JSON.parse(JSON.stringify(TR.st)),sf:TR.sf,n:TR.n}];TR.lgCur=0}})();
-function lgSaveCur(){let l=TR.leagues&&TR.leagues[TR.lgCur];if(!l)return;l.lgAll=JSON.parse(JSON.stringify(TR.lgAll));l.lgMe=TR.lgMe;l.lgTs=TR.lgTs;l.st=JSON.parse(JSON.stringify(TR.st));l.sf=TR.sf;l.n=TR.n;l.espnPj=TR.espnPj||{};l.espnAdv=TR.espnAdv||null;l.espnGm=TR.espnGm||null;trSave()}
-function lgStore(name){let rec={id:Date.now(),name:(name||'').trim().slice(0,28)||'My league',lgAll:JSON.parse(JSON.stringify(TR.lgAll)),lgMe:TR.lgMe,lgTs:TR.lgTs,st:JSON.parse(JSON.stringify(TR.st)),sf:TR.sf,n:TR.n,espnPj:TR.espnPj||{},espnAdv:TR.espnAdv||null,espnGm:TR.espnGm||null};TR.leagues=TR.leagues||[];if(!LGIMP.add&&TR.lgCur>=0&&TR.leagues[TR.lgCur]){rec.id=TR.leagues[TR.lgCur].id;if(!(name||'').trim())rec.name=TR.leagues[TR.lgCur].name;TR.leagues[TR.lgCur]=rec}else{TR.leagues.push(rec);TR.lgCur=TR.leagues.length-1}TR.lgOff=false;trSave()}
+function lgSaveCur(){let l=TR.leagues&&TR.leagues[TR.lgCur];if(!l)return;l.lgAll=JSON.parse(JSON.stringify(TR.lgAll));l.lgMe=TR.lgMe;l.lgTs=TR.lgTs;l.st=JSON.parse(JSON.stringify(TR.st));l.sf=TR.sf;l.n=TR.n;l.espnPj=TR.espnPj||{};l.espnAdv=TR.espnAdv||null;trSave()}
+function lgStore(name){let rec={id:Date.now(),name:(name||'').trim().slice(0,28)||'My league',lgAll:JSON.parse(JSON.stringify(TR.lgAll)),lgMe:TR.lgMe,lgTs:TR.lgTs,st:JSON.parse(JSON.stringify(TR.st)),sf:TR.sf,n:TR.n,espnPj:TR.espnPj||{},espnAdv:TR.espnAdv||null};TR.leagues=TR.leagues||[];if(!LGIMP.add&&TR.lgCur>=0&&TR.leagues[TR.lgCur]){rec.id=TR.leagues[TR.lgCur].id;if(!(name||'').trim())rec.name=TR.leagues[TR.lgCur].name;TR.leagues[TR.lgCur]=rec}else{TR.leagues.push(rec);TR.lgCur=TR.leagues.length-1}TR.lgOff=false;trSave()}
 function lgRefresh(){trSave();trRenderAll();try{tAutoMine();renderTeams()}catch(e){}}
-function lgUseLeague(i){let l=TR.leagues[i];if(!l)return;TR.espnPj=l.espnPj||{};TR.espnAdv=l.espnAdv||null;TR.espnGm=l.espnGm||null;TR.lgCur=i;TR.lgOff=false;TR.st=JSON.parse(JSON.stringify(l.st||TR.st));TR.sf=!!l.sf;TR.n=l.n||TR.n;TRC=null;lgApply(JSON.parse(JSON.stringify(l.lgAll)),l.lgMe,false);TR.lgTs=l.lgTs||0;trSave();trRenderAll()}
+function lgUseLeague(i){let l=TR.leagues[i];if(!l)return;TR.espnPj=l.espnPj||{};TR.espnAdv=l.espnAdv||null;TR.lgCur=i;TR.lgOff=false;TR.st=JSON.parse(JSON.stringify(l.st||TR.st));TR.sf=!!l.sf;TR.n=l.n||TR.n;TRC=null;lgApply(JSON.parse(JSON.stringify(l.lgAll)),l.lgMe,false);TR.lgTs=l.lgTs||0;trSave();trRenderAll()}
 function lgNameModal(title,val,ok,delMsg){let m=document.createElement('div');m.className='trModal';m.innerHTML=delMsg?`<div class="trModalB"><b>${title}</b><p>${delMsg}</p><div class="lgTb"><button type="button" class="trAsk lgOk">Delete</button><button type="button" class="trAsk lgX">Cancel</button></div></div>`:`<div class="trModalB"><b>${title}</b><input class="lgNmI" maxlength="28" value="${trEsc(val||'')}"><div class="lgTb"><button type="button" class="trAsk lgOk">Save</button><button type="button" class="trAsk lgX">Cancel</button></div></div>`;m.onclick=e=>{if(e.target===m||e.target.classList.contains('lgX'))m.remove();else if(e.target.classList.contains('lgOk')){let v=m.querySelector('.lgNmI');ok(v?v.value:'');m.remove()}};document.body.appendChild(m);let i=m.querySelector('.lgNmI');if(i){i.focus();i.select()}}
 document.addEventListener('change',e=>{let t=e.target;if(!t.classList||!t.classList.contains('lgLs'))return;if(t.value==='off'){TR.lgOff=true;trLgOffClear();lgRefresh()}else lgUseLeague(+t.value)});
 document.addEventListener('click',e=>{let t=e.target.closest&&e.target.closest('.lgRn,.lgDel');if(!t)return;let l=TR.leagues&&TR.leagues[TR.lgCur];if(!l)return;if(t.classList.contains('lgRn'))lgNameModal('Rename league',l.name,v=>{l.name=(v||'').trim().slice(0,28)||l.name;lgRefresh()});else lgNameModal('Delete league','',()=>{TR.leagues.splice(TR.lgCur,1);if(TR.leagues.length)lgUseLeague(0);else{TR.lgCur=-1;TR.lg=[];TR.lgAll=[];TR.lgMe=-1;TR.lgi=-1;TR.lgOff=false;lgRefresh()}},'This removes "'+trEsc(l.name)+'" from this device. You can import it again any time.')});
 function lgOwned(){let m={};(TR.lg||[]).forEach(t=>t.ids.forEach(i=>m[i]=t.n));return m}
 function lgAllIds(){let st=new Set(TR.my);(TR.lg||[]).forEach(t=>t.ids.forEach(i=>st.add(i)));if(TR.lgi<0)TR.their.forEach(i=>st.add(i));return st}
-function lgApply(all,me,fresh){TR.lgAll=all.map(t=>({n:t.n,ids:t.ids.slice(),rec:t.rec||'',w:t.w,l:t.l,t:t.t,seed:t.seed||0,pf:t.pf||0,pa:t.pa||0,eid:t.eid}));TR.lgMe=me;if(fresh)TR.lgTs=Date.now();let m=all[me],oth=all.filter((t,i)=>i!==me).map(t=>({n:t.n,ids:t.ids.slice()}));
+function lgApply(all,me,fresh){TR.lgAll=all.map(t=>({n:t.n,ids:t.ids.slice(),rec:t.rec||'',w:t.w,l:t.l,t:t.t,seed:t.seed||0,pf:t.pf||0,pa:t.pa||0}));TR.lgMe=me;if(fresh)TR.lgTs=Date.now();let m=all[me],oth=all.filter((t,i)=>i!==me).map(t=>({n:t.n,ids:t.ids.slice()}));
  TR.my=m.ids.slice();TR.tname=m.n.slice(0,22);TR.lg=oth;TR.lgi=oth.length?0:-1;TR.their=oth.length?oth[0].ids.slice():[];TR.send={my:[],their:[]};TR.give=[];TR.get=[];TR.inc=[];TR.n=Math.max(6,Math.min(20,all.length));TRIC=null;
  trSave();trRenderAll();try{tAutoMine();renderTeams()}catch(e){}}
 function trEspnWhy(txt,r){let t=(txt||'').trim();if(!t)return 'The box is empty. Paste the Rosters page you copied from ESPN.';
@@ -7465,86 +7456,6 @@ function poTeamModal(i){
  };
  document.body.appendChild(m);
 }
-/* ===== GM tab: Best Drafter, Best Trader, league GM leaderboard =====
-   Entirely derived from TR.espnGm (draft picks + trade history, already resolved to our own player
-   ids at import time -- see trEspnFromApi) plus each player's own real game log for the season. No
-   extra server data needed. Gated like Playoffs: only shows up once an Advanced-way import has it. */
-function gmOn(){return lgOn()&&TR.my.length>0&&!!(TR.espnGm&&TR.espnGm.picks&&TR.espnGm.picks.length)}
-function gmGames(p){return (p.logs||[]).filter(l=>l.ppr!=null&&!l.auto)}
-function gmPts(p){return gmGames(p).reduce((s,l)=>s+l.ppr,0)}
-/* Per-game rate, not a season total -- a stud who tore an ACL in Week 8 should still finish near the
-   top, not get buried under every healthy player's extra games of counting stats. Missed time is real
-   bad luck, not a bad pick. Small samples still need a guard rail, though (one monster game is not
-   "the best player in the league"), so a short sample is pulled toward the position's average rate --
-   the more games played, the less it gets pulled, and an 8-game stud barely moves at all. */
-var GMPOSAVG=null;
-/* Games-weighted, not a plain average of each player's own rate -- a plain average would let a
-   one-game-sample backup (the very noise this shrinkage exists to tame) outvote a 12-game starter,
-   since each player's rate counted equally regardless of how many games it was built on. Summing all
-   points and all games across the position first means a 1-game outlier barely moves the baseline. */
-function gmPosAvgRate(pos){GMPOSAVG=GMPOSAVG||{};if(GMPOSAVG[pos]!=null)return GMPOSAVG[pos];
- let totPts=0,totG=0;allPlayers().forEach(p=>{if(p.pos!==pos)return;let gs=gmGames(p).length;if(!gs)return;totPts+=gmPts(p);totG+=gs});
- let avg=totG?totPts/totG:0;GMPOSAVG[pos]=avg;return avg}
-function gmAdjRate(p){let gs=gmGames(p).length;if(!gs)return null;let rate=gmPts(p)/gs,k=4,posAvg=gmPosAvgRate(p.pos);return (rate*gs+posAvg*k)/(gs+k)}
-/* Overall (not positional) realized finish, among every skill player who has actually played a game
-   this season -- matches how the pick-value formula below is meant to read: pick 1 on a player who
-   finishes #1 overall nets 0 ("that takes no skill"); pick 100 on a player who finishes top-5 at his
-   position (roughly rank 15 overall in a typical PPR league) nets +85. Kickers/defenses are already
-   left out of TR.espnGm.picks (see trEspnFromApi), so they never enter this pool either. */
-function gmFinishPool(){GMPOSAVG=null;let arr=allPlayers().filter(p=>gmGames(p).length>0).map(p=>({id:p.id,rate:gmAdjRate(p)}));arr.sort((a,b)=>b.rate-a.rate);let rank={};arr.forEach((x,i)=>rank[x.id]=i+1);return {rank,total:arr.length}}
-/* Replacement level for GRADING trades against past weeks: the Nth-best player at the position this
-   SEASON by real results (N = teams x starters needed there) -- not the live trade analyzer's
-   forward-looking blend, which assumes today's roster shape and today's outlook and does not make
-   sense applied retroactively to a trade from six weeks ago. */
-/* ---------- Best Drafter: value = where he was picked minus where he actually finished ---------- */
-/* GM tab is Best Drafter only -- mDraftDetail always returns the whole season's draft in one shot, so
-   this fully works from a single paste/upload, no bookmarklet loop needed. Trade grading used to live
-   here too, but ESPN's transactions API only ever answers for one week per request (no "whole season"
-   option), so a single-paste import could only ever see the current week's trades -- usually zero --
-   while a correct answer needed the bookmarklet's per-week loop. That two-tier experience (one upload
-   gets you drafting, a special browser click gets you trading) was worse than just not having it, so
-   trade grading was cut entirely rather than shipped as a feature that silently under-delivers for
-   most people who import. */
-function gmTeamIdx(eid){let all=TR.lgAll||[];for(let i=0;i<all.length;i++)if(all[i].eid===eid)return i;return -1}
-function gmDraftTeam(ti,pool){let eid=(TR.lgAll[ti]||{}).eid;if(eid==null)return null;
- let picks=(TR.espnGm.picks||[]).filter(pk=>pk.teamEid===eid).map(pk=>{let p=byId(pk.id);if(!p)return null;let finish=pool.rank[pk.id]!=null?pool.rank[pk.id]:pool.total+1;return {p,pick:pk.pick,round:pk.round,finish,value:pk.pick-finish}}).filter(Boolean);
- if(!picks.length)return null;
- let sum=picks.reduce((s,v)=>s+v.value,0),avg=sum/picks.length,best=picks.slice().sort((a,b)=>b.value-a.value)[0],worst=picks.slice().sort((a,b)=>a.value-b.value)[0];
- return {ti,picks,sum,avg,best,worst}}
-/* ---------- build ---------- */
-var GMR=null;
-function gmBuild(){if(!gmOn())return null;let key=TR.lgTs+'|'+(TR.espnGm.picks||[]).length+'|'+TR.lgMe;if(GMR&&GMR.key===key)return GMR.v;
- let pool=gmFinishPool(),all=TR.lgAll||[],N=all.length,me=TR.lgMe;
- let drafters=[];for(let i=0;i<N;i++){let d=gmDraftTeam(i,pool);if(d)drafters.push(d)}
- drafters.sort((a,b)=>b.avg-a.avg);drafters.forEach((d,i)=>d.rank=i+1);
- function pct(arr,val){return arr.length>1?arr.filter(x=>x.avg<val).length/(arr.length-1):.5}
- let board=all.map((team,i)=>{let d=drafters.find(x=>x.ti===i),overall=d?pct(drafters,d.avg):null;
-  return {ti:i,name:team.n||('Team '+(i+1)),d,overall,nDraft:drafters.length}});
- let ranked=board.filter(b=>b.overall!=null).sort((a,b)=>b.overall-a.overall);
- ranked.forEach((b,k)=>b.rank=k+1);
- let v={board,ranked,me:ranked.find(b=>b.ti===me)||board.find(b=>b.ti===me)||null,drafters,poolTotal:pool.total};
- GMR={key,v};return v}
-function gmPanelHTML(GM){if(!GM)return '';
- function pct(arr,val){return arr.length>1?arr.filter(x=>x.avg<val).length/(arr.length-1):.5}
- let me=GM.me,N=(TR.lgAll||[]).length,lgLet=pc=>pc==null?null:lgLetter(pc),
-  hero=(()=>{if(!me||!me.d)return '<p class="tnote">Not enough of your own picks could be graded yet to rank you &mdash; the league board below still works.</p>';
-   let d=me.d,graded=me.overall!=null,g=lgLet(me.overall),
-    draftTxt=`#${d.rank} of ${GM.drafters.length}`,
-    rankTxt=graded?`#${me.rank} of ${GM.ranked.length}`:'Not ranked yet',
-    headline=graded?(me.rank===1?'You\'re the #1 drafter in your league':`You're #${me.rank} drafter in your league`):'Not enough graded yet to rank you',
-    sub=`${d.sum>=0?'+':''}${Math.round(d.sum)} pts above slot across your draft.`;
-   return `<div class="gmHero${graded?(me.overall>=.6?' good':me.overall<.35?' bad':''):''}"><div class="gmHeroH"><div class="gmHeroG">${g||'&mdash;'}</div><div><strong>${headline}</strong><p>${sub}</p></div></div><div class="gmHeroT"><div><small>Your draft</small><b>${draftTxt}</b><span>${(d.sum>=0?'+':'')+Math.round(d.sum)+' pts above slot'}</span></div><div><small>League rank</small><b>${rankTxt}</b><span>${graded?Math.round(me.overall*100)+'th percentile':'&mdash;'}</span></div></div></div>`})();
- let board=`<div class="tsec">League draft leaderboard</div><div class="gmBoard">${GM.ranked.map(b=>`<div class="gmRow${b.ti===TR.lgMe?' me':''}"><i class="trRole ${b.rank===1?'st':b.rank===GM.ranked.length?'ir':'fx'}">${b.rank}</i><div class="gmRowN"><b>${trEsc(b.name)}</b></div><b class="gmRowG">${lgLet(b.overall)}</b></div>`).join('')||'<p class="tnote">Nobody has enough graded picks yet.</p>'}</div>`,
-  bestD=GM.drafters[0],worstD=GM.drafters[GM.drafters.length-1],
-  /* Best drafter's card leads with their best single steal; worst drafter's card leads with their
-     worst single reach -- a team's single best pick says nothing about its weakest if we are
-     explaining why that specific team ranked where it did, so the two cards never share one fallback. */
-  draftCard=(d,label)=>{if(!d)return '';let pk=label==='best'?d.best:d.worst,line=label==='best'
-    ?(pk&&pk.value>0?`${trEsc(pk.p.name)} in round ${pk.round} (pick ${pk.pick}), finished the real #${pk.finish} overall. Biggest steal of the draft.`:'No pick that beat where he was taken.')
-    :(pk&&pk.value<0?`Reached on ${trEsc(pk.p.name)} at pick ${pk.pick}, who finished only #${pk.finish} overall.`:'No real reach &mdash; every pick finished about where he was taken.');
-   return `<div class="gmPickCard"><div class="gmPickH"><b>${trEsc((GM.board[d.ti]||{}).name||'')}</b><span>${d.sum>=0?'+':''}${Math.round(d.sum)} pts above slot</span></div><p>${line}</p></div>`},
-  drafting=GM.drafters.length?`<div class="tsec">Best drafter</div>${draftCard(bestD,'best')}${GM.drafters.length>1?`<div class="tsec" style="margin-top:14px">Worst drafter</div>${draftCard(worstD,'worst')}`:''}`:'';
- return `${hero}${board}${drafting}<p class="tnote" style="margin-top:14px">Credits/blames whoever drafted a player, even if he was later traded away or dropped, and grades him on points per game (not his season total), so a stud who got hurt partway through the year still shows as a great pick instead of getting buried under everyone else's extra healthy games. ${N>(GM.ranked.length||0)?'Teams with no graded picks yet are left off the board above.':''}</p>`}
 document.addEventListener('click',e=>{let t=e.target.closest&&e.target.closest('.lgSo');if(!t)return;LGR.sort=t.dataset.k;let b=t.closest('.lgSt');if(b)b.outerHTML=lgStandHTML()});
 function lgBox(cx){let LS=TR.leagues||[],TD=!cx||cx==='trade';
  if(!lgOn()&&!LS.length)return `<div class="lgBox"><div><b>Import your ESPN or Sleeper league</b><span>Bring in every team in your league. Then you can compare against anyone, trade with real rosters, and see who is on waivers.</span></div><button type="button" class="lgImp">Import league</button></div>`;
@@ -7838,7 +7749,7 @@ function trEspnModalPaste(){let m=document.createElement('div');m.className='trM
  m.onclick=e=>{if(e.target===m)m.remove()};
  m.querySelector('.trAsk').onclick=()=>{let r=trEspnParse(m.querySelector('textarea').value,Object.values(trCtx().V).map(v=>v.p));
   let txt=m.querySelector('textarea').value,E=m.querySelector('.trImpE'),why=trEspnWhy(txt,r);if(why){E.textContent=why;return}
-  TR.espnPj={};TR.espnAdv=null;TR.espnGm=null;
+  TR.espnPj={};TR.espnAdv=null;
   lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')};
  document.body.appendChild(m);m.querySelector('textarea').focus()}
 /* ===== ESPN import through ESPN's own league feed: public league ID, run on your own computer, or private login ===== */
@@ -7868,23 +7779,11 @@ function trEspnFromApi(d,players,swid){var b=(d&&d.base)||d||{},idx={},miss=[],t
  var eidIdx={};teams.forEach(function(T,i){eidIdx[T.eid]=i});
  var sched=[];(b.schedule||[]).forEach(function(gm){var wk2=gm.matchupPeriodId;if(!wk2||!regWeeks||wk2>regWeeks)return;var h=gm.home,a=gm.away;if(!h||!a)return;var hi=eidIdx[h.teamId],ai=eidIdx[a.teamId];if(hi==null||ai==null)return;
   sched.push({w:wk2,h:hi,a:ai,hp:+h.totalPoints||0,ap:+a.totalPoints||0})});
- /* GM tab extra: draft recap, resolved to our own player ids right here while eidMap is still in scope
-    (so the GM scoring code never has to know ESPN's own ids). mDraftDetail always returns the whole
-    season in one shot, so this works fully from a single paste/upload -- no bookmarklet loop needed.
-    (Trade grading used to live here too, built from mTransactions2, but that endpoint only ever answers
-    for one week per request with no "whole season" option, so a single-paste import could only ever see
-    the current week's trades -- usually none. Cut entirely rather than ship a feature that silently
-    under-delivers for anyone not using the bookmarklet.) Kickers/defenses and any pick nobody has
-    rostered all season (so we have no name to match it to) are left out of the draft recap -- low
-    skill signal either way, and we would just be guessing at a name. */
- var gmPicks=[];((b.draftDetail&&b.draftDetail.picks)||[]).forEach(function(pk){var our=eidMap[pk.playerId];if(our==null)return;if(!players.some(function(p){return p.id===our}))return;
-  gmPicks.push({id:our,pick:pk.overallPickNumber,round:pk.roundId,teamEid:pk.teamId})});
- return {teams:teams,miss:miss,me:me,set:set,name:((b.settings||{}).name||'').trim(),pj:pj,sched:sched,regWeeks:regWeeks,playoffTeamCount:playoffTeamCount,seedRule:seedRule,gmPicks:gmPicks}}
+ return {teams:teams,miss:miss,me:me,set:set,name:((b.settings||{}).name||'').trim(),pj:pj,sched:sched,regWeeks:regWeeks,playoffTeamCount:playoffTeamCount,seedRule:seedRule}}
 function trEspnApply(m,d,swid,E){var r;E=E||m.querySelector('.espnErr');
  try{r=trEspnFromApi(d,Object.values(trCtx().V).map(function(v){return v.p}),swid)}catch(e){if(E)E.textContent='We could not read that league data. Try again, or use another way in.';return}
  if(!r.teams.length||r.teams.reduce(function(s,x){return s+x.ids.length},0)<r.teams.length*3){if(E)E.textContent='ESPN answered, but we found no rosters in it. If the league is private, use the private league or run-it-on-your-computer way.';return}
- TR.espnPj=r.pj;TR.espnAdv=(r.sched&&r.sched.length)?{sched:r.sched,regWeeks:r.regWeeks,playoffTeamCount:r.playoffTeamCount,seedRule:r.seedRule}:null;
- TR.espnGm=(r.gmPicks&&r.gmPicks.length)?{picks:r.gmPicks}:null;trSave();
+ TR.espnPj=r.pj;TR.espnAdv=(r.sched&&r.sched.length)?{sched:r.sched,regWeeks:r.regWeeks,playoffTeamCount:r.playoffTeamCount,seedRule:r.seedRule}:null;trSave();
  lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')}
 function trEspnCall(m,body,btn){var E=m.querySelector('.espnErr');E.textContent='';btn.disabled=true;var t0=btn.textContent;btn.textContent='Reading your league…';
  var done=function(){btn.disabled=false;btn.textContent=t0};
@@ -7898,13 +7797,8 @@ function trEspnBookmarklet(){var base=location.origin+location.pathname.replace(
  +"window.addEventListener('message',function(e){if(e.origin===O&&e.data&&e.data.fmEspnReady){ready=true;send()}});"
  +"var B='https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/'+yr+'/segments/0/leagues/'+id;"
  +"function g(q){return fetch(B+q,{credentials:'include'}).then(function(r){return r.json()})}"
- +"g('?view=mSettings&view=mTeam&view=mRoster&view=mStandings&view=mDraftDetail').then(function(base){var cur=Math.max(1,base.scoringPeriodId||1),ws=[];for(var k=cur;k<=17;k++)ws.push(k);"
- /* Draft picks need no loop: mDraftDetail always returns the complete season's draft in one shot,
-    folded into the same base/mSettings request above -- so Best Drafter works the same whether this
-    bookmarklet or the plain single-paste link below is used. (Trade history used to loop one request
-    per already-played week here, since ESPN's transactions view has no "whole season" option -- but
-    that feature was cut: see trEspnFromApi.) */
- +"return Promise.all(ws.map(function(k){return g('?view=mRoster&scoringPeriodId='+k).then(function(j){var o={};(j.teams||[]).forEach(function(t){((t.roster&&t.roster.entries)||[]).forEach(function(e){var p=e.playerPoolEntry&&e.playerPoolEntry.player;if(!p)return;var s=(p.stats||[]).filter(function(x){return x.statSourceId===1&&x.scoringPeriodId===k})[0];if(s&&s.appliedTotal!=null)o[e.playerId]=Math.round(s.appliedTotal*10)/10})});return [k,o]}).catch(function(){return [k,{}]})})).then(function(res){var pr={};res.forEach(function(x){pr[x[0]]=x[1]});return {base:base,proj:pr}})})"
+ +"g('?view=mSettings&view=mTeam&view=mRoster&view=mStandings').then(function(base){var cur=Math.max(1,base.scoringPeriodId||1),ws=[];for(var k=cur;k<=17;k++)ws.push(k);"
+ +"return Promise.all(ws.map(function(k){return g('?view=mRoster&scoringPeriodId='+k).then(function(j){var o={};(j.teams||[]).forEach(function(t){((t.roster&&t.roster.entries)||[]).forEach(function(e){var p=e.playerPoolEntry&&e.playerPoolEntry.player;if(!p)return;var s=(p.stats||[]).filter(function(x){return x.statSourceId===1&&x.scoringPeriodId===k})[0];if(s&&s.appliedTotal!=null)o[e.playerId]=Math.round(s.appliedTotal*10)/10})});return [k,o]}).catch(function(){return [k,{}]})})).then(function(a){var pr={};a.forEach(function(x){pr[x[0]]=x[1]});return {base:base,proj:pr}})})"
  +".then(function(d){data=JSON.stringify(d);send();setTimeout(function(){if(ready)return;var t=document.createElement('textarea');t.value=data;t.style.cssText='position:fixed;z-index:2147483647;left:5%;top:10%;width:90%;height:50%;font:12px monospace';document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(e){}alert('Fantasy Mania did not open. The league data is selected in the box: copy it (Ctrl+C), then paste it into the Import screen on Fantasy Mania.')},6000)})"
  +".catch(function(){alert('ESPN would not give the league data. Make sure you are logged in to ESPN and on your league page.')})})();";
  return 'javascript:'+encodeURIComponent(code)}
@@ -7914,9 +7808,7 @@ function trEspnBookmarklet(){var base=location.origin+location.pathname.replace(
    roster on this week's matchup instead of on the team, so trEspnPhoneFix moves them to where trEspnFromApi
    looks. A team with no game this week has no roster there; then we hand out the big mRoster link instead. */
 function trEspnPhoneUrl(v,full){v=String(v||'');var id=(v.match(/leagueId=(\d{4,12})/)||v.match(/^\s*(\d{4,12})\s*$/)||[])[1],y=(v.match(/seasonId=(\d{4})/)||[])[1]||trEspnSeason();
- /* mDraftDetail always returns the whole season's draft in one shot, so this single link gets the full
-    GM-tab (Best Drafter) recap in one upload -- no bookmarklet needed for that. */
- return id?'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/'+y+'/segments/0/leagues/'+id+'?view=mSettings&view=mTeam&view=mDraftDetail&view='+(full?'mRoster':'mBoxscore'):''}
+ return id?'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/'+y+'/segments/0/leagues/'+id+'?view=mSettings&view=mTeam&view='+(full?'mRoster':'mBoxscore'):''}
 function trEspnPhoneFix(d){var by={};(d.schedule||[]).forEach(function(g){['home','away'].forEach(function(s){var x=g[s],r=x&&x.rosterForCurrentScoringPeriod;if(r&&r.entries)by[x.teamId]=r})});
  (d.teams||[]).forEach(function(t){if(!t.roster&&by[t.id])t.roster=by[t.id]});return d}
 function trEspnPdfClean(raw){var i=raw.indexOf('{');if(i>0)raw=raw.slice(i);raw=raw.split('Pretty-print').join('');
@@ -7954,7 +7846,7 @@ function trEspnModal(){
  var m=document.createElement('div'),yr=trEspnSeason();m.className='trModal';
  m.innerHTML='<div class="trModalB espnM"><b>Import your ESPN league</b><p class="espnSub">Choose the kind of league you have.</p><p class="espnBigWarn"><b>Use a normal (not private/incognito) browser tab or window for all of this.</b> Private browsing does not save anything, so your import will disappear and nothing here will work.</p>'
  +'<div class="espnTabs"><button type="button" class="on" data-k="priv">My league is private</button><button type="button" data-k="pub">My league is public</button></div>'
- +'<div class="espnP" data-k="priv"><div class="lgHow"><div class="espnBmBox"><p><b>On a computer &mdash; the easy way</b></p><ol><li>Drag this button up to your bookmarks bar: <a class="espnBm">ESPN &rarr; Fantasy Mania</a></li><li>On ESPN, open your league (make sure you are logged in) &mdash; any page of it.</li><li>Click the bookmark. Your whole league imports here on its own, with every team and ESPN&rsquo;s own week-by-week projections.</li></ol><p class="espnSm">The button runs on ESPN using the login you already have there, and sends back only your league data. Your ESPN email, password and login never reach Fantasy Mania.</p></div><p><b>Get your league data</b></p><ol class="espnSteps"><li>Log in to ESPN in your browser (not the ESPN app), then find your league under the <b>Fantasy</b> menu. <a class="espnPg" href="https://www.espn.com/fantasy/" target="_blank" rel="noopener">Open ESPN Fantasy &rsaquo;</a><img class="espnHelpImg onlyMobile" src="/img/espn-help/find-your-league.jpg" alt="ESPN Fantasy menu with your team listed"><p class="espnWarn onlyMobile">If a link opens the ESPN app instead of staying here: don&rsquo;t tap it. Go back, <b>press and hold</b> the link, and choose <b>Open</b> &mdash; not &ldquo;Open in &lsquo;Fantasy&rsquo;&rdquo;, like this:</p><img class="espnHelpImg onlyMobile" src="/img/espn-help/open-in-new-tab.jpg" alt="Press and hold a link and choose Open, not Open in the ESPN app"></li></ol><div class="espnOS onlyMobile"><button type="button" class="on" data-way="easy">Easy way</button><button type="button" data-way="adv">Advanced way</button></div><p class="espnSm espnAdvNote onlyMobile">The <b>Advanced way</b> unlocks more for your team: very accurate playoff odds and chances, plus schedule strength and Best Drafter &mdash; and we\'re adding more.</p><div class="espnWay" data-way="easy"><p class="espnSm" style="margin-top:0"><b>Takes less than 5 minutes.</b></p><ol class="espnSteps"><li>Go to <b>League &rsaquo; Rosters</b>.<img class="espnHelpImg" src="/img/espn-help/league-rosters.jpg" alt="League menu with Rosters highlighted"></li><li>Tap and hold anywhere on the page, tap <b>Select All</b>, then <b>Copy</b>.<img class="espnHelpImg" src="/img/espn-help/select-all-copy.jpg" alt="Copy button after selecting all the page text"></li><li>Paste it in the box below, then tap Import league.</li></ol><p class="espnSm">Fewer steps, but less detail than the Advanced way below.</p></div><div class="espnWay" data-way="adv" hidden><p class="espnSm" style="margin-top:0"><b>Takes less than 5 minutes.</b></p><ol class="espnSteps"><li>Copy your league\'s web address and paste it here. Just the number after <b>leagueId=</b> works too. <span class="espnSm onlyMobile" style="display:block;margin-top:4px">No address bar to tap here? Tap <b>Share</b>, then <b>Copy</b> &mdash; that copies the page&rsquo;s web address.</span><input class="espnPhId" placeholder="League web address or league ID" autocapitalize="off" autocorrect="off"></li><li>Tap <a class="espnPhGo" target="_blank" rel="noopener">Open my league data</a>. A page of data opens.<img class="espnHelpImg onlyMobile" src="/img/espn-help/league-data-share.jpg" alt="Raw league data page with the Share icon circled"></li><li class="onlyMobile">Tap <b>Share</b> (the box with an up arrow) &rarr; <b>Options</b> &rarr; <b>PDF</b>. Make sure <b>PDF</b> is checked &mdash; not Automatic or Reader PDF.<img class="espnHelpImg" src="/img/espn-help/share-options.jpg" alt="Share sheet Options screen with PDF selected"></li><li class="onlyMobile">Tap <b>Save to Files</b>.<img class="espnHelpImg" src="/img/espn-help/save-to-files.jpg" alt="Share sheet with Save to Files highlighted"></li><li class="onlyMobile">Come back here, tap Choose File below and pick the PDF you just saved, then tap Import league.<input type="file" class="espnPhFile"></li><li class="onlyDesktop">Select all (Ctrl+A, or Cmd+A on a Mac) and copy it (Ctrl+C or Cmd+C).</li><li class="onlyDesktop">Paste it in the box below, then click Import league.</li></ol></div><p class="lgKeep">Your ESPN login stays with ESPN. Fantasy Mania only reads the file or text you give it.</p><p class="lgKeep">Your league is saved on this device only. Add Fantasy Mania to your Home Screen and do not use a private tab, or your browser will forget it. Import again any time to refresh rosters.</p></div><textarea class="trImpT espnPasteRoster" rows="5" placeholder="Paste the whole Rosters page, or your league data from the phone steps"></textarea><p class="trImpE espnErrPriv"></p><button type="button" class="trAsk espnPasteGo">Import league</button></div>'
+ +'<div class="espnP" data-k="priv"><div class="lgHow"><div class="espnBmBox"><p><b>On a computer &mdash; the easy way</b></p><ol><li>Drag this button up to your bookmarks bar: <a class="espnBm">ESPN &rarr; Fantasy Mania</a></li><li>On ESPN, open your league (make sure you are logged in) &mdash; any page of it.</li><li>Click the bookmark. Your whole league imports here on its own, with every team and ESPN&rsquo;s own week-by-week projections.</li></ol><p class="espnSm">The button runs on ESPN using the login you already have there, and sends back only your league data. Your ESPN email, password and login never reach Fantasy Mania.</p></div><p><b>Get your league data</b></p><ol class="espnSteps"><li>Log in to ESPN in your browser (not the ESPN app), then find your league under the <b>Fantasy</b> menu. <a class="espnPg" href="https://www.espn.com/fantasy/" target="_blank" rel="noopener">Open ESPN Fantasy &rsaquo;</a><img class="espnHelpImg onlyMobile" src="/img/espn-help/find-your-league.jpg" alt="ESPN Fantasy menu with your team listed"><p class="espnWarn onlyMobile">If a link opens the ESPN app instead of staying here: don&rsquo;t tap it. Go back, <b>press and hold</b> the link, and choose <b>Open</b> &mdash; not &ldquo;Open in &lsquo;Fantasy&rsquo;&rdquo;, like this:</p><img class="espnHelpImg onlyMobile" src="/img/espn-help/open-in-new-tab.jpg" alt="Press and hold a link and choose Open, not Open in the ESPN app"></li></ol><div class="espnOS onlyMobile"><button type="button" class="on" data-way="easy">Easy way</button><button type="button" data-way="adv">Advanced way</button></div><p class="espnSm espnAdvNote onlyMobile">The <b>Advanced way</b> unlocks more for your team: very accurate playoff odds and chances, plus schedule strength &mdash; and we\'re adding more.</p><div class="espnWay" data-way="easy"><p class="espnSm" style="margin-top:0"><b>Takes less than 5 minutes.</b></p><ol class="espnSteps"><li>Go to <b>League &rsaquo; Rosters</b>.<img class="espnHelpImg" src="/img/espn-help/league-rosters.jpg" alt="League menu with Rosters highlighted"></li><li>Tap and hold anywhere on the page, tap <b>Select All</b>, then <b>Copy</b>.<img class="espnHelpImg" src="/img/espn-help/select-all-copy.jpg" alt="Copy button after selecting all the page text"></li><li>Paste it in the box below, then tap Import league.</li></ol><p class="espnSm">Fewer steps, but less detail than the Advanced way below.</p></div><div class="espnWay" data-way="adv" hidden><p class="espnSm" style="margin-top:0"><b>Takes less than 5 minutes.</b></p><ol class="espnSteps"><li>Copy your league\'s web address and paste it here. Just the number after <b>leagueId=</b> works too. <span class="espnSm onlyMobile" style="display:block;margin-top:4px">No address bar to tap here? Tap <b>Share</b>, then <b>Copy</b> &mdash; that copies the page&rsquo;s web address.</span><input class="espnPhId" placeholder="League web address or league ID" autocapitalize="off" autocorrect="off"></li><li>Tap <a class="espnPhGo" target="_blank" rel="noopener">Open my league data</a>. A page of data opens.<img class="espnHelpImg onlyMobile" src="/img/espn-help/league-data-share.jpg" alt="Raw league data page with the Share icon circled"></li><li class="onlyMobile">Tap <b>Share</b> (the box with an up arrow) &rarr; <b>Options</b> &rarr; <b>PDF</b>. Make sure <b>PDF</b> is checked &mdash; not Automatic or Reader PDF.<img class="espnHelpImg" src="/img/espn-help/share-options.jpg" alt="Share sheet Options screen with PDF selected"></li><li class="onlyMobile">Tap <b>Save to Files</b>.<img class="espnHelpImg" src="/img/espn-help/save-to-files.jpg" alt="Share sheet with Save to Files highlighted"></li><li class="onlyMobile">Come back here, tap Choose File below and pick the PDF you just saved, then tap Import league.<input type="file" class="espnPhFile"></li><li class="onlyDesktop">Select all (Ctrl+A, or Cmd+A on a Mac) and copy it (Ctrl+C or Cmd+C).</li><li class="onlyDesktop">Paste it in the box below, then click Import league.</li></ol></div><p class="lgKeep">Your ESPN login stays with ESPN. Fantasy Mania only reads the file or text you give it.</p><p class="lgKeep">Your league is saved on this device only. Add Fantasy Mania to your Home Screen and do not use a private tab, or your browser will forget it. Import again any time to refresh rosters.</p></div><textarea class="trImpT espnPasteRoster" rows="5" placeholder="Paste the whole Rosters page, or your league data from the phone steps"></textarea><p class="trImpE espnErrPriv"></p><button type="button" class="trAsk espnPasteGo">Import league</button></div>'
  +'<div class="espnP" data-k="pub" hidden><p>Since your league is public, there\'s nothing to sign into. Just enter the league ID — it\'s the number after <b>leagueId=</b> in your ESPN league\'s web address.</p><input class="espnId" inputmode="numeric" placeholder="League ID, like 2073417915"><label class="espnYr">Season <input class="espnY" inputmode="numeric" value="'+yr+'"></label><button type="button" class="trAsk espnGo" data-k="pub">Import league</button><p class="trImpE espnErr"></p></div>'
  +'</div>';
  m.onclick=function(e){if(e.target===m)m.remove()};
@@ -7985,7 +7877,7 @@ function trEspnModal(){
  var phFile=m.querySelector('.espnPhFile');if(phFile)phFile.onchange=function(){var f=phFile.files&&phFile.files[0];if(!f)return;trEspnPhoneFileGo(f,m.querySelector('.espnErrPriv'))};
  m.querySelector('.espnPasteGo').onclick=function(){var E=m.querySelector('.espnErrPriv'),pf=phFile&&phFile.files&&phFile.files[0];if(pf)return trEspnPhoneFileGo(pf,E);
   var ta=m.querySelector('.espnPasteRoster');if(/^\s*\{/.test(ta.value))return trEspnPhonePaste(m,ta.value,E);var r=trEspnParse(ta.value,Object.values(trCtx().V).map(function(v){return v.p}));
-  var txt=ta.value,E=m.querySelector('.espnErrPriv'),why=trEspnWhy(txt,r);if(why){E.textContent=why;return}TR.espnPj={};TR.espnAdv=null;TR.espnGm=null;
+  var txt=ta.value,E=m.querySelector('.espnErrPriv'),why=trEspnWhy(txt,r);if(why){E.textContent=why;return}TR.espnPj={};TR.espnAdv=null;
   lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')};
  m.querySelectorAll('.espnGo').forEach(function(btn){btn.onclick=function(){var k=btn.dataset.k,P=m.querySelector('.espnP[data-k="'+k+'"]'),E=P.querySelector('.espnErr');E.textContent='';
   var id=P.querySelector('.espnId').value.replace(/\D/g,''),y=parseInt(P.querySelector('.espnY').value,10)||yr;if(!id){E.textContent='Enter your league ID.';return}
@@ -8393,19 +8285,15 @@ function trMineRaw(){let ids=TR.my,out=trRoster('my','Your roster',false);TRCVma
   nav='',
   sec=(id,k,t,s,b,o)=>`<div class="trSec" id="${id}">${trD(k,t,s,b,o!==false)}</div>`,
   TT=TRMT||'ov',full=(id,k,t,sb,body,nop)=>`<div class="ptile trT${nop?'':' open'} tmFull" data-k="${k}" id="${id}"><div class="pfull trSec"><details class="trD" data-k="${k}" open><summary><span>${t}</span><i>${sb||''}</i></summary><div class="trDB">${body}</div></details></div></div>`,
-  PO=poBuild(),GM=gmOn()?gmBuild():null,
-  tabs=[['ov','Overview'],['lineup','Lineup'],['trades','Trades'],['league','League']].concat(PO?[['playoffs','Playoffs']]:[]).concat(GM?[['gm','GM']]:[]),
+  PO=poBuild(),
+  tabs=[['ov','Overview'],['lineup','Lineup'],['roster','Roster'],['trades','Trades'],['league','League']].concat(PO?[['playoffs','Playoffs']]:[]),
   bar=`<div class="tmTabs${tabs.length>5?' tmTabsN':''}" style="grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map(([k,t])=>`<button type="button" class="tmT${TT===k?' on':''}" data-k="${k}">${t}</button>`).join('')}</div>`,
-  /* Lineup and Roster used to be two separate tabs with almost nothing to tell them apart at a glance --
-     merged into one scroll (planner first, then the player report-card table and roster box underneath)
-     to free up a tab slot for GM below. */
   P={ov:`<div class="trAct"><button type="button" class="trShotB">${ICO.cam} Mania view</button></div>`+report+full('trSecPos','mpos','Position breakdown','vs league average',trPosBars(ids,nd,Ll)),
-   lineup:full('trSecLineup','plan','Lineup planner','week by week, byes and injuries',`<button type="button" class="trShotB trMVb">${ICO.cam} Mania view</button>`+trPlanHTML(ids))
-    +full('trSecPlayers','mtbl','Players and report cards','grades, form, trend',trTblHTML())+full('trRosterBox','roster','Your roster','add, remove, rename',out,1),
+   lineup:full('trSecLineup','plan','Lineup planner','week by week, byes and injuries',`<button type="button" class="trShotB trMVb">${ICO.cam} Mania view</button>`+trPlanHTML(ids)),
+   roster:full('trSecPlayers','mtbl','Players and report cards','grades, form, trend',trTblHTML())+full('trRosterBox','roster','Your roster','add, remove, rename',out,1),
    trades:full('trSecImprove','mimp','Trade ideas and waivers','trades and waiver pickups',trImpHTML(ids,nd)),
    league:(lgOn()?lgStandHTML():'<p class="tnote">Import your ESPN or Sleeper league to see where you stand against every team.</p>')+trNameBox(),
-   playoffs:PO?poPanelHTML(PO):'',
-   gm:GM?gmPanelHTML(GM):''};
+   playoffs:PO?poPanelHTML(PO):''};
  return `${lgBox('team')}${bar}<div class="tmPanel">${P[TT]||P.ov}</div>`}
 /* ---------- render ---------- */
 function trBind(root){const rm=(arr,id)=>{let i=arr.indexOf(id);if(i>=0)arr.splice(i,1)};
@@ -8468,7 +8356,7 @@ root.querySelectorAll('.trJump button[data-j]').forEach(b=>b.onclick=()=>{let t=
  e=root.querySelector('#trLgSel');if(e)e.onchange=ev=>{TR.lgi=+ev.target.value;TR.their=TR.lgi<0?[]:TR.lg[TR.lgi].ids.slice();TR.send.their=[];TR.rec.their=[0,0];TRSUG=false;trSave();trRenderAll()};
  e=root.querySelector('#trLgSave');if(e)e.onclick=()=>{let n=(prompt('Team name')||'').trim();if(!n)return;TR.lg.push({n,ids:TR.their.slice()});TR.lgi=TR.lg.length-1;trSave();trRenderAll()};
  e=root.querySelector('#trLgDel');if(e)e.onclick=()=>{if(!confirm(`Remove ${TR.lg[TR.lgi].n} from your league? Its roster stays loaded.`))return;TR.lg.splice(TR.lgi,1);TR.lgi=-1;trSave();trRenderAll()}}
-function trEditRoster(){if(TRMT!=='lineup'){TRMT='lineup';trRenderAll()}let t=document.getElementById('trRosterBox');if(!t)return;t.classList.add('open');TRTO.roster=1;if(window.innerWidth>800)t.scrollIntoView({behavior:'smooth',block:'start'});else t.scrollTop=0}
+function trEditRoster(){if(TRMT!=='roster'){TRMT='roster';trRenderAll()}let t=document.getElementById('trRosterBox');if(!t)return;t.classList.add('open');TRTO.roster=1;if(window.innerWidth>800)t.scrollIntoView({behavior:'smooth',block:'start'});else t.scrollTop=0}
 function trRenderAll(){TRC=null;TRTV={};TRCVmap=null;let set=$('trSet'),body=$('trBody');
  if(set&&body){set.innerHTML=trSettings();body.innerHTML=((lgOn()||(TR.leagues&&TR.leagues.length))?lgBox():'')+(TR.mode==='full'?trFull():trQuick());document.querySelectorAll('#trModes .tsb').forEach(b=>b.classList.toggle('on',b.dataset.v===TR.mode));trBind(set);trBind(body)}
  let ms=$('plMineSet'),mb=$('plMineBody');if(ms&&mb&&$('team').classList.contains('on')){let sh=document.getElementById('trRosterBox'),st=sh?sh.scrollTop:0,wy=window.scrollY,ae=document.activeElement,hadF=!!(ae&&ae.closest&&ae.closest('#trRmy'));ms.innerHTML=trSettings();mb.innerHTML=trMine();trBind(ms);trBind(mb);let n=document.getElementById('trRosterBox');if(n&&n.classList.contains('open')){n.scrollTop=st;if(hadF){let ii=n.querySelector('#trRmy input');if(ii)ii.focus({preventScroll:true})}}window.scrollTo(0,wy)}}
