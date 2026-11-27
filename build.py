@@ -4813,8 +4813,6 @@ body.shot .lgBox,body.shot .lgPw,body.shot #cmpTeams .cmpH,body.shot #cmpTeams .
 @media(max-width:800px){.gmHeroT{grid-template-columns:1fr 1fr 1fr}.gmHeroG{width:52px;height:52px;font-size:21px}}
 .gmBoard{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}.gmRow{display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}.gmRow.me{box-shadow:0 0 0 2px #3a7bd5,var(--shadow)}
 .gmRowN{flex:1;min-width:0}.gmRowN b{display:block;font-size:14px}.gmRowN small{display:block;font-size:11.5px;color:var(--muted)}.gmRowG{font-size:16px;font-weight:800}
-.gmDeal{background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow)}.gmDealT{display:flex;flex-direction:column;gap:6px;font-size:13px}.gmDealT div{display:flex;flex-direction:column}.gmDealT b{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}.gmDealT i{font-style:normal;color:var(--muted);font-size:11.5px}
-.gmDealM{font-size:11.5px;color:var(--muted);margin-top:8px}.gmDealV{margin-top:6px}
 .gmPickCard{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);margin-bottom:10px}.gmPickH{display:flex;justify-content:space-between;align-items:baseline}.gmPickH b{font-size:14.5px}.gmPickH span{font-size:12px;color:var(--muted)}.gmPickCard p{margin:6px 0 0;font-size:13px;color:#3d4f6d;line-height:1.5}
 .lgWvL{border-bottom:1px solid #eef2f8;padding-bottom:6px}.lgWvL .trVal{display:none!important}.lgWvV{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:0 4px 4px 56px;font-size:12.5px;color:#4a5a73}.lgWvV small{flex-basis:100%;color:#6b7a94;font-size:12px}.lgYour b{color:#16213a}
 .lgVd{font-weight:800;font-size:11.5px;padding:2px 9px;border-radius:999px;background:#eef2f8;color:#4a5a73}.lgVd.up{background:#dff5e6;color:#14663a}.lgVd.ok{background:#e3f0ff;color:#1f4fa8}.lgVd.dn{background:#f1f3f7;color:#7a879c}
@@ -7498,75 +7496,45 @@ function gmFinishPool(){GMPOSAVG=null;let arr=allPlayers().filter(p=>gmGames(p).
    SEASON by real results (N = teams x starters needed there) -- not the live trade analyzer's
    forward-looking blend, which assumes today's roster shape and today's outlook and does not make
    sense applied retroactively to a trade from six weeks ago. */
-var GMREPL=null;
-function gmRepl(){if(GMREPL)return GMREPL;let out={};TRPOS.forEach(pos=>{let arr=allPlayers().filter(p=>p.pos===pos&&gmGames(p).length>0).map(p=>gmPts(p)/gmGames(p).length);arr.sort((a,b)=>b-a);let n=Math.max(1,Math.round((TR.n||10)*(TR.st[pos]||1)));out[pos]=arr.length?arr[Math.min(n,arr.length)-1]:0});GMREPL=out;return out}
-function gmTeamIdx(eid){let all=TR.lgAll||[];for(let i=0;i<all.length;i++)if(all[i].eid===eid)return i;return -1}
 /* ---------- Best Drafter: value = where he was picked minus where he actually finished ---------- */
+/* GM tab is Best Drafter only -- mDraftDetail always returns the whole season's draft in one shot, so
+   this fully works from a single paste/upload, no bookmarklet loop needed. Trade grading used to live
+   here too, but ESPN's transactions API only ever answers for one week per request (no "whole season"
+   option), so a single-paste import could only ever see the current week's trades -- usually zero --
+   while a correct answer needed the bookmarklet's per-week loop. That two-tier experience (one upload
+   gets you drafting, a special browser click gets you trading) was worse than just not having it, so
+   trade grading was cut entirely rather than shipped as a feature that silently under-delivers for
+   most people who import. */
+function gmTeamIdx(eid){let all=TR.lgAll||[];for(let i=0;i<all.length;i++)if(all[i].eid===eid)return i;return -1}
 function gmDraftTeam(ti,pool){let eid=(TR.lgAll[ti]||{}).eid;if(eid==null)return null;
  let picks=(TR.espnGm.picks||[]).filter(pk=>pk.teamEid===eid).map(pk=>{let p=byId(pk.id);if(!p)return null;let finish=pool.rank[pk.id]!=null?pool.rank[pk.id]:pool.total+1;return {p,pick:pk.pick,round:pk.round,finish,value:pk.pick-finish}}).filter(Boolean);
  if(!picks.length)return null;
  let sum=picks.reduce((s,v)=>s+v.value,0),avg=sum/picks.length,best=picks.slice().sort((a,b)=>b.value-a.value)[0],worst=picks.slice().sort((a,b)=>a.value-b.value)[0];
  return {ti,picks,sum,avg,best,worst}}
-/* ---------- Best Trader ---------- */
-/* One trade = everything that moved between the same two teams, grouped by ESPN's own
-   relatedTransactionId (a real 2-sided trade is usually two linked transaction records, one per team),
-   so a single trade is one entry here, never two. */
-function gmTrades(){let groups={};(TR.espnGm.tx||[]).forEach(t=>{let k=t.rel;groups[k]=groups[k]||{wk:t.wk,items:[]};groups[k].items=groups[k].items.concat(t.items||[]);if(t.wk&&(!groups[k].wk||t.wk<groups[k].wk))groups[k].wk=t.wk});
- let out=[];Object.keys(groups).forEach(k=>{let g=groups[k],sides={};g.items.forEach(it=>{if(it.id==null||it.to==null)return;(sides[it.to]=sides[it.to]||[]).push(it.id)});let eids=Object.keys(sides).map(Number);
-  if(eids.length!==2)return;let eA=eids[0],eB=eids[1],tiA=gmTeamIdx(eA),tiB=gmTeamIdx(eB);if(tiA<0||tiB<0)return;
-  out.push({wk:g.wk||1,tiA,tiB,gotA:sides[eA],gotB:sides[eB]})});
- return out}
-/* Rate-based (points above replacement PER GAME actually played, not a season total) so an injury
-   right after the trade -- bad luck, not a bad decision -- cannot sink a grade just because fewer
-   weeks got played, and a couple of random big or bad games cannot swing it either: at least 3 total
-   games across both hauls are required before a trade is graded at all. Before that, "too early to
-   tell yet" is the honest answer, so it is simply left out of the leaderboards. */
-function gmSideRate(ids,fromWk,repl){let games=0,rate=0,total=0;(ids||[]).forEach(id=>{let p=byId(id);if(!p)return;let logs=(p.logs||[]).filter(l=>l.w>fromWk&&l.ppr!=null&&!l.auto);if(!logs.length)return;let sum=0;logs.forEach(l=>sum+=Math.max(0,l.ppr-(repl[p.pos]||0)));games+=logs.length;rate+=sum/logs.length;total+=logs.reduce((s,l)=>s+l.ppr,0)});return {games,rate,total}}
-function gmGradeTrade(t,repl){let a=gmSideRate(t.gotA,t.wk,repl),b=gmSideRate(t.gotB,t.wk,repl);if(a.games+b.games<3)return null;
- return {wk:t.wk,tiA:t.tiA,tiB:t.tiB,gotA:t.gotA,gotB:t.gotB,margin:a.rate-b.rate,ptsA:a.total,ptsB:b.total,gamesA:a.games,gamesB:b.games}}
-function gmTradeTeam(ti,graded){let mine=graded.filter(g=>g.tiA===ti||g.tiB===ti);if(!mine.length)return null;
- let vals=mine.map(g=>g.tiA===ti?g.margin:-g.margin),sumPts=mine.reduce((s,g)=>s+(g.tiA===ti?g.ptsA-g.ptsB:g.ptsB-g.ptsA),0),avg=vals.reduce((s,v)=>s+v,0)/vals.length;
- return {ti,n:mine.length,avg,sumPts}}
-/* ---------- build + combine ---------- */
+/* ---------- build ---------- */
 var GMR=null;
-function gmBuild(){if(!gmOn())return null;let key=TR.lgTs+'|'+(TR.espnGm.picks||[]).length+'|'+(TR.espnGm.tx||[]).length+'|'+TR.lgMe;if(GMR&&GMR.key===key)return GMR.v;
- GMREPL=null;let pool=gmFinishPool(),repl=gmRepl(),all=TR.lgAll||[],N=all.length,me=TR.lgMe;
+function gmBuild(){if(!gmOn())return null;let key=TR.lgTs+'|'+(TR.espnGm.picks||[]).length+'|'+TR.lgMe;if(GMR&&GMR.key===key)return GMR.v;
+ let pool=gmFinishPool(),all=TR.lgAll||[],N=all.length,me=TR.lgMe;
  let drafters=[];for(let i=0;i<N;i++){let d=gmDraftTeam(i,pool);if(d)drafters.push(d)}
  drafters.sort((a,b)=>b.avg-a.avg);drafters.forEach((d,i)=>d.rank=i+1);
- let gradedAll=gmTrades().map(t=>gmGradeTrade(t,repl)).filter(Boolean);
- let traders=[];for(let i=0;i<N;i++){let t=gmTradeTeam(i,gradedAll);if(t)traders.push(t)}
- traders.sort((a,b)=>b.avg-a.avg);traders.forEach((t,i)=>t.rank=i+1);
  function pct(arr,val){return arr.length>1?arr.filter(x=>x.avg<val).length/(arr.length-1):.5}
- let board=all.map((team,i)=>{let d=drafters.find(x=>x.ti===i),t=traders.find(x=>x.ti===i),
-   dPc=d?pct(drafters,d.avg):null,tPc=t?pct(traders,t.avg):null,
-   parts=[dPc,tPc].filter(x=>x!=null),overall=parts.length?parts.reduce((s,x)=>s+x,0)/parts.length:null;
-  return {ti:i,name:team.n||('Team '+(i+1)),d,t,dPc,tPc,overall,nDraft:drafters.length,nTrade:traders.length}});
+ let board=all.map((team,i)=>{let d=drafters.find(x=>x.ti===i),overall=d?pct(drafters,d.avg):null;
+  return {ti:i,name:team.n||('Team '+(i+1)),d,overall,nDraft:drafters.length}});
  let ranked=board.filter(b=>b.overall!=null).sort((a,b)=>b.overall-a.overall);
  ranked.forEach((b,k)=>b.rank=k+1);
- let tradesSorted=gradedAll.slice().sort((a,b)=>b.margin-a.margin),
-  bestTrades=tradesSorted.slice(0,3),worstTrades=tradesSorted.slice(-3).reverse().filter(t=>bestTrades.indexOf(t)<0);
- let v={board,ranked,me:ranked.find(b=>b.ti===me)||board.find(b=>b.ti===me)||null,bestTrades,worstTrades,drafters,traders,poolTotal:pool.total};
+ let v={board,ranked,me:ranked.find(b=>b.ti===me)||board.find(b=>b.ti===me)||null,drafters,poolTotal:pool.total};
  GMR={key,v};return v}
-function gmTradeHeadline(g,GM){let names=ids=>ids.map(id=>{let p=byId(id);return p?trEsc(p.name):'a pick'}).join(', '),nA=trEsc(GM.board[g.tiA].name),nB=trEsc(GM.board[g.tiB].name),
- winnerIsA=g.margin>=0,winN=winnerIsA?nA:nB,gap=Math.abs(g.margin);
- return {nA,nB,gotA:names(g.gotA),gotB:names(g.gotB),verdict:gap<.5?`Close, but ${winN} edges it`:gap<2.5?`${winN} won it`:`Lopsided &mdash; ${winN} won big`}}
 function gmPanelHTML(GM){if(!GM)return '';
  function pct(arr,val){return arr.length>1?arr.filter(x=>x.avg<val).length/(arr.length-1):.5}
  let me=GM.me,N=(TR.lgAll||[]).length,lgLet=pc=>pc==null?null:lgLetter(pc),
-  hero=(()=>{if(!me)return '<p class="tnote">Not enough of your own picks or trades could be graded yet to rank you &mdash; the league board below still works.</p>';
-   let d=me.d,t=me.t,graded=me.overall!=null,g=lgLet(me.overall),
-    draftTxt=d?`#${d.rank} of ${GM.drafters.length}`:'No picks to grade yet',
-    tradeTxt=t?`#${t.rank} of ${GM.traders.length}`:'No graded trades yet',
+  hero=(()=>{if(!me||!me.d)return '<p class="tnote">Not enough of your own picks could be graded yet to rank you &mdash; the league board below still works.</p>';
+   let d=me.d,graded=me.overall!=null,g=lgLet(me.overall),
+    draftTxt=`#${d.rank} of ${GM.drafters.length}`,
     rankTxt=graded?`#${me.rank} of ${GM.ranked.length}`:'Not ranked yet',
-    headline=graded?(me.rank===1?'You\'re the #1 GM in your league':`You're #${me.rank} GM in your league`):'Not enough graded yet to rank you as a GM',
-    sub=d&&t?`Drafting grade <b class="${d.sum>=0?'up':'dn'}">${lgLet(pct(GM.drafters,d.avg))}</b>, trading grade <b class="${t.sumPts>=0?'up':'dn'}">${lgLet(pct(GM.traders,t.avg))}</b>.`
-     :d?`Graded on drafting only so far (${lgLet(pct(GM.drafters,d.avg))}) &mdash; none of your trades have enough games played yet to grade.`
-     :t?`Graded on trading only so far (${lgLet(pct(GM.traders,t.avg))}) &mdash; none of your draft picks could be matched up yet.`
-     :'Import again once you have a few picks or trades to show.';
-   return `<div class="gmHero${graded?(me.overall>=.6?' good':me.overall<.35?' bad':''):''}"><div class="gmHeroH"><div class="gmHeroG">${g||'&mdash;'}</div><div><strong>${headline}</strong><p>${sub}</p></div></div><div class="gmHeroT"><div><small>Best Drafter</small><b>${draftTxt}</b><span>${d?(d.sum>=0?'+':'')+Math.round(d.sum)+' pts above slot':'&mdash;'}</span></div><div><small>Best Trader</small><b>${tradeTxt}</b><span>${t?t.n+' graded trade'+(t.n===1?'':'s'):'&mdash;'}</span></div><div><small>Overall GM</small><b>${rankTxt}</b><span>${graded?Math.round(me.overall*100)+'th percentile':'&mdash;'}</span></div></div></div>`})();
- let board=`<div class="tsec">League GM leaderboard</div><div class="gmBoard">${GM.ranked.map(b=>`<div class="gmRow${b.ti===TR.lgMe?' me':''}"><i class="trRole ${b.rank===1?'st':b.rank===GM.ranked.length?'ir':'fx'}">${b.rank}</i><div class="gmRowN"><b>${trEsc(b.name)}</b><small>${b.d?lgLet(pct(GM.drafters,b.d.avg))+' drafter':'no picks graded'}${b.t?', '+lgLet(pct(GM.traders,b.t.avg))+' trader':', no trades graded'}</small></div><b class="gmRowG">${lgLet(b.overall)}</b></div>`).join('')||'<p class="tnote">Nobody has enough graded picks or trades yet.</p>'}</div>`,
-  tradeCard=g=>{let h=gmTradeHeadline(g,GM);return `<div class="gmDeal"><div class="gmDealT"><div><b>${h.nA} got</b>${h.gotA}<i> from ${h.nB}</i></div><div><b>${h.nB} got</b>${h.gotB}<i> from ${h.nA}</i></div></div><div class="gmDealM">Week ${g.wk} trade</div><div class="gmDealV"><span class="trChip ${Math.abs(g.margin)<.5?'ok':'up'}">${h.verdict}</span></div></div>`},
-  trades=(GM.bestTrades.length||GM.worstTrades.length)?`<div class="tsec">Best trades</div>${GM.bestTrades.length?GM.bestTrades.map(tradeCard).join(''):'<p class="tnote">No trades have enough games played yet to grade.</p>'}<div class="tsec">Worst trades</div>${GM.worstTrades.length?GM.worstTrades.map(tradeCard).join(''):'<p class="tnote">No lopsided trades yet.</p>'}`:`<div class="tsec">Trades</div><p class="tnote">No trades have enough games played since they happened to grade yet. Check back as the season goes &mdash; or import again if you only have the current week's trade history (see the Advanced way link vs. the bookmark for a full season's worth).</p>`,
+    headline=graded?(me.rank===1?'You\'re the #1 drafter in your league':`You're #${me.rank} drafter in your league`):'Not enough graded yet to rank you',
+    sub=`${d.sum>=0?'+':''}${Math.round(d.sum)} pts above slot across your draft.`;
+   return `<div class="gmHero${graded?(me.overall>=.6?' good':me.overall<.35?' bad':''):''}"><div class="gmHeroH"><div class="gmHeroG">${g||'&mdash;'}</div><div><strong>${headline}</strong><p>${sub}</p></div></div><div class="gmHeroT"><div><small>Your draft</small><b>${draftTxt}</b><span>${(d.sum>=0?'+':'')+Math.round(d.sum)+' pts above slot'}</span></div><div><small>League rank</small><b>${rankTxt}</b><span>${graded?Math.round(me.overall*100)+'th percentile':'&mdash;'}</span></div></div></div>`})();
+ let board=`<div class="tsec">League draft leaderboard</div><div class="gmBoard">${GM.ranked.map(b=>`<div class="gmRow${b.ti===TR.lgMe?' me':''}"><i class="trRole ${b.rank===1?'st':b.rank===GM.ranked.length?'ir':'fx'}">${b.rank}</i><div class="gmRowN"><b>${trEsc(b.name)}</b></div><b class="gmRowG">${lgLet(b.overall)}</b></div>`).join('')||'<p class="tnote">Nobody has enough graded picks yet.</p>'}</div>`,
   bestD=GM.drafters[0],worstD=GM.drafters[GM.drafters.length-1],
   /* Best drafter's card leads with their best single steal; worst drafter's card leads with their
      worst single reach -- a team's single best pick says nothing about its weakest if we are
@@ -7576,7 +7544,7 @@ function gmPanelHTML(GM){if(!GM)return '';
     :(pk&&pk.value<0?`Reached on ${trEsc(pk.p.name)} at pick ${pk.pick}, who finished only #${pk.finish} overall.`:'No real reach &mdash; every pick finished about where he was taken.');
    return `<div class="gmPickCard"><div class="gmPickH"><b>${trEsc((GM.board[d.ti]||{}).name||'')}</b><span>${d.sum>=0?'+':''}${Math.round(d.sum)} pts above slot</span></div><p>${line}</p></div>`},
   drafting=GM.drafters.length?`<div class="tsec">Best drafter</div>${draftCard(bestD,'best')}${GM.drafters.length>1?`<div class="tsec" style="margin-top:14px">Worst drafter</div>${draftCard(worstD,'worst')}`:''}`:'';
- return `${hero}${board}${trades}${drafting}<p class="tnote" style="margin-top:14px">Best Drafter credits/blames whoever drafted a player, even if he was later traded away or dropped, and grades him on points per game (not his season total), so a stud who got hurt partway through the year still shows as a great pick instead of getting buried under everyone else's extra healthy games. Best Trader compares what each side's players actually did after the trade (points above a replacement player at their position, per game, capped if they got hurt) so one huge or one terrible game right after a trade can't swing it, and neither can bad injury luck. A new trade needs a few games on the books before it's graded. ${N>(GM.ranked.length||0)?'Teams with no graded picks or trades yet are left off the board above.':''}</p>`}
+ return `${hero}${board}${drafting}<p class="tnote" style="margin-top:14px">Credits/blames whoever drafted a player, even if he was later traded away or dropped, and grades him on points per game (not his season total), so a stud who got hurt partway through the year still shows as a great pick instead of getting buried under everyone else's extra healthy games. ${N>(GM.ranked.length||0)?'Teams with no graded picks yet are left off the board above.':''}</p>`}
 document.addEventListener('click',e=>{let t=e.target.closest&&e.target.closest('.lgSo');if(!t)return;LGR.sort=t.dataset.k;let b=t.closest('.lgSt');if(b)b.outerHTML=lgStandHTML()});
 function lgBox(cx){let LS=TR.leagues||[],TD=!cx||cx==='trade';
  if(!lgOn()&&!LS.length)return `<div class="lgBox"><div><b>Import your ESPN or Sleeper league</b><span>Bring in every team in your league. Then you can compare against anyone, trade with real rosters, and see who is on waivers.</span></div><button type="button" class="lgImp">Import league</button></div>`;
@@ -7900,23 +7868,23 @@ function trEspnFromApi(d,players,swid){var b=(d&&d.base)||d||{},idx={},miss=[],t
  var eidIdx={};teams.forEach(function(T,i){eidIdx[T.eid]=i});
  var sched=[];(b.schedule||[]).forEach(function(gm){var wk2=gm.matchupPeriodId;if(!wk2||!regWeeks||wk2>regWeeks)return;var h=gm.home,a=gm.away;if(!h||!a)return;var hi=eidIdx[h.teamId],ai=eidIdx[a.teamId];if(hi==null||ai==null)return;
   sched.push({w:wk2,h:hi,a:ai,hp:+h.totalPoints||0,ap:+a.totalPoints||0})});
- /* GM tab extras: draft recap and trade history, resolved to our own player ids right here while eidMap
-    is still in scope (so the GM scoring code never has to know ESPN's own ids). mDraftDetail always
-    returns the whole season in one shot. mTransactions2 does not -- it is scoped to one week per
-    request, so d.tx (set only by the looping bookmarklet above) carries the full season's transactions;
-    a plain single-link import only ever has b.transactions, the current week alone. Kickers/defenses and
-    any pick nobody has rostered all season (so we have no name to match it to) are left out of the
-    draft recap -- low skill signal either way, and we would just be guessing at a name. */
+ /* GM tab extra: draft recap, resolved to our own player ids right here while eidMap is still in scope
+    (so the GM scoring code never has to know ESPN's own ids). mDraftDetail always returns the whole
+    season in one shot, so this works fully from a single paste/upload -- no bookmarklet loop needed.
+    (Trade grading used to live here too, built from mTransactions2, but that endpoint only ever answers
+    for one week per request with no "whole season" option, so a single-paste import could only ever see
+    the current week's trades -- usually none. Cut entirely rather than ship a feature that silently
+    under-delivers for anyone not using the bookmarklet.) Kickers/defenses and any pick nobody has
+    rostered all season (so we have no name to match it to) are left out of the draft recap -- low
+    skill signal either way, and we would just be guessing at a name. */
  var gmPicks=[];((b.draftDetail&&b.draftDetail.picks)||[]).forEach(function(pk){var our=eidMap[pk.playerId];if(our==null)return;if(!players.some(function(p){return p.id===our}))return;
   gmPicks.push({id:our,pick:pk.overallPickNumber,round:pk.roundId,teamEid:pk.teamId})});
- var gmTx=[];(((d&&d.tx)||b.transactions)||[]).forEach(function(t){if(t.status!=='EXECUTED')return;if(!(t.items||[]).some(function(it){return it.type==='TRADE'}))return;
-  gmTx.push({id:t.id,rel:t.relatedTransactionId||t.id,wk:t.scoringPeriodId||0,items:(t.items||[]).filter(function(it){return it.type==='TRADE'}).map(function(it){var our2=eidMap[it.playerId];return {from:it.fromTeamId,to:it.toTeamId,id:(our2!=null&&players.some(function(p){return p.id===our2}))?our2:null}})})});
- return {teams:teams,miss:miss,me:me,set:set,name:((b.settings||{}).name||'').trim(),pj:pj,sched:sched,regWeeks:regWeeks,playoffTeamCount:playoffTeamCount,seedRule:seedRule,gmPicks:gmPicks,gmTx:gmTx}}
+ return {teams:teams,miss:miss,me:me,set:set,name:((b.settings||{}).name||'').trim(),pj:pj,sched:sched,regWeeks:regWeeks,playoffTeamCount:playoffTeamCount,seedRule:seedRule,gmPicks:gmPicks}}
 function trEspnApply(m,d,swid,E){var r;E=E||m.querySelector('.espnErr');
  try{r=trEspnFromApi(d,Object.values(trCtx().V).map(function(v){return v.p}),swid)}catch(e){if(E)E.textContent='We could not read that league data. Try again, or use another way in.';return}
  if(!r.teams.length||r.teams.reduce(function(s,x){return s+x.ids.length},0)<r.teams.length*3){if(E)E.textContent='ESPN answered, but we found no rosters in it. If the league is private, use the private league or run-it-on-your-computer way.';return}
  TR.espnPj=r.pj;TR.espnAdv=(r.sched&&r.sched.length)?{sched:r.sched,regWeeks:r.regWeeks,playoffTeamCount:r.playoffTeamCount,seedRule:r.seedRule}:null;
- TR.espnGm=(r.gmPicks&&r.gmPicks.length)?{picks:r.gmPicks,tx:r.gmTx||[]}:null;trSave();
+ TR.espnGm=(r.gmPicks&&r.gmPicks.length)?{picks:r.gmPicks}:null;trSave();
  lgPickBody(m,r.teams,r.me,r.miss,r.set,r.name||'')}
 function trEspnCall(m,body,btn){var E=m.querySelector('.espnErr');E.textContent='';btn.disabled=true;var t0=btn.textContent;btn.textContent='Reading your league…';
  var done=function(){btn.disabled=false;btn.textContent=t0};
@@ -7930,14 +7898,13 @@ function trEspnBookmarklet(){var base=location.origin+location.pathname.replace(
  +"window.addEventListener('message',function(e){if(e.origin===O&&e.data&&e.data.fmEspnReady){ready=true;send()}});"
  +"var B='https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/'+yr+'/segments/0/leagues/'+id;"
  +"function g(q){return fetch(B+q,{credentials:'include'}).then(function(r){return r.json()})}"
- +"g('?view=mSettings&view=mTeam&view=mRoster&view=mStandings&view=mDraftDetail').then(function(base){var cur=Math.max(1,base.scoringPeriodId||1),ws=[];for(var k=cur;k<=17;k++)ws.push(k);var txw=[];for(var k2=1;k2<=cur;k2++)txw.push(k2);"
- /* Transactions (trades, waivers, drops) only ever come back scoped to ONE week per request --
-    ESPN has no "whole season" param for mTransactions2 -- so a full trade history needs one request
-    per week already played. The bookmarklet can afford that loop since it is still a single click for
-    the person; the phone/paste "Advanced way" link below cannot loop at all, so it only ever sees the
-    current week's transactions. Draft picks need no loop: mDraftDetail always returns the complete
-    season's draft in one shot, folded into the same base/mSettings request above. */
- +"return Promise.all([Promise.all(ws.map(function(k){return g('?view=mRoster&scoringPeriodId='+k).then(function(j){var o={};(j.teams||[]).forEach(function(t){((t.roster&&t.roster.entries)||[]).forEach(function(e){var p=e.playerPoolEntry&&e.playerPoolEntry.player;if(!p)return;var s=(p.stats||[]).filter(function(x){return x.statSourceId===1&&x.scoringPeriodId===k})[0];if(s&&s.appliedTotal!=null)o[e.playerId]=Math.round(s.appliedTotal*10)/10})});return [k,o]}).catch(function(){return [k,{}]})})),Promise.all(txw.map(function(k){return g('?view=mTransactions2&scoringPeriodId='+k).then(function(j){return j.transactions||[]}).catch(function(){return []})}))]).then(function(res){var pr={};res[0].forEach(function(x){pr[x[0]]=x[1]});var tx=[];res[1].forEach(function(arr){tx=tx.concat(arr)});return {base:base,proj:pr,tx:tx}})})"
+ +"g('?view=mSettings&view=mTeam&view=mRoster&view=mStandings&view=mDraftDetail').then(function(base){var cur=Math.max(1,base.scoringPeriodId||1),ws=[];for(var k=cur;k<=17;k++)ws.push(k);"
+ /* Draft picks need no loop: mDraftDetail always returns the complete season's draft in one shot,
+    folded into the same base/mSettings request above -- so Best Drafter works the same whether this
+    bookmarklet or the plain single-paste link below is used. (Trade history used to loop one request
+    per already-played week here, since ESPN's transactions view has no "whole season" option -- but
+    that feature was cut: see trEspnFromApi.) */
+ +"return Promise.all(ws.map(function(k){return g('?view=mRoster&scoringPeriodId='+k).then(function(j){var o={};(j.teams||[]).forEach(function(t){((t.roster&&t.roster.entries)||[]).forEach(function(e){var p=e.playerPoolEntry&&e.playerPoolEntry.player;if(!p)return;var s=(p.stats||[]).filter(function(x){return x.statSourceId===1&&x.scoringPeriodId===k})[0];if(s&&s.appliedTotal!=null)o[e.playerId]=Math.round(s.appliedTotal*10)/10})});return [k,o]}).catch(function(){return [k,{}]})})).then(function(res){var pr={};res.forEach(function(x){pr[x[0]]=x[1]});return {base:base,proj:pr}})})"
  +".then(function(d){data=JSON.stringify(d);send();setTimeout(function(){if(ready)return;var t=document.createElement('textarea');t.value=data;t.style.cssText='position:fixed;z-index:2147483647;left:5%;top:10%;width:90%;height:50%;font:12px monospace';document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(e){}alert('Fantasy Mania did not open. The league data is selected in the box: copy it (Ctrl+C), then paste it into the Import screen on Fantasy Mania.')},6000)})"
  +".catch(function(){alert('ESPN would not give the league data. Make sure you are logged in to ESPN and on your league page.')})})();";
  return 'javascript:'+encodeURIComponent(code)}
@@ -7947,11 +7914,9 @@ function trEspnBookmarklet(){var base=location.origin+location.pathname.replace(
    roster on this week's matchup instead of on the team, so trEspnPhoneFix moves them to where trEspnFromApi
    looks. A team with no game this week has no roster there; then we hand out the big mRoster link instead. */
 function trEspnPhoneUrl(v,full){v=String(v||'');var id=(v.match(/leagueId=(\d{4,12})/)||v.match(/^\s*(\d{4,12})\s*$/)||[])[1],y=(v.match(/seasonId=(\d{4})/)||[])[1]||trEspnSeason();
- /* mDraftDetail always returns the whole season's draft in one shot, so a single link gets the full
-    GM-tab draft recap either way. mTransactions2 only ever covers the single current week here (see the
-    bookmarklet above for why) -- so a league imported this way sees Best Drafter but a thinner, current
-    week only Best Trader until they use the bookmarklet or re-import later in the season. */
- return id?'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/'+y+'/segments/0/leagues/'+id+'?view=mSettings&view=mTeam&view=mDraftDetail&view=mTransactions2&view='+(full?'mRoster':'mBoxscore'):''}
+ /* mDraftDetail always returns the whole season's draft in one shot, so this single link gets the full
+    GM-tab (Best Drafter) recap in one upload -- no bookmarklet needed for that. */
+ return id?'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/'+y+'/segments/0/leagues/'+id+'?view=mSettings&view=mTeam&view=mDraftDetail&view='+(full?'mRoster':'mBoxscore'):''}
 function trEspnPhoneFix(d){var by={};(d.schedule||[]).forEach(function(g){['home','away'].forEach(function(s){var x=g[s],r=x&&x.rosterForCurrentScoringPeriod;if(r&&r.entries)by[x.teamId]=r})});
  (d.teams||[]).forEach(function(t){if(!t.roster&&by[t.id])t.roster=by[t.id]});return d}
 function trEspnPdfClean(raw){var i=raw.indexOf('{');if(i>0)raw=raw.slice(i);raw=raw.split('Pretty-print').join('');
@@ -7989,7 +7954,7 @@ function trEspnModal(){
  var m=document.createElement('div'),yr=trEspnSeason();m.className='trModal';
  m.innerHTML='<div class="trModalB espnM"><b>Import your ESPN league</b><p class="espnSub">Choose the kind of league you have.</p><p class="espnBigWarn"><b>Use a normal (not private/incognito) browser tab or window for all of this.</b> Private browsing does not save anything, so your import will disappear and nothing here will work.</p>'
  +'<div class="espnTabs"><button type="button" class="on" data-k="priv">My league is private</button><button type="button" data-k="pub">My league is public</button></div>'
- +'<div class="espnP" data-k="priv"><div class="lgHow"><div class="espnBmBox"><p><b>On a computer &mdash; the easy way</b></p><ol><li>Drag this button up to your bookmarks bar: <a class="espnBm">ESPN &rarr; Fantasy Mania</a></li><li>On ESPN, open your league (make sure you are logged in) &mdash; any page of it.</li><li>Click the bookmark. Your whole league imports here on its own, with every team and ESPN&rsquo;s own week-by-week projections.</li></ol><p class="espnSm">The button runs on ESPN using the login you already have there, and sends back only your league data. Your ESPN email, password and login never reach Fantasy Mania.</p></div><p><b>Get your league data</b></p><ol class="espnSteps"><li>Log in to ESPN in your browser (not the ESPN app), then find your league under the <b>Fantasy</b> menu. <a class="espnPg" href="https://www.espn.com/fantasy/" target="_blank" rel="noopener">Open ESPN Fantasy &rsaquo;</a><img class="espnHelpImg onlyMobile" src="/img/espn-help/find-your-league.jpg" alt="ESPN Fantasy menu with your team listed"><p class="espnWarn onlyMobile">If a link opens the ESPN app instead of staying here: don&rsquo;t tap it. Go back, <b>press and hold</b> the link, and choose <b>Open</b> &mdash; not &ldquo;Open in &lsquo;Fantasy&rsquo;&rdquo;, like this:</p><img class="espnHelpImg onlyMobile" src="/img/espn-help/open-in-new-tab.jpg" alt="Press and hold a link and choose Open, not Open in the ESPN app"></li></ol><div class="espnOS onlyMobile"><button type="button" class="on" data-way="easy">Easy way</button><button type="button" data-way="adv">Advanced way</button></div><p class="espnSm espnAdvNote onlyMobile">The <b>Advanced way</b> unlocks more for your team: very accurate playoff odds and chances, plus schedule strength and GM tools &mdash; best drafter, best trader, league GM leaderboard &mdash; and we\'re adding more.</p><div class="espnWay" data-way="easy"><p class="espnSm" style="margin-top:0"><b>Takes less than 5 minutes.</b></p><ol class="espnSteps"><li>Go to <b>League &rsaquo; Rosters</b>.<img class="espnHelpImg" src="/img/espn-help/league-rosters.jpg" alt="League menu with Rosters highlighted"></li><li>Tap and hold anywhere on the page, tap <b>Select All</b>, then <b>Copy</b>.<img class="espnHelpImg" src="/img/espn-help/select-all-copy.jpg" alt="Copy button after selecting all the page text"></li><li>Paste it in the box below, then tap Import league.</li></ol><p class="espnSm">Fewer steps, but less detail than the Advanced way below.</p></div><div class="espnWay" data-way="adv" hidden><p class="espnSm" style="margin-top:0"><b>Takes less than 5 minutes.</b></p><ol class="espnSteps"><li>Copy your league\'s web address and paste it here. Just the number after <b>leagueId=</b> works too. <span class="espnSm onlyMobile" style="display:block;margin-top:4px">No address bar to tap here? Tap <b>Share</b>, then <b>Copy</b> &mdash; that copies the page&rsquo;s web address.</span><input class="espnPhId" placeholder="League web address or league ID" autocapitalize="off" autocorrect="off"></li><li>Tap <a class="espnPhGo" target="_blank" rel="noopener">Open my league data</a>. A page of data opens.<img class="espnHelpImg onlyMobile" src="/img/espn-help/league-data-share.jpg" alt="Raw league data page with the Share icon circled"></li><li class="onlyMobile">Tap <b>Share</b> (the box with an up arrow) &rarr; <b>Options</b> &rarr; <b>PDF</b>. Make sure <b>PDF</b> is checked &mdash; not Automatic or Reader PDF.<img class="espnHelpImg" src="/img/espn-help/share-options.jpg" alt="Share sheet Options screen with PDF selected"></li><li class="onlyMobile">Tap <b>Save to Files</b>.<img class="espnHelpImg" src="/img/espn-help/save-to-files.jpg" alt="Share sheet with Save to Files highlighted"></li><li class="onlyMobile">Come back here, tap Choose File below and pick the PDF you just saved, then tap Import league.<input type="file" class="espnPhFile"></li><li class="onlyDesktop">Select all (Ctrl+A, or Cmd+A on a Mac) and copy it (Ctrl+C or Cmd+C).</li><li class="onlyDesktop">Paste it in the box below, then click Import league.</li></ol></div><p class="lgKeep">Your ESPN login stays with ESPN. Fantasy Mania only reads the file or text you give it.</p><p class="lgKeep">Your league is saved on this device only. Add Fantasy Mania to your Home Screen and do not use a private tab, or your browser will forget it. Import again any time to refresh rosters.</p></div><textarea class="trImpT espnPasteRoster" rows="5" placeholder="Paste the whole Rosters page, or your league data from the phone steps"></textarea><p class="trImpE espnErrPriv"></p><button type="button" class="trAsk espnPasteGo">Import league</button></div>'
+ +'<div class="espnP" data-k="priv"><div class="lgHow"><div class="espnBmBox"><p><b>On a computer &mdash; the easy way</b></p><ol><li>Drag this button up to your bookmarks bar: <a class="espnBm">ESPN &rarr; Fantasy Mania</a></li><li>On ESPN, open your league (make sure you are logged in) &mdash; any page of it.</li><li>Click the bookmark. Your whole league imports here on its own, with every team and ESPN&rsquo;s own week-by-week projections.</li></ol><p class="espnSm">The button runs on ESPN using the login you already have there, and sends back only your league data. Your ESPN email, password and login never reach Fantasy Mania.</p></div><p><b>Get your league data</b></p><ol class="espnSteps"><li>Log in to ESPN in your browser (not the ESPN app), then find your league under the <b>Fantasy</b> menu. <a class="espnPg" href="https://www.espn.com/fantasy/" target="_blank" rel="noopener">Open ESPN Fantasy &rsaquo;</a><img class="espnHelpImg onlyMobile" src="/img/espn-help/find-your-league.jpg" alt="ESPN Fantasy menu with your team listed"><p class="espnWarn onlyMobile">If a link opens the ESPN app instead of staying here: don&rsquo;t tap it. Go back, <b>press and hold</b> the link, and choose <b>Open</b> &mdash; not &ldquo;Open in &lsquo;Fantasy&rsquo;&rdquo;, like this:</p><img class="espnHelpImg onlyMobile" src="/img/espn-help/open-in-new-tab.jpg" alt="Press and hold a link and choose Open, not Open in the ESPN app"></li></ol><div class="espnOS onlyMobile"><button type="button" class="on" data-way="easy">Easy way</button><button type="button" data-way="adv">Advanced way</button></div><p class="espnSm espnAdvNote onlyMobile">The <b>Advanced way</b> unlocks more for your team: very accurate playoff odds and chances, plus schedule strength and Best Drafter &mdash; and we\'re adding more.</p><div class="espnWay" data-way="easy"><p class="espnSm" style="margin-top:0"><b>Takes less than 5 minutes.</b></p><ol class="espnSteps"><li>Go to <b>League &rsaquo; Rosters</b>.<img class="espnHelpImg" src="/img/espn-help/league-rosters.jpg" alt="League menu with Rosters highlighted"></li><li>Tap and hold anywhere on the page, tap <b>Select All</b>, then <b>Copy</b>.<img class="espnHelpImg" src="/img/espn-help/select-all-copy.jpg" alt="Copy button after selecting all the page text"></li><li>Paste it in the box below, then tap Import league.</li></ol><p class="espnSm">Fewer steps, but less detail than the Advanced way below.</p></div><div class="espnWay" data-way="adv" hidden><p class="espnSm" style="margin-top:0"><b>Takes less than 5 minutes.</b></p><ol class="espnSteps"><li>Copy your league\'s web address and paste it here. Just the number after <b>leagueId=</b> works too. <span class="espnSm onlyMobile" style="display:block;margin-top:4px">No address bar to tap here? Tap <b>Share</b>, then <b>Copy</b> &mdash; that copies the page&rsquo;s web address.</span><input class="espnPhId" placeholder="League web address or league ID" autocapitalize="off" autocorrect="off"></li><li>Tap <a class="espnPhGo" target="_blank" rel="noopener">Open my league data</a>. A page of data opens.<img class="espnHelpImg onlyMobile" src="/img/espn-help/league-data-share.jpg" alt="Raw league data page with the Share icon circled"></li><li class="onlyMobile">Tap <b>Share</b> (the box with an up arrow) &rarr; <b>Options</b> &rarr; <b>PDF</b>. Make sure <b>PDF</b> is checked &mdash; not Automatic or Reader PDF.<img class="espnHelpImg" src="/img/espn-help/share-options.jpg" alt="Share sheet Options screen with PDF selected"></li><li class="onlyMobile">Tap <b>Save to Files</b>.<img class="espnHelpImg" src="/img/espn-help/save-to-files.jpg" alt="Share sheet with Save to Files highlighted"></li><li class="onlyMobile">Come back here, tap Choose File below and pick the PDF you just saved, then tap Import league.<input type="file" class="espnPhFile"></li><li class="onlyDesktop">Select all (Ctrl+A, or Cmd+A on a Mac) and copy it (Ctrl+C or Cmd+C).</li><li class="onlyDesktop">Paste it in the box below, then click Import league.</li></ol></div><p class="lgKeep">Your ESPN login stays with ESPN. Fantasy Mania only reads the file or text you give it.</p><p class="lgKeep">Your league is saved on this device only. Add Fantasy Mania to your Home Screen and do not use a private tab, or your browser will forget it. Import again any time to refresh rosters.</p></div><textarea class="trImpT espnPasteRoster" rows="5" placeholder="Paste the whole Rosters page, or your league data from the phone steps"></textarea><p class="trImpE espnErrPriv"></p><button type="button" class="trAsk espnPasteGo">Import league</button></div>'
  +'<div class="espnP" data-k="pub" hidden><p>Since your league is public, there\'s nothing to sign into. Just enter the league ID — it\'s the number after <b>leagueId=</b> in your ESPN league\'s web address.</p><input class="espnId" inputmode="numeric" placeholder="League ID, like 2073417915"><label class="espnYr">Season <input class="espnY" inputmode="numeric" value="'+yr+'"></label><button type="button" class="trAsk espnGo" data-k="pub">Import league</button><p class="trImpE espnErr"></p></div>'
  +'</div>';
  m.onclick=function(e){if(e.target===m)m.remove()};
