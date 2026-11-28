@@ -1,0 +1,53 @@
+{
+ "week": 12,
+ "items": [
+  {
+   "kind": "vegas line cut back",
+   "name": "Sterling Shepard",
+   "stat": "td",
+   "line": 2.53,
+   "model": 0.16,
+   "used": 0.46
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Zay Jones",
+   "stat": "td",
+   "line": 2.53,
+   "model": 0.11,
+   "used": 0.41
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Irvin Charles",
+   "stat": "td",
+   "line": 2.53,
+   "model": 0.0,
+   "used": 0.3
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Keaton Mitchell",
+   "stat": "td",
+   "line": 2.53,
+   "model": 0.0,
+   "used": 0.3
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Jared Wayne",
+   "stat": "td",
+   "line": 0.66,
+   "model": 0.0,
+   "used": 0.3
+  },
+  {
+   "kind": "vegas line cut back",
+   "name": "Denzel Boston",
+   "stat": "td",
+   "line": 0.76,
+   "model": 0.18,
+   "used": 0.48
+  }
+ ]
+}
